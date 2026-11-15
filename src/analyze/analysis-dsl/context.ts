@@ -241,8 +241,8 @@ export function createAnalysisApi(input: DslInput, limits: Limits, changed: (upd
       },
       report: () => store.snapshot(),
       sweep: (v: unknown) => sweep(v, store, limits),
-      async solve(v: T.SolveOptions) { validateSearch(v, 'solve'); throw new S.AnalysisDslError('ANALYZER_NOT_IMPLEMENTED', 'solve search algorithm is not implemented'); },
-      async optimize(v: T.OptimizeOptions) { validateSearch(v, 'optimize'); throw new S.AnalysisDslError('ANALYZER_NOT_IMPLEMENTED', 'optimize search algorithm is not implemented'); },
+      solve: (v: T.SolveOptions) => solve(v, store, limits),
+      optimize: (v: T.OptimizeOptions) => optimize(v, store, limits),
     };
     contextStates.set(api, state);
     changed({ kind: 'context', report: store.snapshot() });
@@ -297,4 +297,259 @@ function validateSearch(input: unknown, kind: 'solve' | 'optimize') {
   const parameter = z.strictObject({ unit: S.text.optional(), min: z.number().finite().optional(), max: z.number().finite().optional(), values: z.array(z.number().finite()).min(1).optional() }).refine(v => v.values ? v.min === undefined && v.max === undefined : v.min !== undefined && v.max !== undefined && v.min <= v.max, 'Choose interval or explicit values');
   if (kind === 'solve') S.parse(z.strictObject({ parameter: z.strictObject({ ...parameter.shape, name: S.text }).refine(v => v.values ? v.min === undefined && v.max === undefined : v.min !== undefined && v.max !== undefined && v.min <= v.max), target: z.number().finite(), tolerance: z.number().finite().nonnegative(), unit: S.text, maxEvaluations: z.number().int().positive() }), json(description));
   else S.parse(z.strictObject({ parameters: z.record(S.text, parameter), objective: z.strictObject({ metric: S.text, direction: z.enum(['minimize', 'maximize']), unit: S.text }), constraints: z.array(z.strictObject({ metric: S.text, min: z.number().finite().optional(), max: z.number().finite().optional(), unit: S.text })), maxEvaluations: z.number().int().positive(), seed: z.number().int().nonnegative() }), json(description));
+}
+
+type SearchStatus = T.SearchResult['status'];
+type ScalarReading = { value: number } | { error: string };
+
+/** One finite real scalar in the requested unit. Missing, unavailable, non-scalar and unit-mismatched values are errors, never zero. */
+function readScalar(metric: unknown, unit: string, name: string): ScalarReading {
+  if (metric === undefined) return { error: `${name} is missing from the evaluate result` };
+  if (!object(metric) || metric.kind !== 'scalar') return { error: `${name} must be a scalar DataValue in ${unit}` };
+  const validity = metric.validity;
+  if (object(validity) && validity.status === 'unavailable') return { error: `${name} unavailable: ${String(validity.reason ?? 'no reason')}` };
+  if (metric.unit !== unit) return { error: `${name} unit mismatch: expected ${unit}, got ${String(metric.unit)}` };
+  if (typeof metric.value !== 'number' || !Number.isFinite(metric.value)) return { error: `${name} is not a finite real scalar` };
+  return { value: metric.value };
+}
+
+/** Runs a user callback; a throw or rejection becomes a recorded failure instead of aborting the search. */
+async function guarded<R>(run: () => R | Promise<R>): Promise<{ ok: true; value: R } | { ok: false; error: string }> {
+  try { return { ok: true, value: await run() }; }
+  catch (error) { return { ok: false, error: error instanceof Error ? error.message : String(error) }; }
+}
+
+/** Seeded PRNG (mulberry32). The same seed yields the same sequence; seeds are reduced modulo 2^32. */
+export function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** solve(): 1-D root finding of evaluate(x) - target.
+ * Explicit values are evaluated in order (all of them within budget) and the smallest |residual| wins.
+ * An interval is bracketed by its ends, then by up to 9 uniform interior points, then refined by bisection.
+ * Failed evaluations (throw, unavailable, unit mismatch) are recorded in history and skipped.
+ * `found` means |residual| <= tolerance at the best point; a non-found result is never a root claim. */
+async function solve(input: unknown, store: ReportStore, limits: Limits): Promise<T.SearchResult> {
+  validateSearch(input, 'solve');
+  const { evaluate, ...description } = input as T.SolveOptions;
+  const p = json(description) as unknown as Omit<T.SolveOptions, 'evaluate'>;
+  if (p.maxEvaluations > limits.maxEntries) throw new S.AnalysisDslError('OUTPUT_LIMIT', 'Search exceeds scenario attempt limit');
+  const { name, values, min, max } = p.parameter;
+  const st = { attempts: 0, successes: 0, best: undefined as { x: number; metric: number; residual: number } | undefined };
+  const history: T.Json[] = [];
+  const samples: { x: number; residual: number }[] = [];
+  const remaining = () => p.maxEvaluations - st.attempts;
+  const within = () => st.best !== undefined && Math.abs(st.best.residual) <= p.tolerance;
+  async function trial(x: number): Promise<number | undefined> {
+    st.attempts++;
+    const run = await guarded(() => evaluate(x));
+    let record: Record<string, T.Json>;
+    let residual: number | undefined;
+    const reading = run.ok ? readScalar(run.value, p.unit, 'metric') : { error: run.error };
+    if ('value' in reading) {
+      residual = reading.value - p.target; st.successes++;
+      record = { parameter: name, value: x, status: 'complete', metric: reading.value, residual };
+      if (!st.best || Math.abs(residual) < Math.abs(st.best.residual)) st.best = { x, metric: reading.value, residual };
+      samples.push({ x, residual });
+    } else record = { parameter: name, value: x, status: 'failed', error: reading.error };
+    history.push(record); store.add('calculations', { kind: 'solve-attempt', ...record });
+    return residual;
+  }
+  let status: SearchStatus;
+  let note: string | undefined;
+  if (values) {
+    let scanned = 0;
+    for (const x of values) { if (remaining() <= 0) break; await trial(x); scanned++; }
+    status = within() ? 'found' : st.successes === 0 ? 'failed' : scanned < values.length ? 'budget-exhausted' : 'not-found';
+  } else {
+    if (min === undefined || max === undefined) S.invalid('solve interval requires min and max');
+    const lo = min, hi = max;
+    type Bracket = { a: number; ra: number; b: number };
+    let bracket: Bracket | undefined;
+    const rLo = await trial(lo);
+    const rHi = hi !== lo && !within() && remaining() > 0 ? await trial(hi) : undefined;
+    if (rLo !== undefined && rHi !== undefined && Math.sign(rLo) !== Math.sign(rHi)) bracket = { a: lo, ra: rLo, b: hi };
+    let grid = 0;
+    if (hi !== lo && !within() && !bracket) {
+      grid = Math.min(9, remaining());
+      for (let k = 1; k <= grid && !within(); k++) await trial(lo + (hi - lo) * k / (grid + 1));
+      const sorted = [...samples].sort((s, t) => s.x - t.x);
+      for (let i = 0; i + 1 < sorted.length && !bracket; i++) {
+        const s = sorted[i]!, t = sorted[i + 1]!;
+        if (Math.sign(s.residual) !== Math.sign(t.residual)) bracket = { a: s.x, ra: s.residual, b: t.x };
+      }
+    }
+    if (bracket && !within()) {
+      // Bisection with fraction fallbacks: a failed point is retried at another interior fraction.
+      const fractions = [0.5, 0.4, 0.6, 0.3, 0.7];
+      let { a, ra, b } = bracket, k = 0;
+      while (!within() && remaining() > 0) {
+        if (Math.abs(b - a) <= 1e-12 * Math.max(1, Math.abs(a), Math.abs(b))) break;
+        const x = a + (b - a) * fractions[k % fractions.length]!;
+        const r = await trial(x);
+        if (r === undefined) { k++; continue; }
+        k = 0;
+        if (Math.sign(r) === Math.sign(ra)) { a = x; ra = r; } else b = x;
+      }
+    }
+    if (within()) status = 'found';
+    else if (st.successes === 0) status = 'failed';
+    else if (bracket) status = remaining() > 0 ? 'not-found' : 'budget-exhausted';
+    else if (hi !== lo && grid === 0) status = 'budget-exhausted';
+    else status = 'not-found';
+    if (status === 'not-found') note = bracket
+      ? 'Bracket collapsed onto a sign change that is not a root (discontinuity); a root is not guaranteed.'
+      : 'No sign change at the interval ends or on the grid; a root is not guaranteed.';
+  }
+  if (status === 'not-found' && note === undefined) note = 'No evaluated value reaches the tolerance; a root is not guaranteed.';
+  return freeze({
+    status,
+    ...(st.best ? { best: { parameter: name, value: st.best.x, metric: st.best.metric, residual: st.best.residual } } : {}),
+    history, violations: [], ...(note ? { note } : {}),
+  }) as T.SearchResult;
+}
+
+/** optimize(): bounded, derivative-free, deterministic for a given seed.
+ * Phase 1 draws about 30% of the budget as seeded Latin-hypercube samples (continuous) and random levels (discrete).
+ * Phase 2 is a greedy coordinate/pattern search from the best point: lexicographic (total constraint violation, objective),
+ * continuous steps start at a quarter of the range and halve when a full pass does not improve, discrete moves go to
+ * neighbouring listed values. Phase 3 spends any remaining budget on seeded random samples.
+ * This is a local/heuristic search. `found` means the best feasible point seen within the budget; it is NOT a
+ * global-optimum claim. Constraints are checked against each evaluate result; infeasible points go to `violations`. */
+async function optimize(input: unknown, store: ReportStore, limits: Limits): Promise<T.SearchResult> {
+  validateSearch(input, 'optimize');
+  const { evaluate, ...description } = input as T.OptimizeOptions;
+  const p = json(description) as unknown as Omit<T.OptimizeOptions, 'evaluate'>;
+  if (p.maxEvaluations > limits.maxEntries) throw new S.AnalysisDslError('OUTPUT_LIMIT', 'Search exceeds scenario attempt limit');
+  const entries = Object.entries(p.parameters).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  if (!entries.length) S.invalid('optimize requires at least one parameter');
+  type Dim = { name: string; kind: 'continuous'; min: number; max: number } | { name: string; kind: 'discrete'; levels: number[] };
+  const dims: Dim[] = entries.map(([name, d]) => d.values
+    ? { name, kind: 'discrete', levels: [...new Set(d.values)].sort((a, b) => a - b) }
+    : { name, kind: 'continuous', min: d.min ?? 0, max: d.max ?? 0 });
+  type Point = Record<string, number>;
+  type Scored = { point: Point; signed: number; objective: number; violation: number };
+  const rng = mulberry32(p.seed);
+  const st = { attempts: 0 };
+  const history: T.Json[] = [], violations: T.Json[] = [];
+  const scored: Scored[] = [];
+  const seen = new Set<string>();
+  const keyOf = (pt: Point) => dims.map(d => String(pt[d.name])).join('|');
+  const better = (a: Scored, b: Scored) => a.violation < b.violation || (a.violation === b.violation && a.signed < b.signed);
+  const minimize = p.objective.direction === 'minimize';
+
+  async function trial(point: Point): Promise<void> {
+    seen.add(keyOf(point)); st.attempts++;
+    const run = await guarded(() => evaluate(freeze({ ...point })));
+    const read = (metric: string, unit: string): number | string => {
+      const bag: unknown = run.ok ? run.value : undefined;
+      const r = readScalar(object(bag) ? bag[metric] : undefined, unit, `metric ${metric}`);
+      return 'value' in r ? r.value : r.error;
+    };
+    let record: Record<string, T.Json>;
+    if (!run.ok) record = { parameters: { ...point }, status: 'failed', error: run.error };
+    else {
+      const objective = read(p.objective.metric, p.objective.unit);
+      const constraintValues = p.constraints.map(c => read(c.metric, c.unit));
+      const error = [objective, ...constraintValues].find((v): v is string => typeof v === 'string');
+      if (error !== undefined) record = { parameters: { ...point }, status: 'failed', error };
+      else {
+        const raw = objective as number;
+        let violation = 0;
+        const violated: T.Json[] = [];
+        p.constraints.forEach((c, i) => {
+          const v = constraintValues[i] as number;
+          const below = c.min !== undefined && v < c.min, above = c.max !== undefined && v > c.max;
+          if (!below && !above) return;
+          if (below) violation += c.min! - v;
+          if (above) violation += v - c.max!;
+          violated.push({ metric: c.metric, value: v, ...(c.min !== undefined ? { min: c.min } : {}), ...(c.max !== undefined ? { max: c.max } : {}) });
+        });
+        const signed = minimize ? raw : -raw;
+        scored.push({ point: { ...point }, signed, objective: raw, violation });
+        record = { parameters: { ...point }, status: 'complete', objective: raw, feasible: violation === 0 };
+        if (violated.length) { record.violated = violated; violations.push({ parameters: { ...point }, violated }); }
+      }
+    }
+    history.push(record); store.add('calculations', { kind: 'optimize-attempt', ...record });
+  }
+  const budgetLeft = () => st.attempts < p.maxEvaluations;
+
+  // Phase 1: seeded Latin-hypercube / random-level samples, about 30% of the budget.
+  const initialCount = Math.max(1, Math.round(0.3 * p.maxEvaluations));
+  const permutation = (n: number) => {
+    const a = Array.from({ length: n }, (_, i) => i);
+    for (let i = n - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j]!, a[i]!]; }
+    return a;
+  };
+  const strata = dims.map(d => d.kind === 'continuous' ? permutation(initialCount) : []);
+  for (let i = 0; i < initialCount && budgetLeft(); i++) {
+    const point: Point = {};
+    dims.forEach((d, j) => {
+      if (d.kind === 'discrete') point[d.name] = d.levels[Math.floor(rng() * d.levels.length)]!;
+      else point[d.name] = d.min + (((strata[j]![i]! + rng()) / initialCount) * (d.max - d.min));
+    });
+    if (!seen.has(keyOf(point))) await trial(point);
+  }
+
+  // Phase 2: greedy coordinate/pattern search from the best point (violation first, then objective).
+  const steps = dims.map(d => d.kind === 'continuous' ? (d.max - d.min) / 4 : 0);
+  const minSteps = dims.map(d => d.kind === 'continuous' ? (d.max - d.min) * 1e-6 : 0);
+  const moved = (from: Point, j: number, dir: 1 | -1): Point | undefined => {
+    const d = dims[j]!, next: Point = { ...from };
+    if (d.kind === 'discrete') {
+      const i = d.levels.indexOf(from[d.name]!) + dir;
+      if (i < 0 || i >= d.levels.length) return undefined;
+      next[d.name] = d.levels[i]!; return next;
+    }
+    if (steps[j]! <= 0) return undefined;
+    const x = Math.min(d.max, Math.max(d.min, from[d.name]! + dir * steps[j]!));
+    if (x === from[d.name]) return undefined;
+    next[d.name] = x; return next;
+  };
+  const bestScored = (list: Scored[]) => list.reduce<Scored | undefined>((b, s) => (!b || better(s, b) ? s : b), undefined);
+  let current = bestScored(scored);
+  while (current && budgetLeft()) {
+    let improved = false;
+    for (let j = 0; j < dims.length && budgetLeft(); j++) {
+      for (const dir of [1, -1] as const) {
+        if (!budgetLeft()) break;
+        const candidate = moved(current.point, j, dir);
+        if (!candidate || seen.has(keyOf(candidate))) continue;
+        const before = scored.length;
+        await trial(candidate);
+        const s = scored[before];
+        if (s && better(s, current)) { current = s; improved = true; break; }
+      }
+    }
+    if (!improved) {
+      if (!dims.some((d, j) => d.kind === 'continuous' && steps[j]! > minSteps[j]!)) break;
+      dims.forEach((d, j) => { if (d.kind === 'continuous') steps[j] = steps[j]! / 2; });
+    }
+  }
+
+  // Phase 3: any remaining budget goes to seeded random samples (bounded attempts for a finite discrete space).
+  for (let tries = 0; budgetLeft() && tries < 50 * p.maxEvaluations; tries++) {
+    const point: Point = {};
+    for (const d of dims) point[d.name] = d.kind === 'discrete' ? d.levels[Math.floor(rng() * d.levels.length)]! : d.min + rng() * (d.max - d.min);
+    if (!seen.has(keyOf(point))) await trial(point);
+  }
+
+  const bestFeasible = scored.filter(s => s.violation === 0).reduce<Scored | undefined>((b, s) => (!b || s.signed < b.signed ? s : b), undefined);
+  const status: SearchStatus = scored.length === 0 && st.attempts > 0 ? 'failed' : bestFeasible ? 'found' : 'not-found';
+  const note = status === 'found'
+    ? 'Best feasible point within the evaluation budget; a bounded local search, not a global-optimum claim.'
+    : status === 'not-found' ? 'No feasible point found within the evaluation budget; infeasibility is not proven.' : undefined;
+  return freeze({
+    status,
+    ...(bestFeasible ? { best: { parameters: bestFeasible.point, objective: bestFeasible.objective, objectiveMetric: p.objective.metric, unit: p.objective.unit, feasible: true } } : {}),
+    history, violations, ...(note ? { note } : {}),
+  }) as T.SearchResult;
 }

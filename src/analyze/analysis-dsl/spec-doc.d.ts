@@ -2,7 +2,7 @@
  * Reference this file for IDE globals. Production supports board/conductor DC and explicit circuit DC/Z(f)/transient;
  * geometry connectivity/clearance/edge-clearance; explicit S/Z/Y multiports and bounded Touchstone;
  * supplied passive relaxation/authored-resonant-Y/full-RLC/real-K-delay time models through si().network (not PCB SI or TDR; timing and eye post-process only these waveforms).
- * Descriptions, validation, reports and explicit-value sweep are implemented.
+ * Descriptions, validation, reports, explicit-value sweep and solve/optimize search (P14 v1, local/heuristic) are implemented.
  * Coordinates: millimetres, absolute board Y down; no implicit material defaults.
  * This document imports only the package's public, existing board transport.
  */
@@ -346,7 +346,7 @@ export type Metric = DataValue | number;
 export type Evaluation = Metric | Readonly<Record<string, Metric>>;
 export interface SweepResult { attempts: readonly { parameters: Json; status: 'complete' | 'failed'; value?: Json; error?: string }[]; series: DataValue }
 export interface SearchParameter { unit?: string; min?: number; max?: number; values?: readonly number[] }
-export interface SearchResult { status: 'found' | 'not-found' | 'budget-exhausted' | 'failed'; best?: Json; history: readonly Json[]; violations: readonly Json[] }
+export interface SearchResult { status: 'found' | 'not-found' | 'budget-exhausted' | 'failed'; best?: Json; history: readonly Json[]; violations: readonly Json[]; note?: string }
 export interface SolveOptions { parameter: SearchParameter & { name: string }; evaluate: (value: number) => Promise<DataValue> | DataValue; target: number; tolerance: number; unit: string; maxEvaluations: number }
 export interface OptimizeOptions { parameters: Readonly<Record<string, SearchParameter>>; evaluate: (values: Readonly<Record<string, number>>) => Promise<Readonly<Record<string, DataValue>>> | Readonly<Record<string, DataValue>>; objective: { metric: string; direction: 'minimize' | 'maximize'; unit: string }; constraints: readonly { metric: string; min?: number; max?: number; unit: string }[]; maxEvaluations: number; seed: number }
 export type VariantChange = { kind: 'track-width'; target: Selector; widthMm: number }
@@ -379,7 +379,7 @@ export interface AnalysisContext {
   plot(input: PlotInput): void; report(): Report;
   sweep<T>(options: { parameter: SweepParameter<T>; evaluate: (value: T) => Evaluation | Promise<Evaluation> }): Promise<SweepResult>;
   sweep(options: { parameters: Readonly<Record<string, Omit<SweepParameter, 'name'>>>; mode: 'cartesian' | 'zip'; evaluate: (values: Readonly<Record<string, number | Model | Environment>>) => Evaluation | Promise<Evaluation> }): Promise<SweepResult>;
-  /** Search algorithms are unavailable; reject ANALYZER_NOT_IMPLEMENTED. */
+  /** solve: 1-D root finding of evaluate(x)-target. optimize: bounded seeded local search; not a global-optimum claim. */
   solve(options: SolveOptions): Promise<SearchResult>; optimize(options: OptimizeOptions): Promise<SearchResult>;
 }
 export interface ProfilesInput { environments?: Readonly<Record<string, Environment>>; stackups?: Readonly<Record<string, StackupDescription>>; cooling?: Readonly<Record<string, Cooling | Model>>; checks?: Readonly<Record<string, readonly Rule[]>>; numerics?: Readonly<Record<string, Numerics>> }

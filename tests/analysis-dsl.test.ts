@@ -237,9 +237,10 @@ test('sweep executes full cartesian/zip and continues callback failures; search 
   assert.equal(calls, 4); assert.equal(s.attempts.filter(a => a.status === 'failed').length, 1);
   const zip = await a.sweep({ parameters: { x: { values: [1, 2] }, y: { values: [10, 20] } }, mode: 'zip', evaluate: async ({ x }) => Number(x) });
   assert.equal(zip.attempts.length, 2);
-  await assert.rejects(a.solve({ parameter: { name: 'x', unit: 'mm', min: 1, max: 2 }, evaluate: () => { calls++; return value({ kind: 'scalar', unit: 'Ohm', value: 50, validity: { status: 'valid' }, diagnostics: [] }); }, target: 50, tolerance: 1, unit: 'Ohm', maxEvaluations: 10 }), { code: 'ANALYZER_NOT_IMPLEMENTED' });
-  await assert.rejects(a.optimize({ parameters: { x: { values: [1, 2] } }, evaluate: () => { calls++; return {}; }, objective: { metric: 'loss', direction: 'minimize', unit: 'dB' }, constraints: [], maxEvaluations: 2, seed: 1 }), { code: 'ANALYZER_NOT_IMPLEMENTED' });
-  assert.equal(calls, 4);
+  assert.equal((await a.solve({ parameter: { name: 'x', unit: 'mm', min: 1, max: 2 }, evaluate: () => { calls++; return value({ kind: 'scalar', unit: 'Ohm', value: 50, validity: { status: 'valid' }, diagnostics: [] }); }, target: 50, tolerance: 1, unit: 'Ohm', maxEvaluations: 10 })).status, 'found');
+  const optimized = await a.optimize({ parameters: { x: { values: [1, 2] } }, evaluate: () => { calls++; return {}; }, objective: { metric: 'loss', direction: 'minimize', unit: 'dB' }, constraints: [], maxEvaluations: 2, seed: 1 });
+  assert.equal(optimized.status, 'failed');
+  assert.equal(calls, 4 + 1 + optimized.history.length);
 });
 
 test('syntax and runtime errors preserve filename, user line and column', async () => {
