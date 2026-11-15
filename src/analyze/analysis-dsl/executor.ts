@@ -13,6 +13,7 @@ import { createDcExecutor } from './dc-executor.ts';
 import { dcObservedVoltage } from './dc-observation.ts';
 import {createElectricalExecutor,circuitObservedVoltage,circuitObservedTransfer} from './electrical-executor.ts';
 import {createThermalExecutor,thermalObservedData} from './thermal-executor.ts';
+import {createElectrothermalExecutor} from './electrothermal-executor.ts';
 import { object } from './descriptions.ts';
 import {createPiBoardExecutor} from './pi-board-executor.ts';
 import {createTransientExecutor,transientObservedVoltage} from './transient-executor.ts';
@@ -36,7 +37,7 @@ export interface AnalysisTask<K extends AnalysisKind = AnalysisKind> {
 /** Internal serializable result envelope; accessors are created on JS side.
  * Test executors inject this envelope explicitly; production never fabricates it. */
 export interface ExecutionResult {
-  id: string; status: 'complete' | 'partial'; method: string;
+  id: string; status: 'complete' | 'partial' | 'failed'; method: string;
   diagnostics: readonly Diagnostic[]; assumptions: readonly string[];
   metrics: Readonly<Record<string, DataDescription>>;
   finalState?: Json; violations?: readonly Json[];
@@ -55,8 +56,10 @@ export function createAnalysisExecutor(group = createGroupExecutor()): AnalysisE
   const transient=createTransientExecutor();
   const piBoard=createPiBoardExecutor();
   const thermal=createThermalExecutor();
+  const electrothermal=createElectrothermalExecutor(electrical,thermal);
   return async task => {
     if (task.kind==='thermal') return thermal(task as AnalysisTask<'thermal'>);
+    if (task.kind==='electrothermal') return electrothermal(task as AnalysisTask<'electrothermal'>);
     if(isLocalTarget(task))return local(task as AnalysisTask<'impedance'>);
     if (task.kind==='geometry') return geometry(task as AnalysisTask<'geometry'>);
     if (task.kind==='impedance') return crossSection(task as AnalysisTask<'impedance'>);

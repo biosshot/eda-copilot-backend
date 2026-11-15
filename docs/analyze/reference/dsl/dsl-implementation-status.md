@@ -25,8 +25,8 @@
 | `eye()` | да | **нет** | — |
 | `em()` (full-wave) | да | **нет** | исключён из текущей дорожной карты |
 | `emi()` | да | **нет** | — |
-| `thermal()` | да | **нет** | native P9 есть, DSL-исполнителя нет |
-| `electrothermal()` | да | **нет** | — |
+| `thermal()` | да | **да** | `src/analyze/analysis-dsl/thermal-executor.ts` поверх native P9: явная `network` или плата; steady/time; потери DC→thermal через `thermal-loss-transfer.ts` (сохранение мощности проверяется) |
+| `electrothermal()` | да | **частично** | P10 v1 (`unverified`, уровень «приближение»): только standalone steady — `electrical.circuit` + `thermal.network` + `couplings: [{element, thermalNode}]` для резистора с `referenceC`/`temperatureCoefficientPerK`; Picard по существующим DC- и thermal-исполнителям; сходимость `coupling({toleranceK, relativeLossTolerance, maxIterations, relaxation})`; сбой — `failed` с `ELECTROTHERMAL_NOT_CONVERGED` или `ELECTROTHERMAL_RUNAWAY` и историей; мощность связи проверяется до 1e-9. Нет платы/MOSFET (`operating`), нет transient (`ELECTROTHERMAL_TRANSIENT_NOT_IMPLEMENTED`) |
 
 ## `impedance()`
 

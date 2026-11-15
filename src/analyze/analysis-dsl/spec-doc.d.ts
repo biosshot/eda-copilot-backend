@@ -245,7 +245,7 @@ export interface Configurations {
   };
   pi: CommonOptions & ElectricalOptions & { domain?: 'frequency' | 'time'; frequency?: Frequency; frequencyHz?: number; time?: Time; initial?: 'steady' | FinalState };
   thermal: CommonOptions & ThermalOptions;
-  electrothermal: CommonOptions & Pick<PhysicalOptions, 'stackup' | 'materials'> & { electrical?: ElectricalOptions & { operating?: readonly { target: Selector; gateVoltageV: number }[] }; thermal?: ThermalOptions; couplings?: readonly Coupling[]; time?: Time };
+  electrothermal: CommonOptions & Pick<PhysicalOptions, 'stackup' | 'materials'> & { electrical?: ElectricalOptions & { operating?: readonly { target: Selector; gateVoltageV: number }[] }; thermal?: ThermalOptions; couplings?: readonly Coupling[]; time?: Time; coupling?: { toleranceK?: number; relativeLossTolerance?: number; maxIterations?: number; relaxation?: number } };
   impedance: CommonOptions & PhysicalOptions & { mesh?: CrossSectionMesh; target?: Line | Channel | Differential | Resource; method?: 'formula' | 'cross-section' | 'layered'; frequency?: Frequency; frequencyHz?: number; temperatureC?: number };
   tdr: CommonOptions & PhysicalOptions & { target?: Line | Channel | Differential | Resource | Network; referenceOhm?: number | Readonly<Record<string, number>>; riseS?: number; termination?: 'matched' | 'open' | 'short' | Model; time?: Time; temperatureC?: number };
   si: CommonOptions & PhysicalOptions & { initial?:'steady'|PhysicalState; channels?: readonly (Channel | Differential | Line)[]; network?: Network | Line; drivers?: readonly Driver[]; receivers?: readonly Receiver[]; time?: Time; temperatureC?: number };
@@ -266,7 +266,7 @@ export type Builder<K extends AnalysisKind> = {
 } & { prepare(): Promise<Preparation>; run(): Promise<Results[K]> };
 export interface FinalState { kind: 'finalState'; contextId: string; analysisId: string; data: Json }
 export interface ResultBase {
-  id: string; kind: AnalysisKind; status: 'complete' | 'partial'; diagnostics: readonly Diagnostic[];
+  id: string; kind: AnalysisKind; status: 'complete' | 'partial' | 'failed'; diagnostics: readonly Diagnostic[];
   method: string; inputs: Json; assumptions: readonly string[]; contextId: string;
 }
 export interface DcResult extends ResultBase {

@@ -60,7 +60,8 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
   };
   if (kind === 'thermal') { const boardMode = boardOr(['network']); checkThermal(config, '', !boardMode); }
   if (kind === 'electrothermal') {
-    required(['electrical', 'thermal', 'couplings', 'time']);
+    required(['electrical', 'thermal', 'couplings']);
+    if (config.time === undefined && (config.thermal as { domain?: string } | undefined)?.domain !== 'steady') required(['time']);
     const e = config.electrical, t = config.thermal;
     if (object(e) && object(t)) {
       const standalone = e.circuit !== undefined || t.network !== undefined;
