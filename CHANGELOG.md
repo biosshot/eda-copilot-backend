@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Fix: board-foil evidence reports the actual planned bytes when the memory budget is unbounded (wall-only `enforceBudget`), restoring P8 coupon PI runs; stale test paths/exports updated.
 
 - P14 v1 solve/optimize (2026-11-15; physics `unverified`, local heuristic search; `context.ts`, `spec-doc.d.ts` (`SearchResult.note` optional, search comment), `tests/analysis-search.test.ts`, `tests/analysis-dsl.test.ts` assertions updated from `ANALYZER_NOT_IMPLEMENTED` to real results): `solve()` is 1-D root finding over explicit values or an interval (ends, up to 9 grid points, bisection); `optimize()` is a seeded (mulberry32), bounded, derivative-free coordinate/pattern search with constraint violations and no global-optimum claim. Failed evaluations (throws, unavailable values, unit mismatch, missing metrics) are recorded in `history`. `validateSearch` is unchanged.
 

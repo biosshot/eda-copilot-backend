@@ -3,6 +3,7 @@
  * geometry connectivity/clearance/edge-clearance; explicit S/Z/Y multiports and bounded Touchstone;
  * supplied passive relaxation/authored-resonant-Y/full-RLC/real-K-delay time models through si().network (not PCB SI or TDR; timing and eye post-process only these waveforms).
  * Descriptions, validation, reports, explicit-value sweep and solve/optimize search (P14 v1, local/heuristic) are implemented.
+ * Analyzers or models outside this subset reject with ANALYZER_NOT_IMPLEMENTED (or a specific *_NOT_IMPLEMENTED code); results are never fabricated.
  * Coordinates: millimetres, absolute board Y down; no implicit material defaults.
  * This document imports only the package's public, existing board transport.
  */

@@ -41,7 +41,7 @@ function rustReports(paths: string[]): AnalysisImportReport[] {
 }
 
 test('single addon retains all production exports, versions and matching CommonJS declarations', () => {
-    assert.deepEqual(Object.keys(addon).sort(), [...previousExports, 'importAnalysisBoard', 'prepareAnalysisGeometry', 'validateAnalysisGeometry', 'prepareAnalysisConduction', 'AnalysisDcSession','AnalysisElectricalSession'].sort());
+    assert.deepEqual(Object.keys(addon).sort(), [...previousExports, 'importAnalysisBoard', 'prepareAnalysisGeometry', 'validateAnalysisGeometry', 'prepareAnalysisConduction', 'AnalysisDcSession','AnalysisElectricalSession','solveAnalysisThermal'].sort());
     const declaration = readFileSync('native/pcb-board-packer/index.d.ts', 'utf8') + readFileSync('native/analyze/index.d.ts', 'utf8');
     const aggregate = readFileSync('native/node-addon/index.d.cts', 'utf8');
     assert.match(aggregate, /export \* from '\.\.\/pcb-board-packer\/index\.js'/);
@@ -79,7 +79,7 @@ test('negative inputs and unavailable fill preserve Rust diagnostics without inv
         assert.ok(resolve(directory).startsWith(resolve(tmpdir()) + sep));
         rmSync(directory, { recursive: true, force: true });
     });
-    const base = JSON.parse(readFileSync('docs/experimental/analyze/routing-board-v2-example.json', 'utf8'));
+    const base = JSON.parse(readFileSync('docs/analyze/reference/input/routing-board-v2-example.json', 'utf8'));
     const unknownField = { ...base, unknownField: true };
     const unknownLayer = structuredClone(base);
     unknownLayer.copper.fixed.zones[0].layers[0] = 'MISSING';
@@ -98,7 +98,7 @@ test('negative inputs and unavailable fill preserve Rust diagnostics without inv
 });
 
 test('packer -> analyze -> packer retains F32 FTZ and independent F64 subnormal geometry', () => {
-    const board = JSON.parse(readFileSync('docs/experimental/analyze/routing-board-v2-example.json', 'utf8'));
+    const board = JSON.parse(readFileSync('docs/analyze/reference/input/routing-board-v2-example.json', 'utf8'));
     // Area is a nonzero F64 subnormal. A leaked packer FTZ guard makes it zero.
     board.outline = [{ x: 0, y: 0 }, { x: 1e-160, y: 0 }, { x: 0, y: 1e-160 }];
     const text = JSON.stringify(board);

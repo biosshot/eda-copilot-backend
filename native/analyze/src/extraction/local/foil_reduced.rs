@@ -4879,7 +4879,8 @@ pub(super) fn solve_compact_adaptive(
     }}}}
     result["quality"]["scope"]=serde_json::json!("compact-discrete");result["quality"]["physicalError"]=serde_json::json!("unverified");
     result["compactEvidence"]=serde_json::json!({"basis":"adaptive-mixed-closure","sectionHints":{"submitted":profiles.len(),"addedCurrentModes":added_profiles},"skinHints":{"eligibleGroups":eligible_groups,"submitted":submitted_hints,"added":added_hints,"upperHz":upper_hz,"coverage":"unverified"},"planarMaxOrder":magnetic.planar_max_order.get(),"planarMaxRelativeChange":magnetic.planar_max_change.get(),"planarUnconvergedPairs":magnetic.planar_unconverged.get(),"hmatrix":magnetic.hm.as_ref().map(|h|h.stats.json()),"localFast":magnetic.local_hierarchy.as_ref().and_then(|h|h.fast_evidence()),"crossFast":magnetic.cross.info.borrow().clone(),"mixedMaxRelativeChange":magnetic.mixed_max_change.get(),"mixedTetraFallbackCount":magnetic.mixed_fallback_count.get(),"mixedTetraFallbackTolerance":1e-10,"goalAdmittedNearPairs":magnetic.promoted_pairs.get(),"parallelPlWorkers":magnetic.pl_workers,"tetraSelfMaxRelativeChange":magnetic.self_max_change.get().max(magnetic.local_hierarchy.as_ref().map_or(0., |h|h.self_max_change())),"tetraPairAdaptiveTolerance":1e-10,"nearQuadratureEstimatedTolerance":1e-8,"originalVolumeActions":0,"scope":"compact-discrete","physicalAccuracy":"unverified","approximationError":"unverified"});
-    let planned_bytes = if wall == Duration::MAX {
+    // An unbounded allocation budget (external memory supervision) has no finite reservation to report.
+    let planned_bytes = if wall == Duration::MAX || budget.max_bytes > 1usize << 62 {
         space.planned_bytes.checked_add(field.planned_bytes())
             .and_then(|bytes| bytes.checked_add(magnetic.mixed_plan.planned_bytes))
             .and_then(|bytes| bytes.checked_add(dc.owned_bytes))

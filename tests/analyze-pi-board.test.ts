@@ -141,8 +141,9 @@ test('budget: a tiny DC budget is an honest refusal with a hint; the hybrid guar
  assert.equal(done.status, 'complete', JSON.stringify(done.error));
  assert.ok(captured);
  // Different axes keep the results out of each other's cache entries (the cache key does not contain the budget).
+ // enforceBudget bounds wall time only; memory stays under external supervision (decision 2026-11-15).
  const replay = (frequencyHz: number, enforce: boolean) => ({ ...captured!, request: { ...captured!.request, frequenciesHz: [frequencyHz],
-  budget: { maxSeconds: 600, maxMemoryMiB: 1 }, ...(enforce && { enforceBudget: true }) } }) as BoardFoilProblem;
+  budget: { maxSeconds: 0.001, maxMemoryMiB: 1 }, ...(enforce && { enforceBudget: true }) } }) as BoardFoilProblem;
  assert.doesNotThrow(() => execute(replay(2000, false)));
- assert.throws(() => execute(replay(3000, true)), /MEMORY_LIMIT|exceeds|budget/i);
+ assert.throws(() => execute(replay(3000, true)), /DEADLINE|exceeds|budget|time/i);
 });
