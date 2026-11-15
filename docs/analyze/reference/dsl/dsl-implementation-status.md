@@ -22,7 +22,7 @@
 | `networkParameters()` | да | **да** | сеть/connect/line; exact physical-port samples — только отдельный replay исходных точек и опор, без соединения |
 | `si()` | да | **частично** | `.network()` — поддержанный temporal subset; `.channels([...])` — совместное P7-извлечение по спектральному запросу drivers/time, с явными пробелами и без waveform/timing |
 | `tdr()` | да | **нет** | — |
-| `eye()` | да | **нет** | — |
+| `eye()` | да | **частично** | P11 v1 (`unverified`, уровень «приближение»): пост-обработка готового временного `signal` (например, из `si().network`); fold по UI = 1/bitRateBps после `discardS` со сдвигом `phaseS`, 64 фазовых бина на UI; height/voltageMargin в центральном окне ±0.1 UI, width/timingMargin — по спану открытости не менее 50% высоты. Без BER, протоколов, джиттера и эквализации; меньше 2 UI после `discardS` — отказ `EYE_SIGNAL_TOO_SHORT` |
 | `em()` (full-wave) | да | **нет** | исключён из текущей дорожной карты |
 | `emi()` | да | **нет** | — |
 | `thermal()` | да | **да** | `src/analyze/analysis-dsl/thermal-executor.ts` поверх native P9: явная `network` или плата; steady/time; потери DC→thermal через `thermal-loss-transfer.ts` (сохранение мощности проверяется) |
@@ -80,7 +80,7 @@
 | `linear-driver`, `rc-input` | **да** | — |
 | `thermal-network`, `heatsink`, `cooling` | **частично** | только как описание, без thermal-исполнителя |
 | `network` / Touchstone-подобный ресурс | **да** | проверяемый пассивный поднабор |
-| `timing({ kind: "sampling" / "propagation" })` | **нет** | accessor возвращает unavailable с диагностикой; P11 отложен |
+| `timing({ kind: "sampling" / "propagation" })` | **частично** | P11 v1 (`unverified`) только для waveform из поддержанного `si().network`: sampling — уровни в точках clock-события и setup/hold относительно порогов lowV/highV; propagation — задержка по фронту того же направления, skew (парование по порядку событий) и spread. Нет события, неоднозначное совпадение или переход вне окна дают unavailable с диагностикой, а не ноль; каналы и PCB не поддержаны |
 
 ## Что обновлять при изменении кода
 

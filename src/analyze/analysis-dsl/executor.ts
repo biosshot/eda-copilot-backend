@@ -17,6 +17,7 @@ import {createElectrothermalExecutor} from './electrothermal-executor.ts';
 import { object } from './descriptions.ts';
 import {createPiBoardExecutor} from './pi-board-executor.ts';
 import {createTransientExecutor,transientObservedVoltage} from './transient-executor.ts';
+import {eyeFromSignal,timingFromSignals} from './timing-eye.ts';
 
 /** Small analysis dispatch boundary. No transport/session, no callbacks, no
  * internal mesh or import operation masquerading as a completed analysis. */
@@ -46,6 +47,11 @@ export interface ExecutionResult {
   solution?: Json;
 }
 export type AnalysisExecutor = (task: AnalysisTask) => Promise<ExecutionResult>;
+async function eye(task: AnalysisTask<'eye'>): Promise<ExecutionResult> {
+  const config = task.config as Configurations['eye'];
+  const analysis = eyeFromSignal({ signal: config.signal as DataDescription, bitRateBps: config.bitRateBps!, discardS: config.discardS!, phaseS: config.phaseS!, thresholdV: config.thresholdV! });
+  return { id: `${task.contextId}:eye`, status: analysis.status, method: 'Supplied time-voltage fold (post-processing, no solver)', diagnostics: analysis.diagnostics, assumptions: analysis.assumptions, metrics: analysis.metrics };
+}
 export function createAnalysisExecutor(group = createGroupExecutor()): AnalysisExecutor {
   const local=createLocalExecutor();
   const geometry = createGeometryExecutor();
@@ -64,6 +70,7 @@ export function createAnalysisExecutor(group = createGroupExecutor()): AnalysisE
     if (task.kind==='geometry') return geometry(task as AnalysisTask<'geometry'>);
     if (task.kind==='impedance') return crossSection(task as AnalysisTask<'impedance'>);
     if (task.kind==='networkParameters') return frequency(task as AnalysisTask<'networkParameters'>);
+    if (task.kind==='eye') return eye(task as AnalysisTask<'eye'>);
     if (task.kind === 'si') {
       const si = task as AnalysisTask<'si'>;
       return si.config.channels ? group(si) : transient(si);
@@ -120,8 +127,8 @@ export function resultFor<K extends AnalysisKind>(task: AnalysisTask<K>, payload
   if (task.kind === 'si') Object.defineProperty(result, 'timing', { value: (options: TimingOptions) => {
     parse(timingOptions, json(options));
     validate(options);
-    const diagnostic: Diagnostic = { code: 'ANALYZER_NOT_IMPLEMENTED', severity: 'warning', message: 'SI timing extraction is not implemented' };
-    return freeze({ ...Object.fromEntries(['samples', 'events', 'setup', 'hold', 'delay', 'skew', 'delaySpread'].map(k => [k, unavailable('s', diagnostic.message, task.contextId)])), diagnostics: [diagnostic] });
+    const timing = timingFromSignals(parse(timingOptions, json(options)) as TimingOptions, p => metric('voltage', 'V', parse(port, json(p))));
+    return freeze({ ...Object.fromEntries((['samples', 'events', 'setup', 'hold', 'delay', 'skew', 'delaySpread'] as const).map(k => [k, value({ ...timing[k], contextId: task.contextId })])), diagnostics: timing.diagnostics });
   } });
   if (['pi', 'thermal'].includes(task.kind)) Object.defineProperty(result, 'finalState', { enumerable: !!safe.finalState, get: () => {
     if (safe.finalState === undefined) throw new AnalysisDslError('RESULT_UNAVAILABLE', 'No final state in result');

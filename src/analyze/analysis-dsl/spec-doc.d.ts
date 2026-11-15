@@ -1,7 +1,7 @@
 /** Analysis DSL, variant B. Executable source is JavaScript with top-level await.
  * Reference this file for IDE globals. Production supports board/conductor DC and explicit circuit DC/Z(f)/transient;
  * geometry connectivity/clearance/edge-clearance; explicit S/Z/Y multiports and bounded Touchstone;
- * supplied passive relaxation/authored-resonant-Y/full-RLC/real-K-delay time models through si().network (not PCB SI, TDR, eye or timing).
+ * supplied passive relaxation/authored-resonant-Y/full-RLC/real-K-delay time models through si().network (not PCB SI or TDR; timing and eye post-process only these waveforms).
  * Descriptions, validation, reports and explicit-value sweep are implemented.
  * Coordinates: millimetres, absolute board Y down; no implicit material defaults.
  * This document imports only the package's public, existing board transport.
@@ -304,8 +304,11 @@ export interface ThermalResult extends ResultBase {
 }
 export type TimingOptions = { kind: 'sampling'; data: readonly { port: Port; lowV: number; highV: number }[]; clock: { port: Port; thresholdV: number; edges: 'rising' | 'falling' | 'both'; sampleOffsetS: number }; window: { startS: number; stopS: number } }
   | { kind: 'propagation'; paths: readonly { from: Port; to: Port; sourceThresholdV: number; destinationThresholdV: number }[]; edges: 'rising' | 'falling' | 'both'; maxDelayS: number; window: { startS: number; stopS: number } };
-/** Timing processing is not implemented. Missing events, ambiguous matching or
- * window-limited intervals remain unavailable; there is no implicit zero delay. */
+/** Timing is implemented only for waveforms from supported si().network temporal
+ * runs: sampling gives clock-sampled levels and setup/hold; propagation gives
+ * same-edge threshold-crossing delay, skew (ordinal pairing) and spread. Missing
+ * events, ambiguous matching or window-limited intervals remain unavailable with
+ * diagnostics; there is no implicit zero delay. */
 export interface TimingResult { samples: DataValue; events: DataValue; setup: DataValue; hold: DataValue; delay: DataValue; skew: DataValue; delaySpread: DataValue; diagnostics: readonly Diagnostic[] }
 export interface SiResult extends ResultBase { voltage(port: Port): DataValue; differentialVoltage(ports: { positive: Port; negative: Port }): DataValue; timing(options: TimingOptions): TimingResult }
 /** Measurements are nominal distances in mm with source polygons/witness references.
