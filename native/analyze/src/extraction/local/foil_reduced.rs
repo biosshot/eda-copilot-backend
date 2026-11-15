@@ -3423,7 +3423,7 @@ mod native_memory_tests {
         let partitioned=native_partitioned_sizes(n,m,v,i,base).unwrap();
         assert_eq!(global-partitioned,native_global_sparse_bytes(m).unwrap());
         let cell=std::mem::size_of::<Cell>()+4*std::mem::size_of::<(usize,f64)>();
-        assert_eq!(partitioned,base+n*1024+m*(cell+32*std::mem::size_of::<f64>())
+        assert_eq!(partitioned,base+n*1024+m*(cell+36*std::mem::size_of::<f64>())
             +(n*v+m*i)*64+(v+i)*(v+i)*2048);
         assert!(AllocationBudget{max_bytes:partitioned-1,max_nodes:n,max_tetrahedra:m}.check(partitioned).is_err());
         assert!(native_partitioned_sizes(n,usize::MAX,v,i,base).is_err());

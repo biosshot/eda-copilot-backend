@@ -347,7 +347,9 @@ test('compact magnetic evidence is checked without bypassing ownership or power 
     v=>{v.provenance.compactOperator!.planarMaxOrder=0;},
     v=>{v.provenance.compactOperator!.planarMaxOrder=68;},
     v=>{v.provenance.compactOperator!.planarMaxOrder=9;},
-    ...(['planarMaxRelativeChange','mixedMaxRelativeChange','tetraSelfMaxRelativeChange','tetraPairAdaptiveTolerance'] as const).map(key=>(v:AnalysisBoardFoilCheckedReport)=>{v.provenance.compactOperator![key]=1e-7;}),
+    // Noise tier (9754515): pair/self/planar relative changes are accepted up to 2e-3 outside the approximation tier; the pair adaptive tolerance stays at 1e-8.
+    ...(['planarMaxRelativeChange','mixedMaxRelativeChange','tetraSelfMaxRelativeChange'] as const).map(key=>(v:AnalysisBoardFoilCheckedReport)=>{v.provenance.compactOperator![key]=3e-3;}),
+    v=>{v.provenance.compactOperator!.tetraPairAdaptiveTolerance=1e-7;},
     v=>{v.provenance.compactOperator!.mixedMaxRelativeChange=NaN;},
     v=>{v.provenance.sourceMapping=[];},
     v=>{v.samples[0].columns[0].copperLossW=0;},

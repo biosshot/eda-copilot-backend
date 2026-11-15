@@ -10,7 +10,7 @@ import type { BoardFoilProblem, BoardFoilReport } from '../src/analyze/types.ts'
 
 const budget={maxSeconds:30,maxMemoryMiB:256};
 const plan:AutoFoilPlan={
- boardJson:'{}',roiMm:[[0,0],[1,1]],geometry:{electrodes:[
+ boardJson:'{}',roiMm:[[0,0],[1,1]],geometry:{stack:[{name:'TOP',copper:true,conductivitySM:58e6},{name:'BOTTOM',copper:true,conductivitySM:58e6}],electrodes:[
   {name:'a',sourcePath:'pads[0]',layer:'TOP',upper:false},
   {name:'b',sourcePath:'pads[1]',layer:'BOTTOM',upper:true},
  ]},
@@ -56,10 +56,23 @@ function report(problem:BoardFoilProblem):BoardFoilReport{
  Object.assign(result.provenance,{automaticPartition:undefined,magneticOperator:undefined,
   compactOperator:{version:'compact-planar-v1',basis:'adaptive-mixed-closure',electricOperator:'layered-spatial-field-mesh',foilSupports:0,localTetraSupports:3,potentialCoordinates:4,currentCoordinates:9,approximationError:'unverified',scope:'compact-discrete',originalVolumeActions:0,physicalAccuracy:'unverified',planarMaxOrder:0,planarMaxRelativeChange:0,mixedMaxRelativeChange:0,tetraSelfMaxRelativeChange:0,tetraPairAdaptiveTolerance:0,nearQuadratureEstimatedTolerance:1e-8},
   hybridAssembly:{policy:'automatic-hybrid-v1',method:'global-compact-mixed',potentialCoordinates:4,currentCoordinates:9,physicalAccuracy:'unverified'}});
+ if(problem.request.operatorPolicy==='hybrid-planar-v3'){
+  // The auto-foil request always selects the hybrid planar policy, so the validator requires the shared skin-mesh record.
+  const top=frequenciesHz.at(-1)!,upper=problem.request.profileUpperHz??top;
+  const stack=((problem.geometry as {stack?:{name:string;copper:boolean;conductivitySM?:number}[]}).stack??[]).filter(l=>l.copper);
+  const depth=(c:number)=>1/Math.sqrt(Math.PI*upper*(4e-7*Math.PI)*c);
+  Object.assign(result.provenance,{operatorPolicy:'hybrid-planar-v3',copperSkinMesh:{version:3,requestedUpperHz:top,trainingUpperBoundHz:top,effectiveUpperHz:upper,
+   skinDepthDivisor:3,currentAndElectricShareMesh:true,scope:'shared mesh',
+   layers:stack.map(l=>({layer:l.name,skinDepthM:depth(l.conductivitySM!),maximumStepM:depth(l.conductivitySM!)/6,slabs:1})),roundBarrels:[]}});
+ }
  return result;
 }
 
 test('joint range runs one bounded same-geometry batch and preserves exact replay, package scope and full demand',()=>{
+ // This test checks the separately solved supplemental batch; the default one-pass union solve is covered by the high-board test.
+ const previousSeparate=process.env.P7_AUDIT_SEPARATE_SOLVE;
+ process.env.P7_AUDIT_SEPARATE_SOLVE='1';
+ try{
  const calls:BoardFoilProblem[]=[];
  let failBatch=false;
  const execute=(problem:BoardFoilProblem)=>{
@@ -116,11 +129,16 @@ test('joint range runs one bounded same-geometry batch and preserves exact repla
  assert.ok(refused.frequencyAudit?.interpolation.unverified.some(gap=>gap.reason==='physical-evaluation'));
  assert.deepEqual(refused.frequenciesHz,range.frequenciesHz);
  assert.deepEqual(refused.frequencyAudit?.adaptiveResponse.points.map(p=>p.frequencyHz),[1500,7500]);
+ }finally{
+  if(previousSeparate===undefined)delete process.env.P7_AUDIT_SEPARATE_SOLVE;else process.env.P7_AUDIT_SEPARATE_SOLVE=previousSeparate;
+ }
 });
 
 test('frequency audit rejects valid compact basis changes but permits quadrature statistics changes',()=>{
  const previous=process.env.P7_COMPACT_PLANAR;
  process.env.P7_COMPACT_PLANAR='1';
+ const previousSeparate=process.env.P7_AUDIT_SEPARATE_SOLVE;
+ process.env.P7_AUDIT_SEPARATE_SOLVE='1'; // basis changes are compared between separately solved batches
  const calls:BoardFoilProblem[]=[];
  const run=(change:'basis'|'quadrature')=>{
   calls.length=0;
@@ -156,7 +174,8 @@ test('frequency audit rejects valid compact basis changes but permits quadrature
   const quadrature=run('quadrature');
   assert.equal(quadrature.frequencyAudit?.batch.status,'checked');
   assert.ok(quadrature.frequencyAudit?.adaptiveResponse.points.length>2);
- }finally{if(previous===undefined)delete process.env.P7_COMPACT_PLANAR;else process.env.P7_COMPACT_PLANAR=previous;}
+ }finally{if(previous===undefined)delete process.env.P7_COMPACT_PLANAR;else process.env.P7_COMPACT_PLANAR=previous;
+  if(previousSeparate===undefined)delete process.env.P7_AUDIT_SEPARATE_SOLVE;else process.env.P7_AUDIT_SEPARATE_SOLVE=previousSeparate;}
 });
 
 
