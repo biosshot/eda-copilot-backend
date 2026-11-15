@@ -236,6 +236,8 @@ export interface AnalysisBoardFoilCheckedRequest {
     budget: { maxSeconds: number; maxMemoryMiB: number };
     /** Apply `budget` as a real memory ceiling and wall limit in the hybrid path (default: unlimited, as before). */
     enforceBudget?: boolean;
+    /** P8: also return the shared reduced coupled-RLC model as `reducedModel` (hybrid path only; large, default off). */
+    exportReducedModel?: boolean;
     maxIterations?: number;
     attachments?: { id: string; electrodes: [string, string]; model: AnalysisFrequencyResource }[];
 }
@@ -278,6 +280,11 @@ export interface AnalysisBoardFoilCheckedReport {
     coverage: 'unverified';
     representation: 'S';
     operator?: 'compact-planar-homogeneous-prototype' | 'compact-planar-layered-prototype';
+    /** Open-port reduced model behind the S samples (only with `exportReducedModel`). R/L carry the skin profile frozen at `profileUpperHz`. */
+    reducedModel?: {
+        model: {format:'coupled-rlc';referenceTopology:string;potentialNodes:string[];currentDofs:string[];incidence:[number,number,number][];portIncidence:[number,number,number][];resistanceOhm:[number,number,number][];inductanceH:[number,number,number][];capacitanceF:[number,number,number][];conservedPotentialModes:number[][];structuralGaugeModes?:number[][];portTerminals?:unknown[]};
+        portCount: number; trainedAtHz: number[]; profileUpperHz: number; scope: 'compact-discrete'; physicalAccuracy: 'unverified';
+    };
     modelRegimeAudit?: {status:'pass'|'fail';scope:'discrete-model-only';physicalCoverage:'unverified';probeHz:number;dcPortVoltagesV:number[][];acPortVoltagesV:{real:number[];imaginary:number[]}[];timeDiagnostics:{relativePeakErrors:number[];timeQuality:{relativeResidual:number;maximumLocalErrorRatio:number;energyBalanceJ:number;energyNormalizationJ:number;maximumAcceptedStepS:number}[]}[]};
     frequenciesHz: number[];
     referenceOhm: number[];

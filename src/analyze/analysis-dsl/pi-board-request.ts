@@ -8,6 +8,9 @@ import {AnalysisDslError} from './schema.ts';
  * One port = one pair of original physical pads. Nothing is merged, grouped or guessed. */
 export const PI_PORT_LIMIT=16;
 export type PiPortRole='source'|'load'|'decap'|'component';
+/** Small-signal AC termination of a port (stage 3). `series`: R+jwL (+1/jwC when `c` is set); `shunt`: G in parallel with jwC;
+ * `short`: zero output impedance. No term = open. Several terms on one pad pair add as admittances. */
+export type PiAcTerm={kind:'short'}|{kind:'series';r:number;l:number;c?:number}|{kind:'shunt';g:number;c:number};
 export interface PiBoardPort{
  id:string;
  roles:PiPortRole[];
@@ -17,6 +20,7 @@ export interface PiBoardPort{
  positiveLayer?:string;negativeLayer?:string;
  /** Small-signal DC termination of the port seen by the others: conductance in S, 0 = open, Infinity = short. */
  conductanceS:number;
+ terms:PiAcTerm[];
 }
 export interface PiBoardAssembly{
  ports:PiBoardPort[];
@@ -29,6 +33,17 @@ export interface PiBoardAssembly{
 function dcConductance(m:T.LocalModel):number{
  const r=m.kind==='resistor'?m.resistanceOhm:m.kind==='inductor'?m.seriesResistanceOhm??0:m.kind==='rc-input'?m.resistanceOhm:undefined;
  return m.kind==='capacitor'||r===undefined?0:r>0?1/r:Infinity;
+}
+/** AC termination of a local shunt model. Capacitor and inductor parasitics are exactly the authored ones (`ideal` = none). */
+function acTerm(m:T.LocalModel):PiAcTerm|undefined{
+ switch(m.kind){
+  case'resistor':return {kind:'series',r:m.resistanceOhm,l:0};
+  case'capacitor':return {kind:'series',r:m.esrOhm??0,l:m.eslH??0,c:m.capacitanceF};
+  case'inductor':return {kind:'series',r:m.seriesResistanceOhm??0,l:m.inductanceH};
+  case'rc-input':return {kind:'shunt',g:m.resistanceOhm?1/m.resistanceOhm:0,c:m.capacitanceF};
+  case'linear-driver':return m.outputResistanceOhm>0?{kind:'series',r:m.outputResistanceOhm,l:0}:{kind:'short'};
+  default:return undefined;
+ }
 }
 const fail=(code:string,message:string,diagnostics:T.Diagnostic[]=[]):never=>{throw new AnalysisDslError(code,message,diagnostics);};
 const padOf=(task:Pick<AnalysisTask,'board'>,selector:T.Selector)=>task.board!.pads.filter(p=>selector.kind==='padId'?p.id===selector.id:selector.kind==='pad'&&p.component===selector.designator&&p.number===selector.number);
@@ -48,18 +63,18 @@ export function assemblePiBoard(task:AnalysisTask<'pi'>):PiBoardAssembly{
   return s;
  };
  const key=(s:T.Selector)=>'pad:'+padOf(task,s)[0].id;
- const add=(role:PiPortRole,origin:string,positive:T.Selector,negative:T.Selector,conductanceS=0,layers:{positiveLayer?:string;negativeLayer?:string}={}):PiBoardPort=>{
+ const add=(role:PiPortRole,origin:string,positive:T.Selector,negative:T.Selector,conductanceS=0,layers:{positiveLayer?:string;negativeLayer?:string}={},term?:PiAcTerm):PiBoardPort=>{
   if(key(positive)===key(negative))fail('INVALID_REFERENCE','PI port needs distinct positive and return pads: '+origin);
   const same=ports.find(p=>key(p.positive)===key(positive)&&key(p.negative)===key(negative));
-  if(same){if(!same.roles.includes(role))same.roles.push(role);same.origin.push(origin);same.conductanceS+=conductanceS;return same;}
-  const port:PiBoardPort={id:'pi-port:'+ports.length,roles:[role],origin:[origin],positive,negative,conductanceS,...layers};
+  if(same){if(!same.roles.includes(role))same.roles.push(role);same.origin.push(origin);same.conductanceS+=conductanceS;if(term)same.terms.push(term);return same;}
+  const port:PiBoardPort={id:'pi-port:'+ports.length,roles:[role],origin:[origin],positive,negative,conductanceS,terms:term?[term]:[],...layers};
   ports.push(port);return port;
  };
- const fromHandle=(role:PiPortRole,handle:T.Port,conductanceS=0)=>{
+ const fromHandle=(role:PiPortRole,handle:T.Port,conductanceS=0,term?:PiAcTerm)=>{
   const input=description(handle.id)?.input;
   if(!object(input)||!input.positive||!input.negative)return fail('PI_PORT','PI source/load port is not a board pad pair');
   return add(role,handle.id,single(input.positive),single(input.negative),conductanceS,{
-   ...(typeof input.positiveLayer==='string'&&{positiveLayer:input.positiveLayer}),...(typeof input.negativeLayer==='string'&&{negativeLayer:input.negativeLayer})});
+   ...(typeof input.positiveLayer==='string'&&{positiveLayer:input.positiveLayer}),...(typeof input.negativeLayer==='string'&&{negativeLayer:input.negativeLayer})},term);
  };
  const local=(model:T.Model,what:string,kinds:readonly string[])=>{
   const resolved=electricalModel(model,task,['pi']);
@@ -72,10 +87,10 @@ export function assemblePiBoard(task:AnalysisTask<'pi'>):PiBoardAssembly{
  if(!sources.length)fail('MISSING_FIELD','Board PI requires at least one source');
  for(const [i,source] of sources.entries()){
   if(source.model===undefined)fail('PI_COMPONENT_MODEL','Source '+i+' has no VRM model; use model:"ideal" explicitly or a linear-driver');
-  let g=Infinity;
+  let g=Infinity,term:PiAcTerm|undefined={kind:'short'};
   if(source.model==='ideal')warnings.push({code:'PI_IDEAL_SOURCE',severity:'warning',message:'Source '+i+' is an explicit ideal VRM (zero output impedance)'});
-  else{const m=local(source.model as T.Model,'source:'+i,['linear-driver']);if(m.kind==='linear-driver'&&m.outputResistanceOhm>0)g=1/m.outputResistanceOhm;}
-  fromHandle('source',source.port,g);
+  else{const m=local(source.model as T.Model,'source:'+i,['linear-driver']);if(m.kind==='linear-driver'&&m.outputResistanceOhm>0)g=1/m.outputResistanceOhm;term=acTerm(m);}
+  fromHandle('source',source.port,g,term);
  }
  // Loads: explicit ports first, then the existing prepare resolver realised pair by pair.
  for(const [i,load] of (Array.isArray(c.loads)?c.loads:[]).entries()){
@@ -83,7 +98,8 @@ export function assemblePiBoard(task:AnalysisTask<'pi'>):PiBoardAssembly{
   if(load.powerW!==undefined)fail('UNSUPPORTED_NETWORK_MODEL','Constant-power load is nonlinear and unsupported');
   if([load.currentA,load.resistanceOhm,load.model].filter(v=>v!==undefined).length!==1)fail('UNSUPPORTED_NETWORK_MODEL','Choose one of currentA/resistanceOhm/model for load '+i);
   const m=load.model?local(load.model,'load:'+i,['resistor','capacitor','inductor','rc-input']):undefined;
-  fromHandle('load',load.port,load.resistanceOhm!==undefined?1/load.resistanceOhm:m?dcConductance(m):0);
+  fromHandle('load',load.port,load.resistanceOhm!==undefined?1/load.resistanceOhm:m?dcConductance(m):0,
+   load.resistanceOhm!==undefined?{kind:'series',r:load.resistanceOhm,l:0}:m?acTerm(m):undefined);
  }
  for(const l of task.resolvedLoads??[])if(object(l)&&Array.isArray(l.distributions)){
   type Pin={padId:string;currentA:number};
@@ -112,7 +128,7 @@ export function assemblePiBoard(task:AnalysisTask<'pi'>):PiBoardAssembly{
   const pins=entry.pins??{},pn=Object.values(pins);
   const [a,b]=typeof pins.positive==='string'&&typeof pins.negative==='string'?[pins.positive,pins.negative]:pn;
   if(pn.length!==2||typeof a!=='string'||typeof b!=='string'||a===b)fail('PI_COMPONENT_MODEL','Component '+entry.designator+' needs exactly two explicitly mapped pins');
-  add('decap','component:'+entry.designator,single({kind:'pad',designator:entry.designator,number:a}),single({kind:'pad',designator:entry.designator,number:b}),dcConductance(model));
+  add('decap','component:'+entry.designator,single({kind:'pad',designator:entry.designator,number:a}),single({kind:'pad',designator:entry.designator,number:b}),dcConductance(model),{},acTerm(model));
   legs.push(entry);
  }
  // A two-pad board part touching a PI net must be described, never silently open or shorted.

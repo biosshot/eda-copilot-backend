@@ -83,8 +83,8 @@ test('assembly refuses missing models, undescribed rail parts, too many ports an
  r = await run(withParts(many.map((k, i): [string, number] => [k, i * .5 + .5])),
   scenario(base(`{port:port('J1'),currentA:1},` + many.map(k => `{port:port('${k}'),currentA:.1}`).join(','))), createPiBoardExecutor(never));
  assert.equal(codeOf(r.result), 'PI_PORT_LIMIT', JSON.stringify(r.result.error));
- // Stage gates: AC axis and time domain are refused until stages 3-4.
- r = await run(withCap, scenario(base(loads, '.frequencyHz(1e6)')), createPiBoardExecutor(never));
+ // Stage gate: the time domain is refused until stage 4 (the AC axis is stage 3, tests/analyze-pi-frequency.test.ts).
+ r = await run(withCap, scenario(base(loads, `.time({stopS:1e-6,sampleStepS:1e-8}).initial('steady')`)).replace("domain('frequency')", "domain('time')"), createPiBoardExecutor(never));
  assert.equal(codeOf(r.result), 'PI_NOT_IMPLEMENTED_STAGE');
  // Ideal decoupling is accepted only when explicit, and is reported.
  const idealCap = cap(',ideal:true');

@@ -2333,6 +2333,11 @@ fn solve_checked_mesh_impl_policy(
         }
         result["quality"]["scope"] = json!("compact-discrete");
         result["quality"]["physicalError"] = json!("unverified");
+        if super::board_foil::reduced_model_export() {
+            // P8: the final reduced coupled-RLC model the S samples were evaluated from (open ports, no terminations).
+            // R and L carry the skin profile frozen at `profileUpperHz`; the model was trained on `trainedAtHz`.
+            result["reducedModel"] = json!({"model":model,"portCount":request.ports.len(),"trainedAtHz":frequencies_hz,"profileUpperHz":effective_upper,"scope":"compact-discrete","physicalAccuracy":"unverified"});
+        }
         return Ok(result);
     }
     let field_budget = AllocationBudget {

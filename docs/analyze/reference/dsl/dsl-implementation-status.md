@@ -18,7 +18,7 @@
 | `analysis({ board })` | да | **да** | Снимок платы неизменяем |
 | `geometry()` | да | **да** | connectivity / clearance / edge-clearance |
 | `dc()` | да | **да** | плата, `circuit`, одиночный `conductor` |
-| `pi()` | да | **частично** | с явным `circuit`; на плате (без `circuit`) только DC-точка `frequencyHz(0)`: порты из pad-пар, N-портовый DC (P8 этап 2, `unverified`); AC-ось и время — `PI_NOT_IMPLEMENTED_STAGE` до этапов 3-4 |
+| `pi()` | да | **частично** | с явным `circuit`; на плате (без `circuit`): DC-точка `frequencyHz(0)` (P8 этап 2) и частотный режим `frequencyHz(f>0)` / `frequency({...})` (P8 этап 3, `unverified`, уровень «приближение»): сокращённая RLC-модель извлечения по полосам (1 кГц–`f_hi`, `f_hi` ≤ 40 МГц и ≤ предел квазистатики платы) в композиции с развязкой/VRM/нагрузками; `impedance(port)`, `transfer({from,to})`, `resonances`, `solution.zMatrix`, `bandFit`, `dcStitch`; точки вне полосы — `null`/`unavailable`, статус `partial`; время — `PI_NOT_IMPLEMENTED_STAGE` до этапа 4 |
 | `networkParameters()` | да | **да** | сеть/connect/line; exact physical-port samples — только отдельный replay исходных точек и опор, без соединения |
 | `si()` | да | **частично** | `.network()` — поддержанный temporal subset; `.channels([...])` — совместное P7-извлечение по спектральному запросу drivers/time, с явными пробелами и без waveform/timing |
 | `tdr()` | да | **нет** | — |

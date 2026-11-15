@@ -681,6 +681,9 @@ pub struct CheckedRequest {
     /// hybrid path of every earlier caller; the DSL `pi()` executor sets it.
     #[serde(default)]
     pub enforce_budget: bool,
+    /// P8: also return the shared reduced coupled-RLC model (`reducedModel`) of the hybrid path. Off by default (large).
+    #[serde(default)]
+    pub export_reduced_model: bool,
     pub max_iterations: Option<usize>,
     #[serde(default)]
     pub operator_policy: CheckedOperator,
@@ -690,6 +693,13 @@ pub struct CheckedRequest {
     #[serde(default)]
     pub attachments: Vec<super::checked_packages::Attachment>,
 }
+
+thread_local!{static EXPORT_REDUCED_MODEL:std::cell::Cell<bool>=const{std::cell::Cell::new(false)};}
+/// True while the calling thread solves a request with `exportReducedModel` (restored on drop, like `RequestMemory`).
+pub(super) fn reduced_model_export()->bool{EXPORT_REDUCED_MODEL.with(|c|c.get())}
+struct ReducedModelExport(bool);
+impl ReducedModelExport{fn set(on:bool)->Self{Self(EXPORT_REDUCED_MODEL.with(|c|c.replace(on)))}}
+impl Drop for ReducedModelExport{fn drop(&mut self){EXPORT_REDUCED_MODEL.with(|c|c.set(self.0));}}
 
 /// Limits of the checked hybrid path: unlimited unless the request asks for the budget to be enforced.
 fn enforced_limits(enforce: bool, budget: &crate::electrical::Budget) -> Result<(super::AllocationBudget, Duration)> {
@@ -725,6 +735,7 @@ pub fn solve_checked(
     let port_count = geometry.ports.len();
     let axis = request.frequencies_hz;
     let _request_memory = super::roi_fallback::RequestMemory::set(request.budget.max_memory_mi_b);
+    let _export_reduced = ReducedModelExport::set(request.export_reduced_model);
     let operator = CheckedOperator::HybridPlanarV3;
     let partition = mixed_conductor::PartitionPolicy::AutomaticHybridV1;
     operator.validate_partition(partition)?;
