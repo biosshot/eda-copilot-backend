@@ -18,6 +18,7 @@ import { object } from './descriptions.ts';
 import {createPiBoardExecutor} from './pi-board-executor.ts';
 import {createTransientExecutor,transientObservedVoltage} from './transient-executor.ts';
 import {createTdrExecutor} from './tdr-executor.ts';
+import {createEmiExecutor} from './emi-executor.ts';
 import {eyeFromSignal,timingFromSignals} from './timing-eye.ts';
 
 /** Small analysis dispatch boundary. No transport/session, no callbacks, no
@@ -65,10 +66,12 @@ export function createAnalysisExecutor(group = createGroupExecutor()): AnalysisE
   const thermal=createThermalExecutor();
   const electrothermal=createElectrothermalExecutor(electrical,thermal);
   const tdr=createTdrExecutor(transient);
+  const emi=createEmiExecutor(transient);
   return async task => {
     if (task.kind==='thermal') return thermal(task as AnalysisTask<'thermal'>);
     if (task.kind==='electrothermal') return electrothermal(task as AnalysisTask<'electrothermal'>);
     if (task.kind==='tdr') return tdr(task as AnalysisTask<'tdr'>);
+    if (task.kind==='emi') return emi(task as AnalysisTask<'emi'>);
     if(isLocalTarget(task))return local(task as AnalysisTask<'impedance'>);
     if (task.kind==='geometry') return geometry(task as AnalysisTask<'geometry'>);
     if (task.kind==='impedance') return crossSection(task as AnalysisTask<'impedance'>);

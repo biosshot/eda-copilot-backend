@@ -120,7 +120,9 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
     required(['kind']);
     if (config.kind === 'risk') { if (!state.board) issue('BOARD_REQUIRED', 'EMI risk requires board'); required(['signals', 'rules']); if (config.excitations || config.time || config.frequency || config.measurement) issue('CONFLICTING_MODES', 'Risk rules do not accept solver excitation/measurement modes'); }
     else if (config.kind) {
-      if (!config.circuit && !state.board) issue('MISSING_MODEL', 'EMI needs board or circuit');
+      const emiPorts = [...((config.excitations ?? []) as { port?: unknown }[]), ...([config.measurement].flat() as ({ port?: unknown } | undefined)[])].map(x => x?.port);
+      const standaloneNetwork = emiPorts.some(p => typeof descriptionInput(state, p)?.owner === 'string');
+      if (!config.circuit && !state.board && !standaloneNetwork) issue('MISSING_MODEL', 'EMI needs board, circuit or network');
       if (config.circuit && config.kind === 'coupling') issue('CONFLICTING_MODES', 'Board coupling requires board; circuit is conducted mode');
       required(['excitations', 'measurement']);
       if (!config.time) frequencyRequired();
@@ -208,7 +210,7 @@ export function prepare(state: ContextState, kind: T.AnalysisKind, config: Recor
   issue('PHYSICAL_REQUIREMENTS_UNVERIFIED', 'Structure validation does not establish physical readiness; extraction/model applicability is not evaluated', undefined, 'warning');
   const boardGroup = kind === 'si' && !!state.board && Array.isArray(config.channels) && config.channels.length > 0 &&
     config.channels.every(channel => object(channel) && (channel.kind === 'channel' || channel.kind === 'differential'));
-  const available=boardGroup||kind==='impedance'&&config.method==='layered'&&object(config.target)&&['channel','differential'].includes(String(config.target.kind))||kind==='geometry'||kind==='dc'||kind==='pi'&&(!!config.circuit||!!state.board)||kind==='networkParameters'||kind==='si'&&object(config.network)&&['network','connect'].includes(String(config.network.kind))||kind==='impedance'&&config.method==='cross-section'&&object(config.target)&&config.target.kind==='line';
+  const available=boardGroup||kind==='emi'&&(config.kind==='conducted'||config.kind==='coupling')&&!config.circuit&&!state.board&&!!config.time||kind==='impedance'&&config.method==='layered'&&object(config.target)&&['channel','differential'].includes(String(config.target.kind))||kind==='geometry'||kind==='dc'||kind==='pi'&&(!!config.circuit||!!state.board)||kind==='networkParameters'||kind==='si'&&object(config.network)&&['network','connect'].includes(String(config.network.kind))||kind==='impedance'&&config.method==='cross-section'&&object(config.target)&&config.target.kind==='line';
   if (boardGroup) assumptions.push('Joint P7 extraction uses authored sources and time for input spectral demand. Board waveforms and timing remain unavailable.');
   else if(kind==='si'&&available)assumptions.push('Explicit supplied passive temporal model only: supported relaxation/authored resonant Y/full RLC or real-K delay class; not board channels or arbitrary sampled RF; timing() and eye() only post-process these waveforms. Numerical/model applicability is checked by run().');
   if (!available) issue('ANALYZER_NOT_IMPLEMENTED', `No production ${kind} executor for this model`, undefined, 'warning');

@@ -231,7 +231,7 @@ export interface ThermalOptions extends PhysicalOptions { network?: ThermalNetwo
 export type Rule = { kind: 'connectivity' } | { kind: 'clearance' | 'edge-clearance'; minMm: number }
   | { kind: 'length'; channel: Channel; maxMm: number } | { kind: 'skew'; channels: readonly Channel[]; maxMm: number }
   | { kind: 'reference-continuity'; channel: Channel } | { kind: 'return-transition'; channel: Channel; maxDistanceMm: number };
-export type Excitation = { name?: string; port: Port; voltageV?: number | Waveform; currentA?: number | Waveform; voltageSpectrum?: Spectrum; currentSpectrum?: Spectrum }
+export type Excitation = { name?: string; port: Port; voltageV?: number | Waveform; currentA?: number | Waveform; /** Required positive Thevenin source resistance for voltage excitations (P12 v1 standalone network). */ outputResistanceOhm?: number; voltageSpectrum?: Spectrum; currentSpectrum?: Spectrum }
   | { name: string; model: Resource; placement: { positionMm: { x: number; y: number; z: number }; rotationDeg: { x: number; y: number; z: number } }; voltageV?: number | Waveform; currentA?: number | Waveform };
 export interface Measurement { id?: string; port: Port; quantity: 'voltage' | 'current'; model?: Model; detector?: 'rms' | 'peak'; bandwidthHz?: number }
 export interface EmExcitation { port: Port; incidentPowerW: number; phaseDeg: number }

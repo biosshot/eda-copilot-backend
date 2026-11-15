@@ -135,7 +135,7 @@ const freq = { frequency: frequency.optional(), frequencyHz: positive.optional()
 const refOhm = z.union([positive, z.record(text, positive)]);
 const measurement = z.strictObject({ id: text.optional(), port, quantity: z.enum(['voltage', 'current']), model: model.optional(), detector: z.enum(['rms', 'peak']).optional(), bandwidthHz: positive.optional() });
 const excitation = z.union([
-  z.strictObject({ name: text.optional(), port, voltageV: z.union([finite, waveform]).optional(), currentA: z.union([finite, waveform]).optional(), voltageSpectrum: spectrum.optional(), currentSpectrum: spectrum.optional() }),
+  z.strictObject({ name: text.optional(), port, voltageV: z.union([finite, waveform]).optional(), currentA: z.union([finite, waveform]).optional(), outputResistanceOhm: positive.optional(), voltageSpectrum: spectrum.optional(), currentSpectrum: spectrum.optional() }),
   z.strictObject({ name: text, model: resource, placement: z.strictObject({ positionMm: z.strictObject({ x: finite, y: finite, z: finite }), rotationDeg: z.strictObject({ x: finite, y: finite, z: finite }) }), voltageV: z.union([finite, waveform]).optional(), currentA: z.union([finite, waveform]).optional() }),
 ]).refine(v => ['voltageV', 'currentA', 'voltageSpectrum', 'currentSpectrum'].filter(k => k in v && v[k as keyof typeof v] !== undefined).length === 1, 'Choose one excitation');
 const emExcitation = z.union([z.strictObject({ port, incidentPowerW: positive, phaseDeg: finite }), excitation]);
