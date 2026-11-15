@@ -270,7 +270,12 @@ fn loaded_with_modes(
 
 pub fn run(board: &crate::model::Board, request: Request, seconds: f64) -> Result<Value> {
     let started = Instant::now();
-    let max_seconds = board_prepare::verification_limit("P7_VERIFY_SECONDS", 300, 1, 3600)? as f64;
+    // The request budget is the limit; P7_VERIFY_SECONDS caps it only when explicitly set (no hidden clamp).
+    let max_seconds = if std::env::var_os("P7_VERIFY_SECONDS").is_some() {
+        board_prepare::verification_limit("P7_VERIFY_SECONDS", 300, 1, 3600)? as f64
+    } else {
+        f64::INFINITY
+    };
     if !seconds.is_finite() || seconds <= 0. || seconds > max_seconds {
         return Err(error("DEADLINE", "invalid remaining local DC wall budget"));
     }

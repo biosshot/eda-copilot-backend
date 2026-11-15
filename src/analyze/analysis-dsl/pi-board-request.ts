@@ -132,13 +132,20 @@ export function assemblePiBoard(task:AnalysisTask<'pi'>):PiBoardAssembly{
   legs.push(entry);
  }
  // A two-pad board part touching a PI net must be described, never silently open or shorted.
- const railNets=new Set(ports.flatMap(p=>[p.positive,p.negative]).flatMap(s=>padOf(task,s).map(pad=>pad.net).filter(Boolean)));
+ // A part bridging two PI nets (rail-return, rail-rail) is a PDN branch and must be described.
+ // A part from a supply net to an unrelated net is treated open with an approximation warning;
+ // a part from a return-only net to an unrelated net is not on the PDN path.
+ const netsOf=(sides:('positive'|'negative')[])=>new Set(ports.flatMap(p=>sides.map(s=>p[s])).flatMap(s=>padOf(task,s).map(pad=>pad.net).filter(Boolean)));
+ const railNets=netsOf(['positive','negative']),supplyNets=netsOf(['positive']);
  const known=new Set([...legs.map(l=>l.designator),...(c.components??[]).map(l=>l.designator),
   ...ports.flatMap(p=>[p.positive,p.negative]).flatMap(s=>padOf(task,s).map(pad=>pad.component)),
   ...(Array.isArray(c.loads)?c.loads:[]).flatMap(l=>'designator' in l?[l.designator]:[])]);
  const byPart=new Map<string,string[]>();
  for(const pad of board.pads)if(pad.component)byPart.set(pad.component,[...(byPart.get(pad.component)??[]),pad.net??'']);
- const missing=[...byPart].filter(([designator,nets])=>!known.has(designator)&&nets.length===2&&nets.some(n=>n&&railNets.has(n))).map(([d])=>d);
+ const undeclared=[...byPart].filter(([designator,nets])=>!known.has(designator)&&nets.length===2);
+ const missing=undeclared.filter(([,nets])=>nets.every(n=>n&&railNets.has(n))&&nets[0]!==nets[1]).map(([d])=>d);
+ const dangling=undeclared.filter(([d,nets])=>!missing.includes(d)&&nets.some(n=>n&&supplyNets.has(n))).map(([d])=>d);
+ if(dangling.length)warnings.push({code:'PI_UNMODELED_BRANCH',severity:'warning',message:'Undeclared parts from a supply net to other nets are treated open (approximation): '+dangling.join(', ')});
  if(missing.length)fail('PI_COMPONENT_MODEL','Rail components without a model (declare them with .components, never implicitly open/ideal): '+missing.join(', '));
  if(ports.length>PI_PORT_LIMIT)fail('PI_PORT_LIMIT','Board PI needs '+ports.length+' ports (limit '+PI_PORT_LIMIT+'); decoupling is never grouped implicitly: '+ports.map(p=>p.origin[0]).join(', '));
  if(ports.length<2)fail('PI_PORT','Board PI needs at least a source port and a load/component port');

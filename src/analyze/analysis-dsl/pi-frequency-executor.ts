@@ -38,7 +38,8 @@ export function reducedModelWaves(execute:PiProblemExecutor,report:Pick<BoardFoi
    instances:[{id:'board-reduced-model',ports:[...names],model:{id:'board-reduced-model',kind:'network',ports:[...names],data:model.model,
     validity:{status:'conditional',reason:'P8 reduced board model; physical accuracy unverified'},analyses:['networkParameters']}}],
    connections:[],ports:names.map((name,index)=>({name,index})),frequencies:frequenciesHz.slice(from,from+chunk),
-   representation:'S',referenceOhm:names.map(()=>50),budget};
+   // The P6 network contract admits at most 4096 MiB; its own plan check still bounds the evaluation.
+   representation:'S',referenceOhm:names.map(()=>50),budget:{...budget,maxMemoryMiB:Math.min(budget.maxMemoryMiB,4096)}};
   const result=execute({kind:'frequency-network',request} as never) as AnalysisFrequencyReport;
   if(result.status!=='complete'||!result.parameters)
    throw new AnalysisDslError(result.diagnostics[0]?.code??'PI_MODEL_EVALUATION',result.diagnostics.map(d=>d.message).join('; ')||'Reduced model evaluation failed',result.diagnostics);
@@ -82,6 +83,7 @@ export function runPiFrequency(task:AnalysisTask<'pi'>,assembly:PiBoardAssembly,
  let worstFit=0;
  let lowestAnchor:{frequencyHz:number;waves:Matrix}|undefined;
  const models=new Map<PiBand,BoardFoilRunReport>();
+ const bandRefusals:{code:string;message:string}[]=[];
  for(const band of frequencyPlan.bands){
   const left=remaining();
   const frequenciesHz=band.anchorsHz;
@@ -91,7 +93,12 @@ export function runPiFrequency(task:AnalysisTask<'pi'>,assembly:PiBoardAssembly,
   }catch(error){
    if(error instanceof AnalysisDslError)throw error;
    const message=messageOf(error),code=message.match(/^([A-Z][A-Z0-9_]+):/)?.[1]??'PI_EXTRACTION_REJECTED';
-   throw new AnalysisDslError(code,withBudgetHint(code,message,budget),diagnostics);
+   // A budget refusal or a refusal of every band stops the run; a physical refusal of one band only makes its points unavailable.
+   if(/DEADLINE|MEMORY|BUDGET/.test(code))throw new AnalysisDslError(code,withBudgetHint(code,message,budget),diagnostics);
+   bandRefusals.push({code,message});
+   for(const index of band.pointIndices)frequencyPlan.unavailable.push({index,frequencyHz:frequencies[index],reason:'band '+band.extractionHz+' Hz refused: '+code});
+   diagnostics.push({code:'PI_BAND_REFUSED',severity:'warning',message:'Band at '+band.extractionHz+' Hz refused, its points are unavailable: '+message});
+   continue;
   }
   if(!report.reducedModel||report.reducedModel.portCount!==n||report.ports.length!==n)
    throw new AnalysisDslError('PI_MODEL_EXPORT','The hybrid extraction did not return the reduced model for all '+n+' PI ports');
@@ -152,6 +159,7 @@ export function runPiFrequency(task:AnalysisTask<'pi'>,assembly:PiBoardAssembly,
  diagnostics.push({code:'PI_PHYSICAL_UNVERIFIED',severity:'warning',message:'Board PI results are an unverified approximation'},
   {code:'PI_BAND_APPROXIMATION',severity:'warning',message:'Frequency results come from a reduced coupled-RLC board model evaluated between extraction anchors; band fit '+(100*worstFit).toFixed(3)+'%'});
 
+ if(bandRefusals.length&&!models.size){const {code,message}=bandRefusals[0];throw new AnalysisDslError(code,withBudgetHint(code,message,budget),diagnostics);}
  const available=frequencies.map((_,i)=>z[i]!==null);
  const anyAvailable=available.some(Boolean),allAvailable=available.every(Boolean);
  const validity:T.Validity=!anyAvailable?{status:'unavailable',reason:frequencyPlan.unavailable[0]?.reason??'No point in the verified band'}:{status:'conditional',
