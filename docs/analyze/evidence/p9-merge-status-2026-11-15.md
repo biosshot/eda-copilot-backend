@@ -26,11 +26,11 @@
 | Слоистая теплопроводность (медь/диэлектрик/vias) | готово и проверено | `native/analyze/src/thermal/board.rs`, `mesh.rs` | `thermal_board`: `homogeneous_slab_and_multilayer_harmonic_series`, `high_contrast_narrow_copper_spreading_and_mesh_alignment`, `finite_via_barrel_conductance_mass_and_loss_transfer`; [thermal-verification.md](thermal-verification.md) |
 | Компактные package thermal paths | реализовано, частично проверено | `src/analyze/analysis-dsl/thermal-board.ts:23-26`, `schema.ts` (`thermal-path`, `thermal-network`) | покрыто `tests/pcb-analysis-thermal.test.ts` (T1 пример) |
 | Стационарная задача | готово и проверено | `native/analyze/src/thermal/solve.rs` | `thermal.rs`: `analytic_rc_and_temporal_refinement`, `two_node_modal_reference`; `thermal_board`: `captured_tps_steady_real_geometry_regression` |
-| Неявная адаптивная временная задача | частично | `solve.rs` (MOSFET-ориентированный интегратор не найден grep-ом) | адаптивность в тестах касается уточнения сетки (`adaptive_refinement_*`), а не шага по времени; явного неявного интегратора и адаптивного шага по времени не нашёл, проверить отдельно |
+| Неявная адаптивная временная задача | готово (проверено руководителем) | `solve.rs` (MOSFET-ориентированный интегратор не найден grep-ом) | адаптивность в тестах касается уточнения сетки (`adaptive_refinement_*`), а не шага по времени; есть: `solve.rs` ~1468, неявный шаг с контролем ошибки удвоением шага (полный шаг против двух половинных) и событиями/точками вывода |
 | Заданные мощности и карты DC-потерь | готово и проверено | `src/analyze/analysis-dsl/thermal-loss-transfer.ts` | `thermal_board`: `finite_via_barrel_conductance_mass_and_loss_transfer`; `pcb-analysis-thermal.test.ts`: production DC loss transfer (проходит) |
 | Температура среды и профили | готово и проверено | `thermal-executor.ts` (`ambientC`, `initialC`, `initial`) | `thermal.rs`: `events_pulse_ambient_and_cooling_switch`, `fixed_coordinate_origin_preserves_varying_ambient_nonlinear_cooling_energy_and_continuation` |
 | Initial state | готово и проверено | `thermal-executor.ts` (`steady` / data) | `thermal.rs`: `continuation_compatibility_and_budgets_recovery` |
-| Радиатор (radiator) | нет | в коде нет ни одного совпадения | — |
+| Радиатор | = heatsink (строка ниже) | | |
 | Heatsink с теплоёмкостью | реализовано, частично проверено | `schema.ts` (`heatsink`), `thermal-board.ts:41-42` | `tests/pcb-analysis-thermal-audit.test.ts`, board-ожидания `tests/pcb-analyze/*/thermal*.expectations.json`; отдельного unit-теста на heatsink нет |
 | TIM / тепловой интерфейс | реализовано, частично проверено | `schema.ts` (`thermal-interface`), `board.rs` | используется board-сценариями BandAmpV5 и TPS (`tests/pcb-analyze/*/thermal*.js`); отдельного unit-теста на TIM нет |
 | Контакты и теплоёмкость | готово и проверено | `board.rs` | `thermal_board`: `missing_material_contact_source_and_geometry_reject`, `spatial_source_conservation_and_time_capacity`; `thermal.rs`: `floating_missing_capacity_invalid_table_and_duplicate_power_reject` |
@@ -51,3 +51,11 @@
 - `captured_controller_steady_geometry_budget_regression` падает и до слияния; порог 2% не выполняется на последнем шаге сетки.
 - Адаптивный шаг по времени и неявный интегратор не подтверждены.
 - Аддон `Cargo.lock` в `native/node-addon` нужно обновить и закоммитить отдельно.
+
+## Решения руководителя (2026-11-15)
+
+- Активное охлаждение задаётся автором как табличный закон `cooling` для заданного обдува; отдельной модели вентилятора нет (CFD вне объёма).
+- Узел корпуса (case) задаётся явным `thermal-path`/`thermal-network`; скрытых параметров корпуса не вводим.
+- `captured_controller_steady_geometry_budget_regression` (9,5 % против 2 %) падал и до слияния; оставлен падающим как известное ограничение сходимости на плате, порог не ослаблен.
+- Сравнение с независимыми данными MOSFET/радиатор/MCU отсутствует: внешних данных нет; физика thermal на платах — `unverified`, как в P7/P8.
+- P9 v1 считается закрытым в этом объёме.
