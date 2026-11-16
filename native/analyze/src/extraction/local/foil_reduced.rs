@@ -4418,24 +4418,28 @@ impl CompactMixedMagnetic {
         // P7_PLANAR_HMATRIX=force lowers the 512-support gate to 2 so small cases can compare H-matrix and exact actions.
         let hm_env=std::env::var("P7_PLANAR_HMATRIX");
         let hm_gate=if hm_env.as_deref()==Ok("force") {2} else {512};
-        let hm=if supports.len()>=hm_gate && hm_env.as_deref()!=Ok("0") {
-            let refs:Vec<&super::prism::Prism>=supports.iter().map(|s|&s.prism).collect();
-            let h=super::planar_hmatrix::PlanarHMatrix::build(&refs,mixed_budget/2,super::planar_hmatrix::Params::from_env(),start,wall)?;
-            eprintln!("P7_COMPACT_HMATRIX {}",h.stats.json());
-            if super::planar_operator::prof_on() {eprintln!("P7_PAIR_PROFILE {}",super::planar_operator::prof_json());}
-            Some(h)
-        } else {None};
-        let mixed_budget=if hm.is_some() {mixed_budget-mixed_budget/2} else {mixed_budget};
-        let local_hierarchy=if local.is_empty(){None}else{let mut h=super::volume_integral_magnetic::CompactLocalHierarchy::new(local.iter().map(|s|s.tetra).collect(),AllocationBudget{max_bytes:local_budget,..budget},start,wall)?;if hm.is_some()&&supports.len()>=512{eprintln!("P7_COMPACT_LOCAL_FAST enabled={}",h.enable_fast(local_budget));}Some(h)};
+        let hm_wanted=supports.len()>=hm_gate && hm_env.as_deref()!=Ok("0");
+        // The mixed near/far plan is built first (its kind follows the H-matrix gate, known before the build) in the
+        // share the H-matrix used to leave it; the H-matrix then gets everything the plan does not use (no budget increase).
+        let total_mixed_budget=mixed_budget;
+        let mixed_budget=if hm_wanted {mixed_budget-mixed_budget/2} else {mixed_budget};
         let local_pairs=None;
         let mut moments=Vec::with_capacity(supports.len()+local.len());
         for s in &supports {check_time(start,wall)?;moments.push(super::far::Moments::new(&s.prism)?);}
         for s in &local {check_time(start,wall)?;moments.push(super::far::Moments::tetrahedron(s.tetra)?);}
         let pairs=moments.len().checked_mul(moments.len().checked_add(1).ok_or_else(||error("MEMORY_LIMIT","mixed pair overflow"))?).and_then(|n|n.checked_div(2)).ok_or_else(||error("MEMORY_LIMIT","mixed pair overflow"))?;
-        let mixed_plan=if hm.is_some() {super::near_far::Plan::from_moments_cross_only} else {super::near_far::Plan::from_moments_excluding_suffix_pairs}(moments,supports.len(),0.2,12,super::near_far::Budget{max_bytes:mixed_budget,max_nodes:budget.max_nodes,max_blocks:mixed_budget/128,max_pairs:pairs,max_wall:wall.saturating_sub(start.elapsed())})?;
+        let mixed_plan=if hm_wanted {super::near_far::Plan::from_moments_cross_only} else {super::near_far::Plan::from_moments_excluding_suffix_pairs}(moments,supports.len(),0.2,12,super::near_far::Budget{max_bytes:mixed_budget,max_nodes:budget.max_nodes,max_blocks:mixed_budget/128,max_pairs:pairs,max_wall:wall.saturating_sub(start.elapsed())})?;
         eprintln!("P7_COMPACT_UNIFIED_PLAN supports={} nearPairs={} farPairs={} planBytes={} cacheCapacity={}",mixed_plan.moments.len(),mixed_plan.near_pairs,mixed_plan.far_pairs,mixed_plan.planned_bytes,cache_limit);
+        let hm=if hm_wanted {
+            let refs:Vec<&super::prism::Prism>=supports.iter().map(|s|&s.prism).collect();
+            let h=super::planar_hmatrix::PlanarHMatrix::build(&refs,total_mixed_budget.saturating_sub(mixed_plan.planned_bytes),super::planar_hmatrix::Params::from_env(),start,wall)?;
+            eprintln!("P7_COMPACT_HMATRIX {}",h.stats.json());
+            if super::planar_operator::prof_on() {eprintln!("P7_PAIR_PROFILE {}",super::planar_operator::prof_json());}
+            Some(h)
+        } else {None};
+        let local_hierarchy=if local.is_empty(){None}else{let mut h=super::volume_integral_magnetic::CompactLocalHierarchy::new(local.iter().map(|s|s.tetra).collect(),AllocationBudget{max_bytes:local_budget,..budget},start,wall)?;if hm.is_some()&&supports.len()>=512{eprintln!("P7_COMPACT_LOCAL_FAST enabled={}",h.enable_fast(local_budget));}Some(h)};
         let (hm_order,hm_change,hm_unconv)=hm.as_ref().map_or((0,0.,0),|h|(h.stats.max_order,h.stats.max_change,h.stats.unconverged));
-        let spare=cache_bytes+mixed_budget.saturating_sub(mixed_plan.planned_bytes);
+        let spare=cache_bytes+mixed_budget.saturating_sub(mixed_plan.planned_bytes).min(total_mixed_budget.saturating_sub(mixed_plan.planned_bytes).saturating_sub(hm.as_ref().map_or(0,|h|h.stats.stored_bytes)));
         let cross_fast=local_hierarchy.as_ref().is_some_and(|h|h.is_fast()) && !supports.is_empty() && local.len().checked_mul(supports.len()).and_then(|n|n.checked_mul(8)).is_some_and(|b|b<=spare);
         eprintln!("P7_COMPACT_CROSS_FAST enabled={cross_fast}");
         let cache_limit=if cross_fast {0} else {cache_limit};

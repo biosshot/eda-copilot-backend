@@ -235,17 +235,17 @@ fn request_memory_bytes()->Option<f64> { REQUEST_MEMORY.with(|c|c.get()) }
 /// The request memory limit (`budget.maxMemoryMiB`) for the ROI memory fit of the calling thread, restored on drop.
 /// The checked endpoint keeps its unbounded allocation budget (an external supervisor owns hard limits); only the
 /// ROI size decision reads this limit. `P7_ROI_BUDGET_MIB` still overrides it.
-const DSL_DEFAULT_MEMORY_MIB:f64=2048.;
 pub(super) struct RequestMemory(Option<f64>);
 impl RequestMemory {
+    /// Any finite positive request budget moves the ROI fit (the DSL always sends its resolved budget: the request's
+    /// `.budget()` or the machine-derived cap), including values at or above 2048 MiB.
     pub(super) fn set(mib:Option<f64>)->Self {
-        // 2048 MiB is the DSL default budget, not a deliberate limit, and the pre-build estimate is pessimistic
-        // (BandAmpV5: 3.5 GB estimated, 1.6 GiB measured), so only a request that tightens it below the default
-        // moves the ROI fit; otherwise the native 6 GiB default stays (boards that completed keep their full ROI).
-        let bytes=mib.filter(|m|m.is_finite()&&*m>0.&&*m<DSL_DEFAULT_MEMORY_MIB).map(|m|m*1048576.);
+        let bytes=mib.filter(|m|m.is_finite()&&*m>0.).map(|m|m*1048576.);
         Self(REQUEST_MEMORY.with(|c|c.replace(bytes)))
     }
 }
+/// The request memory limit in whole MiB, if the calling thread carries one.
+pub(super) fn request_memory_mib()->Option<f64> { request_memory_bytes().map(|b|(b/1048576.).floor()) }
 impl Drop for RequestMemory { fn drop(&mut self) { REQUEST_MEMORY.with(|c|c.set(self.0)); } }
 pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,forced:Option<(&str,f64)>,skin:Option<copper_skin_profile::Profile>)->Result<Option<Plan>> {
     if std::env::var("P7_ROI_FALLBACK").as_deref()==Ok("0")||!r.cut_planes.is_empty() {return Ok(None);}
@@ -486,6 +486,14 @@ pub(super) fn next_smaller(r:&Request,mode:&str,margin_mm:f64)->Option<(String,f
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn request_budget_of_6144_mib_reaches_the_roi_fit() {
+        let _g=RequestMemory::set(Some(6144.));
+        assert_eq!(request_memory_mib(),Some(6144.));
+        assert_eq!(request_memory_bytes(),Some(6144.*1048576.));
+        drop(_g);
+        assert_eq!(request_memory_bytes(),None);
+    }
     fn rc(x0:f64,y0:f64,x1:f64,y1:f64)->geo::Polygon<f64> {rect_poly([[x0,y0],[x1,y1]])}
     #[test]
     fn corridor_follows_the_l_trace_and_drops_a_stub_pour() {

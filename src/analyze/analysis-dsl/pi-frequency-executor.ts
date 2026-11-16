@@ -94,7 +94,7 @@ export function runPiFrequency(task:AnalysisTask<'pi'>,assembly:PiBoardAssembly,
    if(error instanceof AnalysisDslError)throw error;
    const message=messageOf(error),code=message.match(/^([A-Z][A-Z0-9_]+):/)?.[1]??'PI_EXTRACTION_REJECTED';
    // A budget refusal or a refusal of every band stops the run; a physical refusal of one band only makes its points unavailable.
-   if(/DEADLINE|MEMORY|BUDGET/.test(code))throw new AnalysisDslError(code,withBudgetHint(code,message,budget),diagnostics);
+   if(/DEADLINE|MEMORY|BUDGET/.test(code))throw new AnalysisDslError(code,withBudgetHint(code,message,budget,task.config.budget?.maxMemoryMiB===undefined),diagnostics);
    bandRefusals.push({code,message});
    for(const index of band.pointIndices)frequencyPlan.unavailable.push({index,frequencyHz:frequencies[index],reason:'band '+band.extractionHz+' Hz refused: '+code});
    diagnostics.push({code:'PI_BAND_REFUSED',severity:'warning',message:'Band at '+band.extractionHz+' Hz refused, its points are unavailable: '+message});
@@ -160,7 +160,7 @@ export function runPiFrequency(task:AnalysisTask<'pi'>,assembly:PiBoardAssembly,
  diagnostics.push({code:'PI_PHYSICAL_UNVERIFIED',severity:'warning',message:'Board PI results are an unverified approximation'},
   {code:'PI_BAND_APPROXIMATION',severity:'warning',message:'Frequency results come from a reduced coupled-RLC board model evaluated between extraction anchors; band fit '+(100*worstFit).toFixed(3)+'%'});
 
- if(bandRefusals.length&&!models.size){const {code,message}=bandRefusals[0];throw new AnalysisDslError(code,withBudgetHint(code,message,budget),diagnostics);}
+ if(bandRefusals.length&&!models.size){const {code,message}=bandRefusals[0];throw new AnalysisDslError(code,withBudgetHint(code,message,budget,task.config.budget?.maxMemoryMiB===undefined),diagnostics);}
  const available=frequencies.map((_,i)=>z[i]!==null);
  const anyAvailable=available.some(Boolean),allAvailable=available.every(Boolean);
  const validity:T.Validity=!anyAvailable?{status:'unavailable',reason:frequencyPlan.unavailable[0]?.reason??'No point in the verified band'}:{status:'conditional',

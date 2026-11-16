@@ -9,6 +9,7 @@ import type { AnalysisTask, ExecutionResult } from './executor.ts';
 import { localChannelGroupRequest, type LocalExtractionPlan } from './local-request.ts';
 import { AnalysisDslError } from './schema.ts';
 import { withBudgetHint } from './budget-hint.ts';
+import { resolveMemoryMiB } from './machine-memory.ts';
 import { sourceBandPlan } from './source-band.ts';
 import type { Binding, Diagnostic } from './spec-doc.js';
 import { transientStimulus } from './transient-executor.ts';
@@ -123,14 +124,14 @@ export function createGroupExecutor(solve = solveGroup) {
       diagnostics.push({ code: 'CHANNEL_GROUP_NO_APPLICABLE_AC', severity: 'warning', message: 'No requested AC frequency lies in the common board and component applicability.' });
       return { ...base, solution: json(extraction) };
     }
-    const budget = { maxSeconds: config.budget?.maxSeconds ?? 1800, maxMemoryMiB: config.budget?.maxMemoryMiB ?? 4096 };
+    const budget = { maxSeconds: config.budget?.maxSeconds ?? 1800, maxMemoryMiB: resolveMemoryMiB(config.budget?.maxMemoryMiB).maxMemoryMiB };
     let solved: ReturnType<typeof solve>;
     try {
       solved = solve(task.board, geometry, terminalRequest, seeds, budget, requestedIntervalHz);
     } catch (error) {
       if (error instanceof AnalysisDslError) throw error;
       const message = messageOf(error);
-      { const code = message.match(/^([A-Z][A-Z0-9_]+):/)?.[1] ?? 'CHANNEL_REJECTED'; throw new AnalysisDslError(code, withBudgetHint(code, message, budget), diagnostics); }
+      { const code = message.match(/^([A-Z][A-Z0-9_]+):/)?.[1] ?? 'CHANNEL_REJECTED'; throw new AnalysisDslError(code, withBudgetHint(code, message, budget, config.budget?.maxMemoryMiB === undefined), diagnostics); }
     }
     const checkPorts = (ports?: readonly string[]) => {
       if (ports?.length !== physicalPorts.length || ports.some((name, i) => name !== physicalPorts[i].name)) {

@@ -19,6 +19,9 @@ pub struct Request {
     #[serde(default)]
     pub observables_only: bool,
     pub external_port_count: Option<usize>,
+    /// `budget.maxMemoryMiB` of the calculation; `P7_VERIFY_MEMORY_MIB` takes precedence, none keeps 2048 MiB.
+    #[serde(default)]
+    pub max_memory_mib: Option<f64>,
 }
 
 pub(super) struct Loaded {
@@ -285,18 +288,14 @@ pub fn run(board: &crate::model::Board, request: Request, seconds: f64) -> Resul
             .filter(|t| !t.is_zero())
             .ok_or_else(|| error("DEADLINE", "local DC extraction deadline"))
     };
-    let budget = board_prepare::allocation_budget(board_prepare::verification_limit(
-        "P7_VERIFY_MEMORY_MIB",
-        2048,
-        256,
-        8192,
-    )?);
+    let budget = board_prepare::allocation_budget(board_prepare::memory_limit_mib(request.max_memory_mib)?);
     let Request {
         geometry,
         mut drive,
         mut loads_ohm,
         observables_only,
         external_port_count,
+        max_memory_mib: _,
     } = request;
     let np = geometry.ports.len();
     if !(1..=16).contains(&np) || !(2..=32).contains(&geometry.electrodes.len()) {

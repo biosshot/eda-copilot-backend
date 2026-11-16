@@ -19,6 +19,8 @@ export function localDcEndpoint(
  components: readonly PhysicalDcComponentRequest[] = [],
  /** N-port callers (P8 `pi()`) name the ordered physical ports; no channel loop probe is selected for them. */
  portNames?: readonly string[],
+ /** `budget.maxMemoryMiB` of the calculation; reaches the DC mesh memory fit and ROI selection. */
+ maxMemoryMiB?: number,
 ): ExecutionResult {
  if(!Number.isFinite(remainingSeconds)||remainingSeconds<=0)
   throw new AnalysisDslError('LOCAL_DC_DEADLINE','Shared DC planning deadline exhausted',diagnostics);
@@ -86,6 +88,7 @@ export function localDcEndpoint(
   if(left<=0)throw new Error('LOCAL_DC_DEADLINE: shared DC planning deadline exhausted');
   report=solve({kind:'local-dc-extraction',boardJson,request:{
    geometry:{...geometry,electrodes,ports:nativePorts,allowInsulatedCopperCuts:false},observablesOnly:true,externalPortCount:ports.length,
+   ...(maxMemoryMiB!==undefined&&{maxMemoryMib:maxMemoryMiB}),
    ...(drive&&{drive}),...(nativePorts.length>ports.length&&{loadsOhm:nativeLoads}),
   },remainingSeconds:left});
  }catch(error){

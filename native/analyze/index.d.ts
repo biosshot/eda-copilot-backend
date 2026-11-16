@@ -190,6 +190,7 @@ export interface AnalysisLocalDcRequest {
   loadsOhm?: (number | null)[];
   observablesOnly?: boolean;
   externalPortCount?: number;
+  maxMemoryMib?: number;
 }
 export interface AnalysisLocalDcReport {
   status: 'complete';

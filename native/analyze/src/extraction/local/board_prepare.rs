@@ -238,7 +238,7 @@ pub fn run_with_frequency_audit(board:&crate::model::Board,r:&board_mesh::Reques
         }
     }
     let seconds_cap=verification_limit("P7_VERIFY_SECONDS",300,1,3600)? as f64;
-    let memory_mib=verification_limit("P7_VERIFY_MEMORY_MIB",2048,256,8192)?;
+    let memory_mib=memory_limit_mib(super::roi_fallback::request_memory_mib())?;
     if !seconds.is_finite()||seconds<=0.||seconds>seconds_cap {return Err("LOCAL_DEADLINE: invalid remaining cold budget".into());}
     let started=std::time::Instant::now();
     let requested_jobs=std::env::var("PCB_ANALYSIS_TRAINING_JOBS").ok().map(|v|v.parse::<usize>().map_err(|_|"LOCAL_THREADS: training jobs must be integer1..4".to_string())).transpose()?.unwrap_or(1);
@@ -530,6 +530,12 @@ pub fn run_with_frequency_audit(board:&crate::model::Board,r:&board_mesh::Reques
 }
 
 /// Explicit developer-only limits; production defaults remain unchanged.
+/// Memory limit of a local preparation in MiB. `P7_VERIFY_MEMORY_MIB`, when set, takes precedence over the request
+/// budget (`budget.maxMemoryMiB`); without either the earlier 2048 MiB default stays.
+pub(super) fn memory_limit_mib(requested:Option<f64>)->Result<usize,String>{
+    if std::env::var_os("P7_VERIFY_MEMORY_MIB").is_some() {return verification_limit("P7_VERIFY_MEMORY_MIB",2048,256,8192);}
+    Ok(match requested {Some(m) if m.is_finite()&&m>=256. => m.floor() as usize,_=>2048})
+}
 pub(super) fn verification_limit(name:&str,default:usize,min:usize,max:usize)->Result<usize,String>{
     let value=std::env::var(name).ok().map(|s|s.parse::<usize>().map_err(|_|format!("LOCAL_BUDGET: invalid {name}"))).transpose()?.unwrap_or(default);
     if value<min||value>max{return Err(format!("LOCAL_BUDGET: {name} outside {min}..{max}"));}Ok(value)
@@ -540,6 +546,13 @@ fn trains_basis(mode:&str)->bool{matches!(mode,"full"|"train"|"prepare"|"verify"
 #[cfg(test)]
 mod tests{
     use super::*;
+    #[test]
+    fn request_memory_sets_the_domain_budget(){
+        if std::env::var_os("P7_VERIFY_MEMORY_MIB").is_some() {return;}
+        assert_eq!(memory_limit_mib(Some(6144.)).unwrap(),6144);
+        assert_eq!(allocation_budget(memory_limit_mib(Some(6144.)).unwrap()).max_bytes,6144*1024*1024-crate::extraction::local::parallel::stack_reservation());
+        assert_eq!(memory_limit_mib(None).unwrap(),2048);
+    }
     use crate::electrical::frequency::math::C;
     #[test]
     fn full_mode_trains_the_reduced_basis(){

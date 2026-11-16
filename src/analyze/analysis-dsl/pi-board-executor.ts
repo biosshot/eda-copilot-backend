@@ -1,6 +1,7 @@
 import type {AnalysisLocalDcReport} from '../../../native/analyze/index.js';
 import {createProblemExecutor} from '../execute-problem.ts';
 import {withBudgetHint} from './budget-hint.ts';
+import {resolveMemoryMiB} from './machine-memory.ts';
 import {json} from './data.ts';
 import {object} from './descriptions.ts';
 import type {AnalysisTask,ExecutionResult} from './executor.ts';
@@ -13,7 +14,7 @@ import {AnalysisDslError} from './schema.ts';
 import type * as T from './spec-doc.js';
 
 /** Same default as the local/group executors; used only when the request carries no `.budget()`. */
-export const piDefaultBudget={maxSeconds:1800,maxMemoryMiB:4096};
+export const piDefaultBudget={maxSeconds:1800};
 const NOT_IMPLEMENTED='PI_NOT_IMPLEMENTED_STAGE';
 
 /** Every PI port is one physical pad pair. The channel machinery plans the common domain, so the ports are
@@ -50,10 +51,10 @@ export function solvePiDc(task:AnalysisTask<'pi'>,assembly:PiBoardAssembly,budge
  const {geometry,order,ids}=planPiPorts(synthetic,targets,assembly,true);
  const left=budget.maxSeconds-(performance.now()-start)/1000;
  let dc:ExecutionResult;
- try{dc=localDcEndpoint(synthetic as unknown as AnalysisTask<'impedance'>,geometry,[],left,execute as never,undefined,ids);}
+ try{dc=localDcEndpoint(synthetic as unknown as AnalysisTask<'impedance'>,geometry,[],left,execute as never,undefined,ids,budget.maxMemoryMiB);}
  catch(error){
   if(!(error instanceof AnalysisDslError))throw error;
-  throw new AnalysisDslError(error.code,withBudgetHint(error.code,error.message,budget),error.diagnostics);
+  throw new AnalysisDslError(error.code,withBudgetHint(error.code,error.message,budget,task.config.budget?.maxMemoryMiB===undefined),error.diagnostics);
  }
  return finish(task,assembly,order,dc,geometry.ports as [string,string][]);
 }
@@ -66,7 +67,7 @@ export function createPiBoardExecutor(execute:PiProblemExecutor=createProblemExe
   const assembly=assemblePiBoard(task);
   if(c.domain==='time'||c.time!==undefined)
    throw new AnalysisDslError(NOT_IMPLEMENTED,'Board PI time domain is not implemented yet (P8 stage 4)');
-  const budget={maxSeconds:c.budget?.maxSeconds??piDefaultBudget.maxSeconds,maxMemoryMiB:c.budget?.maxMemoryMiB??piDefaultBudget.maxMemoryMiB};
+  const budget={maxSeconds:c.budget?.maxSeconds??piDefaultBudget.maxSeconds,maxMemoryMiB:resolveMemoryMiB(c.budget?.maxMemoryMiB).maxMemoryMiB};
   if(c.frequencyHz===0)return solvePiDc(task,assembly,budget,start,execute);
   if(c.frequencyHz===undefined&&c.frequency===undefined)
    throw new AnalysisDslError('MISSING_FIELD','Board PI frequency domain needs frequencyHz(0) for the DC point, frequencyHz(f) or frequency({startHz,stopHz,points,scale})');
