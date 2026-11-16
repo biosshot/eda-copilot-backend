@@ -781,7 +781,7 @@ pub fn solve_checked(
         frequencies_hz: &axis,
         reference_ohm: &refs,
         // Continuation: the last 8 iterations run only while the residual keeps falling (see `enrichment_continues`).
-        max_iterations: iterations + if iterations == 16 && std::env::var("P7_ENRICHMENT_CONTINUATION").as_deref() != Ok("0") { super::foil_reduced::CONTINUATION_EXTRA } else { 0 },
+        max_iterations: iterations + if iterations == 16 && std::env::var("P7_ENRICHMENT_CONTINUATION").as_deref() != Ok("0") { super::foil_reduced::continuation_extra(refs.len()) } else { 0 },
     };
     let cut_ports = mixed_conductor::highband_cuts_enabled() && !geometry.cut_planes.is_empty();
     if !cut_ports && (!geometry.cut_planes.is_empty() || geometry.allow_insulated_copper_cuts) {

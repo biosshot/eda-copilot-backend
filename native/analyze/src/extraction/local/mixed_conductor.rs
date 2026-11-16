@@ -1591,7 +1591,7 @@ pub(super) fn checked_reserve_policy(request:&board_mesh::Request,grid:CheckedGr
         || reference_ohm
             .iter()
             .any(|r| !r.is_finite() || *r <= 0. || !(1. / r).is_finite())
-        || !(1..=16 + foil_reduced::CONTINUATION_EXTRA).contains(&max_iterations)
+        || !(1..=16 + foil_reduced::CONTINUATION_EXTRA_MAX).contains(&max_iterations)
     {
         return Err(error(
             "MIXED_FOIL_GRID",

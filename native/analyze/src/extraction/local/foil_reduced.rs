@@ -762,10 +762,13 @@ pub(super) fn reciprocity_tier(err: f64, gate: f64, strict: bool) -> Reciprocity
 pub(super) fn reciprocity_tier_of(max_err: f64) -> &'static str {
     reciprocity_tier(max_err, 1e-9, false).name()
 }
-/// Extra enrichment iterations granted past the requested 16 (`max_iterations` = 16 + this) while the residual falls.
+/// Extra enrichment iterations granted past the requested 16 while the residual falls: 8 for two ports, +4 per further
+/// port (the residual is checked per port input, so the tail grows with ports), at most `CONTINUATION_EXTRA_MAX`.
 pub(super) const CONTINUATION_EXTRA: usize = 8;
-/// Continuation rule: up to the requested cap (`max - CONTINUATION_EXTRA` when the grid carries the extension) the loop
-/// always continues; beyond it only while the worst KVL fell at least 2x over the last 4 iterations.
+pub(super) const CONTINUATION_EXTRA_MAX: usize = 40;
+pub(super) fn continuation_extra(ports: usize) -> usize { (CONTINUATION_EXTRA + 4 * ports.saturating_sub(2)).min(CONTINUATION_EXTRA_MAX) }
+/// Continuation rule: up to the requested 16 iterations the loop always continues; beyond it only while the worst KVL
+/// fell at least 1.5x over the last 4 iterations (steady decay). Acceptance limits are unchanged.
 /// `P7_ENRICH_MAX` (1..=256): enrichment iteration limit for the compact adaptive solver. Unset keeps the default.
 fn enrich_max_override() -> Result<Option<usize>> {
     match std::env::var("P7_ENRICH_MAX") {
@@ -779,7 +782,20 @@ fn enrich_max_override() -> Result<Option<usize>> {
 fn enrichment_continues(iteration: usize, max_iterations: usize, history: &[serde_json::Value]) -> bool {
     if max_iterations <= 16 || iteration < 16 { return true; }
     let kvl = |i: usize| history.get(i).and_then(|h| h["maxKvlRelative"].as_f64());
-    match (kvl(iteration), kvl(iteration - 4)) { (Some(now), Some(before)) => now * 2. <= before, _ => false }
+    match (kvl(iteration), kvl(iteration - 4)) { (Some(now), Some(before)) => now * 1.5 <= before, _ => false }
+}
+/// Default on (`P7_ENRICH_SEED=0` disables): every iteration enriches for the worst residual of EVERY port input whose KVL
+/// exceeds the limit (one dominant phase each) instead of the worst input plus one other. Unset keeps the default.
+/// Per-input enrichment starts above this many failing inputs; fewer use the two-drive path.
+const SEED_MIN_FAILING: usize = 3;
+fn enrich_seed() -> bool { std::env::var("P7_ENRICH_SEED").as_deref() != Ok("0") }
+/// Modes the enrichment may add per iteration: 4 (two drives), or two per port input under `P7_ENRICH_SEED`.
+fn enrich_growth_per_iteration(ports: usize) -> usize { if enrich_seed() { 4.max(2 * ports) } else { 4 } }
+/// Inputs (worst first) whose stored KVL exceeds the limit; the drives enriched together under `P7_ENRICH_SEED`.
+fn failing_inputs(kvl: &[Option<f64>], limit: f64) -> Vec<usize> {
+    let mut inputs: Vec<usize> = (0..kvl.len()).filter(|&i| kvl[i].is_some_and(|v| v > limit)).collect();
+    inputs.sort_by(|&a, &b| kvl[b].unwrap().total_cmp(&kvl[a].unwrap()).then(a.cmp(&b)));
+    inputs
 }
 fn congruence(
     basis: &[Vec<f64>],
@@ -921,7 +937,7 @@ pub(super) fn solve_mixed_grid(
     let profile_bytes=profiles.len().checked_mul(ni).and_then(|n|n.checked_mul(std::mem::size_of::<f64>())).and_then(|n|n.checked_add(profiles.len().checked_mul(std::mem::size_of::<Vec<f64>>())?)).ok_or_else(||error("MEMORY_LIMIT","mixed profile plan overflow"))?;
     // Each phase can supply a voltage shape and its conductive current,
     // plus one independent induced-current correction.
-    let reserve = 4 * grid.max_iterations;
+    let reserve = enrich_growth_per_iteration(grid.references.len()) * grid.max_iterations;
     let map_retained = map.retained_bytes()?;
     let field_base = map_retained
         .checked_add(profile_bytes).and_then(|n|n.checked_add(ElectricApply::planned_bytes(field)))
@@ -1910,6 +1926,7 @@ fn worst_kvl_json(row: &WorstKvl, frequency: f64, input: usize, map: Option<&sup
         "resistanceTerm":row.rq,"gradientTerm":row.gradient,"omegaLTerm":row.wl,"cellResistanceOhm":row.resistance,"owner":owner})
 }
 
+#[derive(Clone)]
 struct FullResidual {
     norm: Residual,
     worst_kvl: Option<WorstKvl>,
@@ -2318,7 +2335,7 @@ impl ReducedSpace {
         omega: f64,
     ) -> Result<()> {
         self.grow_phases(
-            [(&full.kcl[0], &full.kvl[0]), (&full.kcl[1], &full.kvl[1])],
+            vec![(&full.kcl[0], &full.kvl[0]), (&full.kcl[1], &full.kvl[1])],
             full.norm, initial_nv, names, dc, field, magnetic, start, wall, pair_gradient,
             (omega > 0.).then(|| (omega, [(full, 0), (full, 1)])),
         )
@@ -2545,7 +2562,7 @@ impl ReducedSpace {
     }
     fn grow_phases(
         &mut self,
-        phases: [(&[f64], &[f64]); 2],
+        phases: Vec<(&[f64], &[f64])>,
         residual: Residual,
         initial_nv: usize,
         names: &[String],
@@ -2873,6 +2890,8 @@ impl ReducedSpace {
                 let mut stats = Counters::default();
                 let mut worst: Option<(f64, usize, FullResidual)> = None;
                 let mut other_drive: Option<(usize, FullResidual)> = None;
+                let seed = enrich_seed() && balance_drives;
+                let mut per_input: Vec<Option<(f64, FullResidual)>> = (0..if seed { ports } else { 0 }).map(|_| None).collect();
                 let mut parameters = Vec::with_capacity(grid.frequencies.len());
                 let mut samples = Vec::with_capacity(grid.frequencies.len());
                 let (mut max_kcl, mut max_kvl, mut max_power) = (0_f64, 0_f64, 0_f64);
@@ -2973,6 +2992,9 @@ impl ReducedSpace {
                             }
                         }
                         let score = norm.kcl_relative.max(norm.kvl_relative);
+                        if seed && norm.kvl_relative > residual_limit && per_input[input].as_ref().is_none_or(|(old, _)| norm.kvl_relative > *old) {
+                            per_input[input] = Some((norm.kvl_relative, residual.clone()));
+                        }
                         if worst.as_ref().is_none_or(|(_, _, old)| {
                             score > old.norm.kcl_relative.max(old.norm.kvl_relative)
                         }) {
@@ -3205,13 +3227,23 @@ impl ReducedSpace {
                 drop(parameters);
                 drop(samples);
                 let grow_started = Instant::now();
-                if let Some((_, other)) = other {
+                let kvl_by_input: Vec<Option<f64>> = per_input.iter().map(|e| e.as_ref().map(|(v, _)| *v)).collect();
+                let failing = failing_inputs(&kvl_by_input, residual_limit);
+                if seed && other.is_some() && failing.len() > SEED_MIN_FAILING {
+                    // One dominant-phase correction for every failing input, with the mode caps scaled. With three failing
+                    // inputs this stalled near the limit (TPS src,C3,C5 at 3 MHz) where the two-drive path converges.
+                    let residuals: Vec<&FullResidual> = failing.iter().map(|&i| &per_input[i].as_ref().expect("failing input stored").1).collect();
+                    self.grow_phases(
+                        residuals.iter().map(|r| dominant_kvl_phase(r)).collect(),
+                        worst.norm, initial_nv, names, dc, field, magnetic, start, wall, pair_gradient, None,
+                    )?;
+                } else if let Some((_, other)) = other {
                     // Once charge continuity is admitted, spread the two
                     // phase corrections over independently failing drives.
                     // Keep the gradient companion of each correction and
                     // the existing four-current/two-voltage growth cap.
                     self.grow_phases(
-                        [dominant_kvl_phase(&worst), dominant_kvl_phase(other)],
+                        vec![dominant_kvl_phase(&worst), dominant_kvl_phase(other)],
                         worst.norm, initial_nv, names, dc, field, magnetic, start, wall, pair_gradient,
                         (inductive_mode() == 2).then(|| (2. * std::f64::consts::PI * frequency, [(&worst, dominant_phase(&worst)), (other, dominant_phase(other))])),
                     )?;
@@ -4789,7 +4821,7 @@ pub(super) fn solve_compact_adaptive(
     for island in &map.potential_components {if !island.iter().any(|i|retained.contains(i)) {retained.insert(island[0]);}}
     let seed_count=retained.len().checked_sub(map.potential_components.len()).ok_or_else(||error("HYBRID_INPUT","invalid physical island anchors"))?;
     let hint_cap=if eligible_groups>0 {seed_count.checked_mul(4).ok_or_else(||error("MEMORY_LIMIT","skin hint count overflow"))?} else {0};
-    let growth=grid.max_iterations.checked_mul(4).ok_or_else(||error("MEMORY_LIMIT","enrichment mode count overflow"))?;
+    let growth=grid.max_iterations.checked_mul(enrich_growth_per_iteration(grid.references.len())).ok_or_else(||error("MEMORY_LIMIT","enrichment mode count overflow"))?;
     let voltage_cap=retained.len().checked_add(growth).ok_or_else(||error("MEMORY_LIMIT","potential mode count overflow"))?;
     let current_cap=seed_count.checked_add(growth).and_then(|v|v.checked_add(hint_cap)).and_then(|v|v.checked_add(profiles.len())).ok_or_else(||error("MEMORY_LIMIT","current mode count overflow"))?.min(ni);
     let hint_bytes=hint_cap.checked_mul(ni).and_then(|v|v.checked_mul(8)).and_then(|v|v.checked_add(hint_cap.checked_mul(std::mem::size_of::<Vec<f64>>())?)).ok_or_else(||error("MEMORY_LIMIT","skin hint buffer overflow"))?;
@@ -5088,5 +5120,19 @@ mod continuation_tests {
         assert!(enrichment_continues(8,16,&flat));
         assert!(enrichment_continues(8,24,&flat));
         assert!(enrichment_continues(16,16,&flat));
+        // TPS 6 ports at 3 MHz stopped here under the old 2x rule: 0.0362 -> 0.0191 is a 1.9x fall.
+        let mut tps=vec![1.;17]; tps[12]=0.0362; tps[16]=0.0191;
+        assert!(enrichment_continues(16,40,&h(&tps)));
+        let mut slow=vec![1.;17]; slow[12]=0.0362; slow[16]=0.03;
+        assert!(!enrichment_continues(16,40,&h(&slow)));
+        assert_eq!((continuation_extra(2),continuation_extra(3),continuation_extra(6),continuation_extra(20)),(8,12,24,40));
+    }
+    #[test]
+    fn seed_selects_every_failing_input_worst_first_and_scales_growth() {
+        let kvl=[Some(2e-3),None,Some(5e-2),Some(1e-3),Some(8e-3),Some(2e-3)];
+        assert_eq!(failing_inputs(&kvl,1e-3),vec![2,4,0,5]);
+        assert!(failing_inputs(&[None,None],1e-3).is_empty());
+        assert_eq!(enrich_growth_per_iteration(6),12); // default on: two modes per port input
+        assert_eq!(enrich_growth_per_iteration(2),4);
     }
 }
