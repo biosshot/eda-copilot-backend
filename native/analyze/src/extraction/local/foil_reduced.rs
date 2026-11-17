@@ -762,6 +762,8 @@ pub(super) fn reciprocity_tier(err: f64, gate: f64, strict: bool) -> Reciprocity
 pub(super) fn reciprocity_tier_of(max_err: f64) -> &'static str {
     reciprocity_tier(max_err, 1e-9, false).name()
 }
+/// Mode limit of the P6 coordinate space (same bound as the retained-trace and skin-hint refusals).
+const P6_MODE_LIMIT: usize = 1024;
 /// Extra enrichment iterations granted past the requested 16 while the residual falls: 8 for two ports, +4 per further
 /// port (the residual is checked per port input, so the tail grows with ports), at most `CONTINUATION_EXTRA_MAX`.
 pub(super) const CONTINUATION_EXTRA: usize = 8;
@@ -4821,6 +4823,14 @@ pub(super) fn solve_compact_adaptive(
     for island in &map.potential_components {if !island.iter().any(|i|retained.contains(i)) {retained.insert(island[0]);}}
     let seed_count=retained.len().checked_sub(map.potential_components.len()).ok_or_else(||error("HYBRID_INPUT","invalid physical island anchors"))?;
     let hint_cap=if eligible_groups>0 {seed_count.checked_mul(4).ok_or_else(||error("MEMORY_LIMIT","skin hint count overflow"))?} else {0};
+    // The mode reservation (iterations x growth per iteration) must fit the P6 coordinate limit with the retained modes;
+    // on many ports the continuation and seed growth exceed it, so the iteration count is cut to what fits. A cut run
+    // that does not converge refuses on the residual as usual. Fewer ports never reach this cap (unchanged).
+    if wall != Duration::MAX {
+        let used=retained.len().max(seed_count+hint_cap+profiles.len());
+        let room=P6_MODE_LIMIT.saturating_sub(used)/enrich_growth_per_iteration(grid.references.len());
+        if grid.max_iterations>room {eprintln!("P7_ENRICH_P6_CAP iterations={}->{room} retained={used}",grid.max_iterations);grid.max_iterations=room;}
+    }
     let growth=grid.max_iterations.checked_mul(enrich_growth_per_iteration(grid.references.len())).ok_or_else(||error("MEMORY_LIMIT","enrichment mode count overflow"))?;
     let voltage_cap=retained.len().checked_add(growth).ok_or_else(||error("MEMORY_LIMIT","potential mode count overflow"))?;
     let current_cap=seed_count.checked_add(growth).and_then(|v|v.checked_add(hint_cap)).and_then(|v|v.checked_add(profiles.len())).ok_or_else(||error("MEMORY_LIMIT","current mode count overflow"))?.min(ni);

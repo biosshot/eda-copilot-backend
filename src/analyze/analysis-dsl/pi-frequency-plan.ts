@@ -7,6 +7,11 @@ export const PI_AC_FLOOR_HZ=1e3;
 export const PI_AC_CEILING_HZ=40e6;
 /** Quasi-static electrical-size factor of the native hybrid screen (`2 pi f/c D sqrt(er) <= 0.1`). */
 export const PI_QUASI_STATIC_KD=0.1;
+/** Widest extraction interval (upper/lower point) of one band close to the quasi-static limit: one decade. Dispersion of a
+ * board grows as (2 pi f D sqrt(er)/c)^2, i.e. with the square of f/f_hi, so below f_hi/10 (error under 1e-4 of the screen
+ * limit) one model spans any ratio, while in the top decade below f_hi a model must not span more than a decade. */
+export const PI_BAND_MAX_RATIO=10;
+export const PI_BAND_SPLIT_FRACTION=0.1;
 const C0=299792458;
 
 export interface PiStackLayer{thicknessM:number;epsilonR:number|null}
@@ -72,12 +77,23 @@ export function planPiFrequency(options:{
   occupied.set(band,[...(occupied.get(band)??[]),index]);
  });
  const maxAnchors=Math.max(2,Math.floor(256/portCount));
- const bands=[...occupied].sort((a,b)=>a[0]-b[0]).map(([band,pointIndices]):PiBand=>{
+ const bandOf=(boundsHz:FrequencyInterval,pointIndices:number[]):PiBand=>{
   const values=pointIndices.map(i=>frequenciesHz[i]);
   const extractionHz:FrequencyInterval=[Math.min(...values),Math.max(...values)];
-  return {boundsHz:[edges[band],Math.min(edges[band+1]??fHiHz,fHiHz)],extractionHz,pointIndices,
-   anchorsHz:anchorFrequencies(extractionHz,maxAnchors,characteristicHz)};
- });
+  return {boundsHz,extractionHz,pointIndices,anchorsHz:anchorFrequencies(extractionHz,maxAnchors,characteristicHz)};
+ };
+ // A band whose upper point lies in the top decade below f_hi and spans more than PI_BAND_MAX_RATIO is split at the
+ // geometric middle of its extraction interval (repeatedly); the split frequency is the junction of the two parts.
+ const split=(boundsHz:FrequencyInterval,pointIndices:number[]):PiBand[]=>{
+  const band=bandOf(boundsHz,pointIndices),[lo,hi]=band.extractionHz;
+  if(!(hi/lo>PI_BAND_MAX_RATIO&&hi>PI_BAND_SPLIT_FRACTION*fHiHz))return [band];
+  const middle=Math.sqrt(lo*hi);
+  const lower=pointIndices.filter(i=>frequenciesHz[i]<=middle),upper=pointIndices.filter(i=>frequenciesHz[i]>middle);
+  if(!lower.length||!upper.length)return [band];
+  return [...split([boundsHz[0],middle],lower),...split([middle,boundsHz[1]],upper)];
+ };
+ const bands=[...occupied].sort((a,b)=>a[0]-b[0]).flatMap(([band,pointIndices])=>
+  split([edges[band],Math.min(edges[band+1]??fHiHz,fHiHz)],pointIndices));
  const junctionsHz=bands.slice(1).map((band,i)=>band.boundsHz[0]).filter((f,i)=>bands[i].boundsHz[1]===f);
  return {fHiHz,fHiReason,bands,unavailable,junctionsHz};
 }

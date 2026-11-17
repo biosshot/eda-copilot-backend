@@ -66,6 +66,10 @@ pub struct Request {
     pub accept_unknown_fill_freshness:bool,
     #[serde(default)]
     pub allow_insulated_copper_cuts:bool,
+    /// The domain already holds all copper that matters (whole-board DC): an over-budget ROI is refused with
+    /// `MEMORY_LIMIT` instead of being shrunk by the cutting fallback.
+    #[serde(default,skip_serializing_if="std::ops::Not::not")]
+    pub refuse_roi_fallback:bool,
     #[serde(default)]
     pub electrodes:Vec<Electrode>,
     #[serde(default,skip_serializing_if="BTreeMap::is_empty")]

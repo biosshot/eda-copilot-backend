@@ -262,6 +262,7 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,force
     if skin.is_some() {eprintln!("P7_ROI_ESTIMATE planar={planar0} nodes={nodes0} bytes={bytes0:.0} budgetBytes={budget_bytes:.0} z={}",z_planes(r,skin));}
     // Small meshes never need the fallback (the fixed overhead term must not refuse unit-scale fixtures).
     if bytes0<=budget_bytes||nodes0<100_000 {return Ok(None);}
+    if r.refuse_roi_fallback {return Err(error("MEMORY_LIMIT",&format!("the whole-copper domain needs about {:.1} GiB ({nodes0} nodes), budget {:.1} GiB; copper may not be cut",bytes0/1073741824.,budget_bytes/1073741824.)));}
     // Support: electrode source regions and the copper of the non-reference channel nets.
     let Some(Support{electrode_regions,channel_nets,net_area,reference,support,bbox})=channel_support(r,g) else {return Ok(None);};
     let stack_mm=r.stack.iter().map(|l|l.thickness_m).sum::<f64>()*1e3;

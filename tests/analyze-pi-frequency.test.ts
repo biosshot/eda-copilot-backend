@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import type { AnalysisTask } from '../src/analyze/analysis-dsl/executor.ts';
 import { createPiBoardExecutor } from '../src/analyze/analysis-dsl/pi-board-executor.ts';
 import { magnitudeExtrema, portAdmittance, reflection, solveComplex, terminatedZ, type Cx } from '../src/analyze/analysis-dsl/pi-frequency-compose.ts';
-import { anchorFrequencies, fitTier, planPiFrequency, quasiStaticLimitHz } from '../src/analyze/analysis-dsl/pi-frequency-plan.ts';
+import { anchorFrequencies, fitTier, PI_BAND_MAX_RATIO, planPiFrequency, quasiStaticLimitHz } from '../src/analyze/analysis-dsl/pi-frequency-plan.ts';
 import { executeScenario } from '../src/analyze/analysis-dsl/scenario.ts';
 import { segmentedCoupon } from './helpers/pcb-analysis-segmented-coupon.ts';
 
@@ -177,6 +177,8 @@ test('coupon end to end: the source-port |Z| minimum is the decap series resonan
  // DC point stays the stage-2 path and its stitching difference is reported.
  assert.equal(s.dcStitch.status, 'reported');
  assert.ok(s.dcStitch.max > 0 && s.dcStitch.acFrequencyHz === s.bands[0].anchorsHz[0]);
+ // The stitch compares the board with the DC terminations; with the decap conducting at 200 kHz the terminated difference is far larger.
+ assert.ok(s.dcStitch.relativeDifference[1] < 0.05 && s.dcStitch.terminatedRelativeDifference[1] > 0.2, JSON.stringify(s.dcStitch));
  // A decap nearer to the source (shorter loop) resonates higher.
  const nearer = await run(withParts([['C1', 2.5]]), scenario(`.frequency({startHz:2e5,stopHz:1.5e6,points:15,scale:'log'})`, cap(C, ESR, ESL)));
  const mn = axisMin(seriesOf(nearer, 0))!;
@@ -202,4 +204,21 @@ test('coupon: DC/AC stitching at 1 kHz, a single AC frequency, and unavailable p
  assert.equal(seriesOf(high, 1).validity.status, 'unavailable');
  assert.ok(seriesOf(high, 1).values.every(v => v === null));
  assert.equal(high.diagnostics.some(d => d.code === 'PI_BAND_UNAVAILABLE'), true);
+});
+
+test('frequency plan: a band in the top decade below f_hi never spans more than a decade, lower bands stay whole', () => {
+ const fHi = 3.975e7;
+ const axis = Array.from({ length: 30 }, (_, i) => 1e3 * (4e7 / 1e3) ** (i / 29));
+ const plan = planPiFrequency({ frequenciesHz: axis, portCount: 6, quasiStaticHz: fHi });
+ const whole = planPiFrequency({ frequenciesHz: axis.filter(f => f <= 1e6), portCount: 6, quasiStaticHz: fHi });
+ // The 1 kHz-80 kHz band is wider than a decade but far below f_hi/10: unchanged.
+ assert.deepEqual(plan.bands.slice(0, 2).map(b => b.extractionHz), whole.bands.map(b => b.extractionHz));
+ const high = plan.bands.filter(b => b.boundsHz[0] >= 1e6);
+ assert.ok(high.length >= 2);
+ for (const band of high) assert.ok(band.extractionHz[1] / band.extractionHz[0] <= PI_BAND_MAX_RATIO, String(band.extractionHz));
+ assert.deepEqual(high.flatMap(b => b.pointIndices).sort((a, b) => a - b), axis.map((f, i) => f > 1e6 && f <= fHi ? i : -1).filter(i => i >= 0));
+ for (let i = 1; i < high.length; i++) {
+  assert.equal(high[i].boundsHz[0], high[i - 1].boundsHz[1]);
+  assert.ok(plan.junctionsHz.includes(high[i].boundsHz[0]));
+ }
 });

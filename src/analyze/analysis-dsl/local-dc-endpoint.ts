@@ -10,6 +10,15 @@ import type { localRequest } from './local-request.ts';
 import { AnalysisDslError } from './schema.ts';
 import type { Diagnostic, Validity } from './spec-doc.js';
 
+/** Bounding box of the board outline and all captured copper (mm), with a small margin so no copper touches the edge. */
+function wholeBoardRoi(captured:ReturnType<typeof capturedBoardGeometry>):[[number,number],[number,number]]{
+ const box:[[number,number],[number,number]]=[[Infinity,Infinity],[-Infinity,-Infinity]];
+ for(const polygon of [...(captured.outline?[captured.outline]:[]),...captured.regions.map(region=>region.polygon)])
+  for(const [x,y] of polygon.outer){box[0][0]=Math.min(box[0][0],x);box[0][1]=Math.min(box[0][1],y);box[1][0]=Math.max(box[1][0],x);box[1][1]=Math.max(box[1][1],y);}
+ const margin=0.05;
+ return [[box[0][0]-margin,box[0][1]-margin],[box[1][0]+margin,box[1][1]+margin]];
+}
+
 /** Exact DC of a bounded copper mesh. The selected drive is a probe, not a
  * schematic operating point or an independent excitation of floating ports. */
 export function localDcEndpoint(
@@ -83,14 +92,23 @@ export function localDcEndpoint(
  const loop=portNames?-1:relativeSigns.findIndex(sign=>sign!==0);
  const drive=loop<0?undefined:nativePorts.map((_,i)=>i===loop?1:i===loop+1?relativeSigns[loop]:0);
  let report: AnalysisLocalDcReport;
- try{
+ const attempt=(domain:object)=>{
   const left=remainingSeconds-(performance.now()-start)/1000;
   if(left<=0)throw new Error('LOCAL_DC_DEADLINE: shared DC planning deadline exhausted');
-  report=solve({kind:'local-dc-extraction',boardJson,request:{
-   geometry:{...geometry,electrodes,ports:nativePorts,allowInsulatedCopperCuts:false},observablesOnly:true,externalPortCount:ports.length,
+  return solve({kind:'local-dc-extraction',boardJson,request:{
+   geometry:{...geometry,electrodes,ports:nativePorts,allowInsulatedCopperCuts:false,...domain},observablesOnly:true,externalPortCount:ports.length,
    ...(maxMemoryMiB!==undefined&&{maxMemoryMib:maxMemoryMiB}),
    ...(drive&&{drive}),...(nativePorts.length>ports.length&&{loadsOhm:nativeLoads}),
   },remainingSeconds:left});
+ };
+ try{
+  try{report=attempt({});}
+  catch(error){
+   // The planned ROI cuts copper and DC refuses insulated cuts: solve the whole board instead, so nothing is cut.
+   // The native side refuses (MEMORY_LIMIT) when that domain does not fit the request budget.
+   if(!(error instanceof Error)||!error.message.startsWith('LOCAL_BOARD_CUT_POLICY'))throw error;
+   report=attempt({roiMm:wholeBoardRoi(captured),domainPolygonMm:undefined,refuseRoiFallback:true});
+  }
  }catch(error){
   const message=error instanceof Error?error.message:String(error);
   throw new AnalysisDslError(message.match(/^([A-Z][A-Z0-9_]+):/)?.[1]??'LOCAL_DC_NATIVE_REJECTED',message,diagnostics);
