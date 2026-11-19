@@ -10,7 +10,7 @@ import {AnalysisDslError} from './schema.ts';
 import {withBudgetHint} from './budget-hint.ts';
 import {resolveMemoryMiB} from './machine-memory.ts';
 import {cascadeSwitchOn,solveChannelCascade} from '../channel-cascade.ts';
-import {chooseChannelModel} from '../channel-cascade-policy.ts';
+import {chooseChannelModel,describeChannelStructure} from '../channel-cascade-policy.ts';
 import {channelCascadeResult} from './channel-cascade-result.ts';
 /** Defaults apply only when the request carries no `.budget()`. */
 const defaultBudget={maxSeconds:1800};
@@ -28,6 +28,7 @@ export function createLocalExecutor(execute=createProblemExecutor(true)){return 
  if(startHz===0&&stopHz===0)
   return localDcEndpoint(task,geometry,warningDiagnostics(),dcSeconds(),execute,extractionPlan?.dcComponents,undefined,resolveMemoryMiB(c.budget?.maxMemoryMiB).maxMemoryMiB);
  if(!extractionPlan) throw new AnalysisDslError('CHANNEL_FOIL_SCOPE','Hybrid AC extraction requires an automatic domain around the physical contacts',warningDiagnostics());
+ let cascadeNote='';
  try {
   // P7_CHANNEL_CASCADE: a plain pad-track-pad channel is a chain of 2D sections; any other channel keeps the one-domain path below.
   if(cascadeSwitchOn()&&!extractionPlan.terminalRequest){
@@ -38,8 +39,10 @@ export function createLocalExecutor(execute=createProblemExecutor(true)){return 
     const cascade=solveChannelCascade(execute,{boardJson:JSON.stringify(task.board),stack:(geometry as any).stack,choice,returns:extractionPlan.contacts.slice(2),frequencies,budget});
     return channelCascadeResult(task.contextId,cascade,choice,extractionPlan.contacts,warningDiagnostics());
    }
+   // Not a plain chain: say what a cascade would need (blocks); the one-domain path below stays as is and an error carries this note.
+   cascadeNote=' [P7_CHANNEL_CASCADE: one-domain path; '+choice.reasons[0]+'; '+describeChannelStructure(task.board,extractionPlan.contacts,signal).summary+']';
   }
   const solved=solveHybridBoardChannel(execute,task.board,geometry,extractionPlan.terminalRequest??extractionPlan.contacts,frequencies,{maxSeconds:c.budget?.maxSeconds??defaultBudget.maxSeconds,maxMemoryMiB:resolveMemoryMiB(c.budget?.maxMemoryMiB).maxMemoryMiB},[startHz,stopHz]);
   return boardFoilResult(task.contextId,solved.foil,solved.report,warningDiagnostics());
- } catch(error) { if(error instanceof AnalysisDslError)throw error;const message=error instanceof Error?error.message:String(error);{const code=message.match(/^([A-Z][A-Z0-9_]+):/)?.[1]??'CHANNEL_REJECTED';throw new AnalysisDslError(code,withBudgetHint(code,message,{maxSeconds:c.budget?.maxSeconds??defaultBudget.maxSeconds,maxMemoryMiB:resolveMemoryMiB(c.budget?.maxMemoryMiB).maxMemoryMiB},c.budget?.maxMemoryMiB===undefined),warningDiagnostics());} }
+ } catch(error) { if(error instanceof AnalysisDslError)throw error;const message=error instanceof Error?error.message:String(error);{const code=message.match(/^([A-Z][A-Z0-9_]+):/)?.[1]??'CHANNEL_REJECTED';throw new AnalysisDslError(code,withBudgetHint(code,message+cascadeNote,{maxSeconds:c.budget?.maxSeconds??defaultBudget.maxSeconds,maxMemoryMiB:resolveMemoryMiB(c.budget?.maxMemoryMiB).maxMemoryMiB},c.budget?.maxMemoryMiB===undefined),warningDiagnostics());} }
 };}

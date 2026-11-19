@@ -102,3 +102,58 @@ export function chooseChannelModel(board:any,contacts:CascadeContact[],signal:Ca
  return {mode:'cascade',layer,sections,joints,portPlaneMm:[inputPort,chain[last].to],
   notModelled:['pad parts not aligned with the track (the port plane is the track end inside the pad, no pad shunt)','width steps and bends (ideal joint between sections, error estimated per joint)']};
 }
+
+export interface ChannelBlockSite {kind:'layer-transition'|'component-pad'|'branch'|'open-end';atMm:Pt;layers:string[];sourcePaths:string[]}
+export interface ChannelStructure {
+ sections:{count:number;totalLengthMm:number;byLayerMm:Record<string,number>};
+ blocks:ChannelBlockSite[];summary:string;
+}
+/** Where a cascade would need a 3D block (P7-completion 4.5): layer transitions, component pads on the copper, branches and open ends;
+ * the straight track runs between them are the sections. Pure geometry; used to name what the one-domain fallback is missing. */
+export function describeChannelStructure(board:any,contacts:CascadeContact[],signal:CascadeContact[]):ChannelStructure{
+ const TOL=0.01,items:{key:string;at:Pt;radius:number;kind:'pad'|'via'|'track-end';layers:string[];path:string;contact:boolean;seg?:number}[]=[];
+ const seen=new Set<string>(),done=new Set<string>(),contactPaths=new Set(contacts.slice(0,2).map(c=>c.sourcePath));
+ const segs:{path:string;layer:string;a:Pt;b:Pt}[]=[];
+ for(const s of signal){
+  if(seen.has(s.sourcePath+'|'+s.layer))continue;seen.add(s.sourcePath+'|'+s.layer);
+  const pi=indexOf(s.sourcePath,'pads'),vi=indexOf(s.sourcePath,'copper.fixed.vias'),ti=indexOf(s.sourcePath,'copper.fixed.tracks');
+  if(pi!==undefined){
+   if(done.has(s.sourcePath))continue;done.add(s.sourcePath);
+   const p=board.pads?.[pi];if(!p?.at)continue;
+   const sh=p.shape??{},r=sh.diameterMm?sh.diameterMm/2:Math.max(sh.widthMm??0,sh.heightMm??0)/2;
+   items.push({key:s.sourcePath,at:[p.at.x,p.at.y],radius:r,kind:'pad',layers:p.layers??[s.layer],path:s.sourcePath,contact:contactPaths.has(s.sourcePath)});
+  }else if(vi!==undefined){
+   if(done.has(s.sourcePath))continue;done.add(s.sourcePath);
+   const v=board.copper?.fixed?.vias?.[vi];if(!v?.at)continue;
+   items.push({key:s.sourcePath,at:[v.at.x,v.at.y],radius:(v.diameterMm??0)/2,kind:'via',layers:[v.fromLayer,v.toLayer],path:s.sourcePath,contact:false});
+  }else if(ti!==undefined){
+   const t=board.copper?.fixed?.tracks?.[ti];if(!t?.points)continue;
+   for(let i=1;i<t.points.length;i++)segs.push({path:s.sourcePath,layer:s.layer,a:[t.points[i-1].x,t.points[i-1].y],b:[t.points[i].x,t.points[i].y]});
+  }
+ }
+ segs.forEach((g,i)=>{items.push({key:'s'+i+'a',at:g.a,radius:0,kind:'track-end',layers:[g.layer],path:g.path,contact:false,seg:i},{key:'s'+i+'b',at:g.b,radius:0,kind:'track-end',layers:[g.layer],path:g.path,contact:false,seg:i});});
+ const parent=items.map((_,i)=>i),find=(i:number):number=>parent[i]===i?i:(parent[i]=find(parent[i]));
+ for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++){
+  const a=items[i],b=items[j];if(a.kind==='track-end'&&b.kind==='track-end'?dist(a.at,b.at)<ENDPOINT_TOL_MM*2:(a.kind!=='track-end'&&b.kind!=='track-end')?false:dist(a.at,b.at)<=Math.max(a.radius,b.radius)+TOL)parent[find(i)]=find(j);
+ }
+ const clusters=new Map<number,number[]>();items.forEach((_,i)=>{const r=find(i);clusters.set(r,[...(clusters.get(r)??[]),i]);});
+ const blocks:ChannelBlockSite[]=[],blockRoots=new Set<number>();
+ for(const [root,ids] of clusters){
+  const m=ids.map(i=>items[i]),ends=m.filter(x=>x.kind==='track-end').length,solid=m.filter(x=>x.kind!=='track-end');
+  const contact=solid.some(x=>x.contact),via=solid.some(x=>x.kind==='via'||x.layers.length>1),other=solid.filter(x=>!x.contact);
+  const degree=ends+(contact?1:0);
+  const kind:ChannelBlockSite['kind']|undefined=via?'layer-transition':other.length?'component-pad':degree>=3?'branch':(ends===1&&!contact)?'open-end':contact&&ends>1?'branch':undefined;
+  if(!kind)continue;
+  blockRoots.add(root);
+  const layers=[...new Set(m.flatMap(x=>x.layers))],c=(solid[0]??m[0]).at;
+  blocks.push({kind,atMm:c,layers,sourcePaths:[...new Set(solid.map(x=>x.path))]});
+ }
+ // Sections: track segments joined through plain two-segment nodes (no block there).
+ const sp=segs.map((_,i)=>i),sf=(i:number):number=>sp[i]===i?i:(sp[i]=sf(sp[i]));
+ for(const [root,ids] of clusters){if(blockRoots.has(root))continue;const s=ids.map(i=>items[i].seg).filter((v):v is number=>v!==undefined);for(let k=1;k<s.length;k++)sp[sf(s[k])]=sf(s[0]);}
+ const byLayer:Record<string,number>={},groups=new Set<number>();let total=0;
+ segs.forEach((g,i)=>{groups.add(sf(i));const l=dist(g.a,g.b);total+=l;byLayer[g.layer]=(byLayer[g.layer]??0)+l;});
+ const count=blocks.reduce((m:Record<string,number>,b)=>({...m,[b.kind]:(m[b.kind]??0)+1}),{});
+ const summary=groups.size+' track sections ('+total.toFixed(2)+' mm) and blocks needed at: '+(Object.entries(count).map(([k,n])=>n+' '+k).join(', ')||'none');
+ return {sections:{count:groups.size,totalLengthMm:total,byLayerMm:byLayer},blocks,summary};
+}

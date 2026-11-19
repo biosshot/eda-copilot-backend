@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {cascadeTwoPorts,cabs,csub,cx,maxSingularValue,reciprocityError,terminatePorts,type CMatrix,type Cx} from '../src/analyze/channel-cascade-stitch.ts';
-import {chooseChannelModel} from '../src/analyze/channel-cascade-policy.ts';
+import {chooseChannelModel,describeChannelStructure} from '../src/analyze/channel-cascade-policy.ts';
 
 const Z0=50;
 const cexp=(a:Cx)=>cx(Math.exp(a.re)*Math.cos(a.im),Math.exp(a.re)*Math.sin(a.im));
@@ -95,4 +95,26 @@ test('partition: a long output pad aligned with the last track becomes its own s
  if(choice.mode!=='cascade')return;
  assert.deepEqual(choice.sections.map(s=>s.id),['track-0','track-1','pad-output']);
  assert.ok(Math.abs(choice.sections[1].lengthMm-(10.63-2.75))<1e-9&&Math.abs(choice.sections[2].lengthMm-2.75)<1e-9&&choice.sections[2].widthMm===1);
+});
+
+test('structure: a via, a component pad and a stub name the blocks a cascade would need',()=>{
+ const board={
+  pads:[{at:{x:0,y:0},shape:{kind:'circle',diameterMm:1},layers:['TOP']},{at:{x:20,y:0},shape:{kind:'circle',diameterMm:2},layers:['TOP','BOTTOM']},
+   {at:{x:8,y:0},shape:{kind:'rect',widthMm:1,heightMm:0.8},layers:['TOP']},{at:{x:0,y:-3},shape:{kind:'circle',diameterMm:2},layers:['TOP','BOTTOM']}],
+  copper:{fixed:{tracks:[
+   {widthMm:0.25,points:[{x:0,y:0},{x:8,y:0}]},{widthMm:0.25,points:[{x:8,y:0},{x:12,y:0}]},
+   {widthMm:0.25,points:[{x:12,y:0},{x:12,y:0}]},
+   {widthMm:0.25,points:[{x:12,y:0},{x:20,y:0}]},{widthMm:0.25,points:[{x:0,y:0},{x:0,y:-3}]}],
+   vias:[{at:{x:12,y:0},diameterMm:0.6,fromLayer:'TOP',toLayer:'BOTTOM'}]}},
+ };
+ const contacts=[{sourcePath:'pads[0]',layer:'TOP'},{sourcePath:'pads[1]',layer:'TOP'}];
+ const track=(i:number,layer:string)=>({sourcePath:'copper.fixed.tracks['+i+']',layer});
+ const signal=[...contacts,{sourcePath:'pads[1]',layer:'BOTTOM'},{sourcePath:'pads[2]',layer:'TOP'},{sourcePath:'pads[3]',layer:'TOP'},{sourcePath:'copper.fixed.vias[0]',layer:'TOP'},{sourcePath:'copper.fixed.vias[0]',layer:'BOTTOM'},
+  track(0,'TOP'),track(1,'TOP'),track(3,'BOTTOM'),track(4,'TOP')];
+ const s=describeChannelStructure(board,contacts,signal);
+ assert.equal(s.blocks.filter(b=>b.kind==='layer-transition').length,3,'via, output through-hole pad, stub-end through-hole pad');
+ assert.equal(s.blocks.filter(b=>b.kind==='component-pad').length,1);
+ assert.ok(s.blocks.some(b=>b.kind==='branch'),'stub branches at the input pad');
+ assert.ok(s.sections.count>=3&&Math.abs(s.sections.totalLengthMm-(8+4+8+3))<1e-9);
+ assert.equal(chooseChannelModel(board,[...contacts,{sourcePath:'pads[2]',layer:'BOTTOM'},{sourcePath:'pads[3]',layer:'BOTTOM'}],signal).mode,'one-domain');
 });
