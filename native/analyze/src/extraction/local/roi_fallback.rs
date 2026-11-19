@@ -15,9 +15,22 @@ use geo::{Area,BoundingRect,Contains,Intersects};
 use std::cmp::Reverse;
 use std::collections::{BTreeMap,BTreeSet,BinaryHeap,HashMap,HashSet};
 
-/// Calibrated on TPS 24k nodes/0.7 GiB, BandAmpV5 60k/1.1 GiB, STM32G0 154k/3.9 GiB.
-const BASE_BYTES:f64=0.2*1073741824.;
-const BYTES_PER_NODE:f64=24.*1024.;
+/// Peak process-tree working set of a whole run versus the ESTIMATED counts (`planar * z_planes` nodes, before mesh coarsening,
+/// so the node figure also absorbs the 1.3-1.65x node overestimate of most boards; NanoScope meshes at 0.96 of the estimate).
+/// Model: base + bytes/node * nodes + bytes/planar vertex * planar + bytes/z plane * z planes. Fit 2026-11-19 (4 threads, min max-ratio LP,
+/// estimate >= measured on every point, whole BandAmpV5 estimate kept under the 6 GiB budget; `debugging/p7-completion/stage5/fit_quick.py`).
+/// Points, est nodes / est planar / z -> peak MiB: BandAmpV5 M2 1 MHz 5 ports corridor 2 mm 139k/4642/30 -> 1078, corridor 3 mm 200k/6658/30 -> 1497,
+/// bbox 3 mm 246k/8205/30 -> 1822, bbox 5 mm 292k/9728/30 -> 2071, whole board 677k/22565/30 -> 4155; BandAmpV5 RF_IN 50 MHz 41k/5168/8 -> 1029;
+/// TPS63060DSCR L6 236k/7867/30 -> 1564, M1 252k/7867/32 -> 2527; STM32G0 M3 whole board z6 216k/35947/6 -> 4002 and 4204 (rerun; the larger is used), corridor 680k/22655/30 -> 5261;
+/// NanoScope M9 corridor 1.5 mm 387k/8063/48 -> 4409 (10 kHz), 4322 (1 MHz). Ratio est/measured 1.0-2.2 (M2 whole 1.48, only 5 MiB under its 6 GiB budget, M3 whole 1.00, NanoScope 1.00-1.02).
+/// A per-node figure alone cannot cover both (STM32G0 z6 has 5x fewer nodes per planar vertex than BandAmpV5 z30 at the same peak; NanoScope z48 meshes
+/// nearly in full), hence the planar and z terms. The older NanoScope runs (z10/z14, previous solver) are NOT covered (0.36-0.45x here); the post-build honest estimate is.
+const BASE_BYTES:f64=105.*1048576.;
+const BYTES_PER_NODE:f64=4.53*1024.;
+const BYTES_PER_PLANAR:f64=82.8*1024.;
+const BYTES_PER_Z_PLANE:f64=40.5*1048576.;
+/// Built/estimated node ratio the constants above already include; `recalibrate` corrects only the departure from it.
+const CALIBRATED_NODE_RATIO:f64=0.65;
 const MARGIN_LADDER_MM:[f64;4]=[20.,10.,5.,3.];
 /// The corridor ladder continues below the bbox ladder: its area is already small, so tighter radii are still meaningful.
 const CORRIDOR_LADDER_MM:[f64;6]=[20.,10.,5.,3.,2.,1.5];
@@ -48,7 +61,8 @@ fn estimate_in(g:&PreparationReport,r:&Request,roi:&[[f64;2];2],poly:Option<&geo
     let area=poly.map_or((roi[1][0]-roi[0][0])*(roi[1][1]-roi[0][1]),|p|p.unsigned_area());
     let planar=(1.3*v as f64+area/(2.*r.max_triangle_area_m2*1e6)) as usize;
     let nodes=planar.saturating_mul(z_planes(r,skin));
-    (planar,nodes,BASE_BYTES+BYTES_PER_NODE*nodes as f64)
+    let z=z_planes(r,skin);
+    (planar,nodes,BASE_BYTES+BYTES_PER_NODE*nodes as f64+BYTES_PER_PLANAR*planar as f64+BYTES_PER_Z_PLANE*z as f64)
 }
 
 
@@ -247,6 +261,13 @@ impl RequestMemory {
 /// The request memory limit in whole MiB, if the calling thread carries one.
 pub(super) fn request_memory_mib()->Option<f64> { request_memory_bytes().map(|b|(b/1048576.).floor()) }
 impl Drop for RequestMemory { fn drop(&mut self) { REQUEST_MEMORY.with(|c|c.set(self.0)); } }
+thread_local!{static STEP_FALLBACK:std::cell::Cell<Option<Option<f64>>>=const{std::cell::Cell::new(None)};}
+/// Set by the field-band build while it tries the automatic interface step (`P7_FIELD_INTERFACE_STEP` unset): carries the interface
+/// step of the unstepped retry (`None` = no step). When the whole domain fits the budget only with that coarser z grid, `plan` refuses
+/// instead of truncating, so the retry solves the whole board. Restored on drop.
+pub(super) struct StepFallback(Option<Option<f64>>);
+impl StepFallback {pub(super) fn set(alt:Option<Option<f64>>)->Self {Self(STEP_FALLBACK.with(|c|c.replace(alt)))}}
+impl Drop for StepFallback {fn drop(&mut self) {STEP_FALLBACK.with(|c|c.set(self.0));}}
 pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,forced:Option<(&str,f64)>,skin:Option<copper_skin_profile::Profile>)->Result<Option<Plan>> {
     if std::env::var("P7_ROI_FALLBACK").as_deref()==Ok("0")||!r.cut_planes.is_empty() {return Ok(None);}
     let roi0=r.roi_mm;
@@ -263,6 +284,20 @@ pub(super) fn plan(r:&Request,g:&PreparationReport,budget:AllocationBudget,force
     // Small meshes never need the fallback (the fixed overhead term must not refuse unit-scale fixtures).
     if bytes0<=budget_bytes||nodes0<100_000 {return Ok(None);}
     if r.refuse_roi_fallback {return Err(error("MEMORY_LIMIT",&format!("the whole-copper domain needs about {:.1} GiB ({nodes0} nodes), budget {:.1} GiB; copper may not be cut",bytes0/1073741824.,budget_bytes/1073741824.)));}
+    // Ladder order: an untruncated domain with fewer z planes beats a truncated one at full z. Truncation cuts the far return
+    // paths (boundary current 0.16-0.66 on BandAmpV5 and 0.23 on STM32G0, all CHANNEL_RETURN_UNRESOLVED), while the whole domain
+    // passes the return-current check; fewer z planes only coarsen the vertical grading near dielectric interfaces
+    // (the same trade the unstepped retry already makes), which the residual/return checks still judge.
+    if forced.is_none() {if let Some(alt)=STEP_FALLBACK.with(|c|c.get()) {
+        let mut r2=r.clone();r2.interface_step_m=alt;if alt.is_none() {r2.interface_growth=None;}
+        if z_planes(&r2,skin)<z_planes(r,skin) {
+            let (_,n2,b2)=estimate(g,&r2,&roi0,skin);
+            if b2<=budget_bytes||n2<100_000 {
+                eprintln!("P7_ROI_STEP_BEFORE_TRUNCATION z={} -> {} nodes {nodes0} -> {n2} bytes {bytes0:.0} -> {b2:.0}",z_planes(r,skin),z_planes(&r2,skin));
+                return Err(error("MEMORY_LIMIT",&format!("the whole-copper domain needs about {:.1} GiB with the interface step ({nodes0} nodes) but {:.1} GiB without it ({n2} nodes), budget {:.1} GiB; solve it whole at the coarser z grid rather than truncate",bytes0/1073741824.,b2/1073741824.,budget_bytes/1073741824.)));
+            }
+        }
+    }}
     // Support: electrode source regions and the copper of the non-reference channel nets.
     let Some(Support{electrode_regions,channel_nets,net_area,reference,support,bbox})=channel_support(r,g) else {return Ok(None);};
     let stack_mm=r.stack.iter().map(|l|l.thickness_m).sum::<f64>()*1e3;
@@ -439,7 +474,7 @@ const SAFETY:f64=1.1;
 pub(super) fn recalibrate(ev:&serde_json::Value,built_nodes:usize,build_seconds:f64,budget:AllocationBudget)->Option<((String,f64),serde_json::Value)> {
     if std::env::var("P7_ROI_RECALIBRATE").as_deref()==Ok("0")||build_seconds>120. {return None;}
     let est=ev["estimatedNodes"].as_f64()?;let first=ev["marginMm"].as_f64()?;let mode=ev["mode"].as_str()?;
-    let ratio=built_nodes as f64/est;
+    let ratio=built_nodes as f64/est/CALIBRATED_NODE_RATIO;
     let budget_bytes=ev["budgetBytes"].as_f64().unwrap_or(budget.max_bytes as f64);
     // Rungs tried before the chosen one are larger; the first that fits the corrected estimate wins.
     let pick=ev["largerRungsBytes"].as_array()?.iter().filter_map(|v|Some((v[0].as_f64()?,v[1].as_f64()?))).find(|(_,b)|BASE_BYTES+(b-BASE_BYTES)*ratio*SAFETY<=budget_bytes)?;
@@ -452,26 +487,30 @@ pub(super) fn not_rebuilt(ev:&serde_json::Value,built_nodes:usize)->serde_json::
 
 
 // ---- Honest post-build estimate ---------------------------------------------------------------------
-/// Peak private memory of a whole run versus the counts of the built mesh (GiB). Calibration points, from
-/// debugging/p7-v1-stage2 (peaks are lower bounds when the run was stopped early):
-/// NanoScope 198540 nodes / 317205 tets / 6081 prisms -> >= 8.78 (resource-failure in the magnetic stage),
-/// BandAmpV5 60492 / 113787 / 7730 -> >= 10.24 (resource-failure), STM32G0_CAN_RS485 154092 / 198780 / 6966 -> >= 3.77 (timeout),
-/// TPS63060DSCR 54336 / 77412 / 2499 -> 0.6 to 1.0 (diagnostic-complete or timeout). The model is the larger of a tet
-/// term and a barrel-term (barrel copper tetrahedra, about 7 per thin-wall prism: NanoScope 42843 tets for 6081 prisms, ThunderF722 23199 for 3485),
-/// plus a fixed base; it stays at or above the observed peak for NanoScope (10.4 vs >= 8.78) and ThunderF722 (5.8 vs 5.18 at the charge stage).
-pub(super) const HONEST_BASE_GIB:f64=0.5;
-pub(super) const HONEST_GIB_PER_TET:f64=2.8e-5;
-pub(super) const HONEST_GIB_PER_BARREL_TET:f64=2.3e-4;
+/// Peak process-tree working set of a whole run versus the built mesh (GiB): bytes per copper tetrahedron + bytes per planar triangle.
+/// Fitted 2026-11-19 (4 threads, `P7_ROI_HONEST=0` keeps rungs the estimate would reject; min max-ratio LP, estimate >= measured on every point,
+/// `debugging/p7-completion/stage5/fit_honest2.py`, rows `honest_rows.json` = last P7_ROI_HONEST_ESTIMATE line of each stage0/stage4 run + memory.json peak).
+/// Points, tets / planar triangles -> peak GiB: BandAmpV5 M2 corridor 3 mm 117840/9275 -> 1.46, bbox 3 mm 143085/10402 -> 1.78, bbox 5 mm 169578/11756 -> 2.02;
+/// STM32G0 M3 10 kHz corridor 265233/34830 -> 5.14; stage0/stage4 M5/M7a/M7b 50k-145k tets -> 0.75-1.71; NanoScope M9 10 kHz and 1 MHz (current code,
+/// corridor 1.5 mm z48) 183108/15444 -> 4.31 / 4.22, older runs 139443/18166 -> 3.56 / 4.28, 226680/15444 (40 MHz) -> 4.95. Result: 1.0-2.4x of every point
+/// (NanoScope 1.00-1.21, STM32G0 1.60, BandAmpV5 1.8-1.9, cheap M5/M7 up to 2.4 where it does not matter).
+/// NanoScope peaks during the magnetic preparation (H-matrix build, 75k foil currents / 37k supports; 3.7 GiB at 140 s, 4.3 GiB at 290 s of 830 s),
+/// not in the later AC solve, and its 10 kHz and 1 MHz peaks agree (4.31 / 4.22): it follows the foil triangle count, not frequency or ports. The node and base terms
+/// of the 5.3b fit are gone (a node term cannot cover NanoScope without 2-3x on BandAmpV5); the barrel term of the pre-compact solver stays removed.
+pub(super) const HONEST_BASE_GIB:f64=0.;
+pub(super) const HONEST_GIB_PER_TET:f64=1.22e-5;
+pub(super) const HONEST_GIB_PER_PLANAR_TRIANGLE:f64=1.43e-4;
 pub(super) fn honest_estimate(nodes:usize,tets:usize,planar_triangles:usize,barrel_tets:usize)->(f64,serde_json::Value) {
     let tet_term=HONEST_GIB_PER_TET*tets as f64;
-    let barrel_term=HONEST_GIB_PER_BARREL_TET*barrel_tets as f64;
-    let gib=HONEST_BASE_GIB+tet_term.max(barrel_term);
-    (gib*1073741824.,serde_json::json!({"model":"base + max(gibPerTet*tets, gibPerBarrelTet*barrelTets)","baseGiB":HONEST_BASE_GIB,"gibPerTet":HONEST_GIB_PER_TET,"gibPerBarrelTet":HONEST_GIB_PER_BARREL_TET,
-        "nodes":nodes,"copperTetrahedra":tets,"planarTriangles":planar_triangles,"barrelTetrahedra":barrel_tets,"tetTermGiB":tet_term,"barrelTermGiB":barrel_term,"estimateGiB":gib,
-        "calibration":[{"board":"NanoScope","nodes":198540,"tets":317205,"prisms":6081,"observedPeakGiB":8.78,"note":"lower bound, stopped by the memory cap"},
-            {"board":"BandAmpV5","nodes":60492,"tets":113787,"prisms":7730,"observedPeakGiB":10.24,"note":"lower bound, stopped by the memory cap"},
-            {"board":"STM32G0_CAN_RS485","nodes":154092,"tets":198780,"prisms":6966,"observedPeakGiB":3.77,"note":"timeout, lower bound"},
-            {"board":"TPS63060DSCR","nodes":54336,"tets":77412,"prisms":2499,"observedPeakGiB":1.04,"note":"timeout, lower bound"}]}))
+    let tri_term=HONEST_GIB_PER_PLANAR_TRIANGLE*planar_triangles as f64;
+    let gib=HONEST_BASE_GIB+tet_term+tri_term;
+    (gib*1073741824.,serde_json::json!({"model":"base + gibPerTet*tets + gibPerPlanarTriangle*planarTriangles","baseGiB":HONEST_BASE_GIB,"gibPerTet":HONEST_GIB_PER_TET,"gibPerPlanarTriangle":HONEST_GIB_PER_PLANAR_TRIANGLE,
+        "nodes":nodes,"copperTetrahedra":tets,"planarTriangles":planar_triangles,"barrelTetrahedra":barrel_tets,"tetTermGiB":tet_term,"triangleTermGiB":tri_term,"estimateGiB":gib,
+        "calibration":[{"board":"BandAmpV5 corridor 3 mm","tets":117840,"planarTriangles":9275,"observedPeakGiB":1.46},
+            {"board":"BandAmpV5 bbox 5 mm","tets":169578,"planarTriangles":11756,"observedPeakGiB":2.02},
+            {"board":"STM32G0 M3 10 kHz corridor 1.5 mm","tets":265233,"planarTriangles":34830,"observedPeakGiB":5.14},
+            {"board":"NanoScope M9 10 kHz corridor 1.5 mm","tets":183108,"planarTriangles":15444,"observedPeakGiB":4.31},
+            {"board":"NanoScope M9 40 MHz (older solver)","tets":226680,"planarTriangles":15444,"observedPeakGiB":4.95}]}))
 }
 /// The next smaller rung below the current ROI (bbox margins, then corridor radii; margins in mm as in the evidence).
 pub(super) fn next_smaller(r:&Request,mode:&str,margin_mm:f64)->Option<(String,f64)> {

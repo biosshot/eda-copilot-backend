@@ -565,6 +565,8 @@ fn build_profiled_impl(board:&Board,r:&Request,budget:AllocationBudget,max_wall:
             let (est,model)=super::roi_fallback::honest_estimate(mesh.mesh.nodes_m.len(),mesh.mesh.copper_tetrahedra.len(),mesh.planar_triangles.len(),barrel_tets);
             eprintln!("P7_ROI_HONEST_ESTIMATE {} budgetBytes={budget_bytes}",model);
             last_model=model.clone();
+            // Diagnostics: print the estimate but keep the chosen rung (measuring the peak of a rung the estimate would step down from).
+            if std::env::var("P7_ROI_HONEST").as_deref()==Ok("0") {steps.push(serde_json::json!({"fits":est<=budget_bytes,"estimateBytes":est,"note":"step-down disabled by P7_ROI_HONEST=0"}));break;}
             if est<=budget_bytes {steps.push(serde_json::json!({"fits":true,"estimateBytes":est,"model":model}));break;}
             let cur=mesh.roi_fallback.clone().unwrap_or(serde_json::Value::Null);
             let (Some(md),Some(mg))=(cur["mode"].as_str(),cur["marginMm"].as_f64()) else {break};

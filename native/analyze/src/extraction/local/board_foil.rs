@@ -870,7 +870,8 @@ pub fn solve_checked(
     Ok(checked)
     };
     if step_auto {
-        match run(step_geometry) {
+        let first = { let _g = super::roi_fallback::StepFallback::set(Some(mesh_geometry.interface_step_m)); run(step_geometry) };
+        match first {
             Err(e) if e.contains("MESH_LIMIT") || e.contains("MEMORY_LIMIT") => {
                 eprintln!("P7_FIELD_INTERFACE_STEP_SKIPPED reason={e} (set P7_FIELD_INTERFACE_STEP=1 to keep the refusal)");
                 let mut v = run(mesh_geometry)?;
