@@ -150,13 +150,17 @@ export function runPiFrequency(task:AnalysisTask<'pi'>,assembly:PiBoardAssembly,
   // The board at the AC frequency is terminated as at DC (terminations evaluated at w=0: capacitors open), so the
   // difference is that of the board model alone; with AC terminations the decoupling shunt would enter it.
   const diagonalDifference=(zs:(Cx|null)[][])=>assembly.ports.map((_,i)=>{const a=zs[i][i],b=zDc![i][i];return a&&b!==null&&b!==0?Math.hypot(a.re-b,a.im)/Math.abs(b):null;});
-  const relative=diagonalDifference(terminatedZ(toPi(lowestAnchor.waves),gamma(0)));
+  const acAtDcTerminations=terminatedZ(toPi(lowestAnchor.waves),gamma(0));
+  const relative=diagonalDifference(acAtDcTerminations);
+  // Split of the difference: resistive part (Re) and the series inductance its imaginary part implies.
+  const resistiveRelative=assembly.ports.map((_,i)=>{const a=acAtDcTerminations[i][i],b=zDc![i][i];return a&&b!==null&&b!==0?Math.abs(a.re-b)/Math.abs(b):null;});
+  const seriesInductanceH=assembly.ports.map((_,i)=>{const a=acAtDcTerminations[i][i];return a&&zDc![i][i]!==null?a.im/(2*Math.PI*lowestAnchor.frequencyHz):null;});
   const terminated=diagonalDifference(compose(lowestAnchor.waves,lowestAnchor.frequencyHz));
   const finite=relative.filter((v):v is number=>v!==null),maximum=finite.length?Math.max(...finite):null;
   dcStitch={status:'reported',acFrequencyHz:lowestAnchor.frequencyHz,relativeDifference:relative,max:maximum,
    tier:maximum===null?null:fitTier(maximum,0.01,0.05),dcImpedanceOhm:assembly.ports.map((_,i)=>zDc![i][i]),
-   terminatedRelativeDifference:terminated,
-   note:'|Z_ac - Z_dc|/|Z_dc| per port: the board at the lowest extracted frequency with the DC terminations (capacitors open) against the DC point; the board inductive part is part of the difference. terminatedRelativeDifference uses the AC terminations at that frequency (decoupling shunt included, informational).'};
+   terminatedRelativeDifference:terminated,resistiveRelativeDifference:resistiveRelative,seriesInductanceH,
+   note:'resistiveRelativeDifference = |Re Z_ac - Z_dc|/|Z_dc|; seriesInductanceH = Im Z_ac/(2 pi f).|Z_ac - Z_dc|/|Z_dc| per port: the board at the lowest extracted frequency with the DC terminations (capacitors open) against the DC point; the board inductive part is part of the difference. terminatedRelativeDifference uses the AC terminations at that frequency (decoupling shunt included, informational).'};
   if(maximum!==null&&maximum>0.05)diagnostics.push({code:'PI_DC_STITCH',severity:'warning',message:'AC model at '+lowestAnchor.frequencyHz+' Hz differs from the DC point by '+(100*maximum).toFixed(1)+'% (approximation)'});
  }
  for(const u of frequencyPlan.unavailable.slice(0,1))diagnostics.push({code:'PI_BAND_UNAVAILABLE',severity:'warning',
