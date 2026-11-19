@@ -118,3 +118,17 @@ test('structure: a via, a component pad and a stub name the blocks a cascade wou
  assert.ok(s.sections.count>=3&&Math.abs(s.sections.totalLengthMm-(8+4+8+3))<1e-9);
  assert.equal(chooseChannelModel(board,[...contacts,{sourcePath:'pads[2]',layer:'BOTTOM'},{sourcePath:'pads[3]',layer:'BOTTOM'}],signal).mode,'one-domain');
 });
+
+test('structure: a four-port coupled pair with pours is a named refusal, pours are counted, all signal contacts are contacts',()=>{
+ const pad=(x:number,y:number)=>({at:{x,y},shape:{kind:'rect',widthMm:1,heightMm:1},layers:['TOP']});
+ const board={pads:[pad(0,0),pad(10,0),pad(0,3),pad(10,3)],copper:{fixed:{tracks:[{widthMm:0.25,points:[{x:0,y:0},{x:10,y:0}]},{widthMm:0.25,points:[{x:0,y:3},{x:10,y:3}]}],zones:[{}]}}};
+ const p=(i:number)=>({sourcePath:'pads['+i+']',layer:'TOP'});
+ const contacts=[p(0),p(1),p(2),p(3),p(0),p(1),p(2),p(3)];
+ const signal=[p(0),p(1),p(2),p(3),{sourcePath:'copper.fixed.tracks[0]',layer:'TOP'},{sourcePath:'copper.fixed.tracks[1]',layer:'TOP'},{sourcePath:'copper.fixed.zones[0].filledPolygons[0].polygons[0]',layer:'TOP'}];
+ const choice=chooseChannelModel(board,contacts,signal);
+ assert.equal(choice.mode,'one-domain');
+ assert.match((choice as any).reasons[0],/coupled multi-port set \(4 ports\)/);
+ const s=describeChannelStructure(board,contacts,signal);
+ assert.equal(s.pours,1);
+ assert.ok(!s.blocks.some(b=>b.kind==='component-pad'),'the four signal pads are contacts, not component pads');
+});

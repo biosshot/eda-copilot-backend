@@ -39,6 +39,7 @@ const padExit=(r:Rect,d:Pt)=>{
 /** `signal` is the set of source paths on the signal island (contacts included). */
 export function chooseChannelModel(board:any,contacts:CascadeContact[],signal:CascadeContact[]):ChannelModelChoice{
  const refuse=(...reasons:string[]):ChannelModelChoice=>({mode:'one-domain',reasons});
+ if(contacts.length>4)return refuse('coupled multi-port set ('+contacts.length/2+' ports): the cascade handles one two-port channel, a coupled pair needs coupled sections');
  if(contacts.length!==4)return refuse('cascade needs one two-port channel with explicit return contacts');
  const [a,b]=contacts;
  if(a.layer!==b.layer)return refuse('signal contacts are on different layers: a layer transition needs a block');
@@ -106,13 +107,13 @@ export function chooseChannelModel(board:any,contacts:CascadeContact[],signal:Ca
 export interface ChannelBlockSite {kind:'layer-transition'|'component-pad'|'branch'|'open-end';atMm:Pt;layers:string[];sourcePaths:string[]}
 export interface ChannelStructure {
  sections:{count:number;totalLengthMm:number;byLayerMm:Record<string,number>};
- blocks:ChannelBlockSite[];summary:string;
+ blocks:ChannelBlockSite[];/** Copper pour polygons on the signal island (not sections: a pour is not a track). */pours:number;summary:string;
 }
 /** Where a cascade would need a 3D block (P7-completion 4.5): layer transitions, component pads on the copper, branches and open ends;
  * the straight track runs between them are the sections. Pure geometry; used to name what the one-domain fallback is missing. */
 export function describeChannelStructure(board:any,contacts:CascadeContact[],signal:CascadeContact[]):ChannelStructure{
  const TOL=0.01,items:{key:string;at:Pt;radius:number;kind:'pad'|'via'|'track-end';layers:string[];path:string;contact:boolean;seg?:number}[]=[];
- const seen=new Set<string>(),done=new Set<string>(),contactPaths=new Set(contacts.slice(0,2).map(c=>c.sourcePath));
+ const seen=new Set<string>(),done=new Set<string>(),contactPaths=new Set(contacts.slice(0,contacts.length/2).map(c=>c.sourcePath));
  const segs:{path:string;layer:string;a:Pt;b:Pt}[]=[];
  for(const s of signal){
   if(seen.has(s.sourcePath+'|'+s.layer))continue;seen.add(s.sourcePath+'|'+s.layer);
@@ -151,9 +152,10 @@ export function describeChannelStructure(board:any,contacts:CascadeContact[],sig
  // Sections: track segments joined through plain two-segment nodes (no block there).
  const sp=segs.map((_,i)=>i),sf=(i:number):number=>sp[i]===i?i:(sp[i]=sf(sp[i]));
  for(const [root,ids] of clusters){if(blockRoots.has(root))continue;const s=ids.map(i=>items[i].seg).filter((v):v is number=>v!==undefined);for(let k=1;k<s.length;k++)sp[sf(s[k])]=sf(s[0]);}
+ const pours=new Set(signal.filter(s=>indexOf(s.sourcePath.replace(/\.filledPolygons.*$/,''),'copper.fixed.zones')!==undefined).map(s=>s.sourcePath.replace(/\.filledPolygons.*$/,''))).size;
  const byLayer:Record<string,number>={},groups=new Set<number>();let total=0;
  segs.forEach((g,i)=>{groups.add(sf(i));const l=dist(g.a,g.b);total+=l;byLayer[g.layer]=(byLayer[g.layer]??0)+l;});
  const count=blocks.reduce((m:Record<string,number>,b)=>({...m,[b.kind]:(m[b.kind]??0)+1}),{});
- const summary=groups.size+' track sections ('+total.toFixed(2)+' mm) and blocks needed at: '+(Object.entries(count).map(([k,n])=>n+' '+k).join(', ')||'none');
- return {sections:{count:groups.size,totalLengthMm:total,byLayerMm:byLayer},blocks,summary};
+ const summary=groups.size+' track sections ('+total.toFixed(2)+' mm) and blocks needed at: '+(Object.entries(count).map(([k,n])=>n+' '+k).join(', ')||'none')+(pours?'; '+pours+' copper pour on the signal island':'');
+ return {sections:{count:groups.size,totalLengthMm:total,byLayerMm:byLayer},blocks,pours,summary};
 }
