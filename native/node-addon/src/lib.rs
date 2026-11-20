@@ -23,6 +23,17 @@ pub fn release_shared_analysis_operators() {
     pcb_analyze::extraction::local::release_shared_operators()
 }
 
+/// Rational (vector fitting) model of sampled multiport Y/Z/S data; JSON in, JSON out.
+#[napi]
+pub fn fit_rational_model(request: Value) -> Result<Value> {
+    pcb_analyze::electrical::vector_fit::fit_json(request).map_err(napi::Error::from_reason)
+}
+
+#[napi]
+pub fn evaluate_rational_model(request: Value) -> Result<Value> {
+    pcb_analyze::electrical::vector_fit::evaluate_json(request).map_err(napi::Error::from_reason)
+}
+
 #[napi]
 pub fn placement_geometry_epsilon() -> f32 {
     pcb_board_packer::placement_geometry_epsilon()

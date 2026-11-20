@@ -8,6 +8,7 @@ pub mod relaxation;
 pub mod resonant;
 pub mod signal;
 mod solve;
+pub mod vector_fit;
 mod waveform;
 pub use network::{Circuit, Element, Port};
 use serde::{Deserialize, Serialize};

@@ -71,6 +71,48 @@ export declare function validateAnalysisGeometry(request: AnalysisValidationRequ
 /** Drop operators kept for reuse between bands of one calculation. */
 export declare function releaseSharedAnalysisOperators(): void;
 
+export interface RationalComplex { real: number; imaginary: number }
+export type RationalMatrix = RationalComplex[][];
+export interface RationalFitRequest {
+  kind: 'Y' | 'Z' | 'S';
+  /** Strictly increasing, >= 0 (0 allowed first), maximum > 0. */
+  frequenciesHz: number[];
+  /** One n x n (1..8) matrix per frequency. */
+  samples: RationalMatrix[];
+  /** Pole count; odd counts get one real pole, the rest are conjugate pairs. */
+  poles: number;
+  iterations?: number;
+  weights?: number[];
+  /** Default true. */
+  fitD?: boolean;
+  /** Default true for Y/Z, false for S. */
+  fitE?: boolean;
+  /** Only perturbs the model when true; the result reports whether passivity was verified. */
+  enforcePassivity?: boolean;
+  /** Refuse with RATIONAL_FIT_NOT_CONVERGED above this max relative error. */
+  maxRelativeError?: number;
+  budget?: { maxSeconds?: number | null; maxMemoryMiB?: number | null };
+}
+/** H(s) = D + s E + sum R_p / (s - p), s = j 2 pi f, SI units; complex poles in conjugate pairs. */
+export interface RationalModel { kind: 'Y' | 'Z' | 'S'; ports: number; poles: RationalComplex[]; residues: RationalMatrix[]; d: RationalMatrix; e: RationalMatrix }
+export interface RationalPassivity {
+  passive: boolean; reason: string | null; tolerance: number; gridPoints: number;
+  violations: Array<{ startHz: number; endHz: number; worstHz: number; worstValue: number }>;
+  /** Min Hermitian-part eigenvalue (Y/Z) or max singular value (S) over the grid. */
+  worstValue: number; worstFrequencyHz: number; asymptoticDValue: number; asymptoticEValue: number;
+}
+export interface RationalFitResult {
+  model: RationalModel; rmsRelativeError: number; maxRelativeError: number; iterations: number;
+  passive: boolean; passivityReason: string | null; passivity: RationalPassivity;
+  enforcement: null | {
+    iterations: number; reached: boolean; reason: string | null;
+    maxRelativeErrorBefore: number; maxRelativeErrorAfter: number; rmsRelativeErrorBefore: number; rmsRelativeErrorAfter: number;
+  };
+}
+/** Errors start with RATIONAL_FIT_INPUT or RATIONAL_FIT_NOT_CONVERGED. */
+export declare function fitRationalModel(request: RationalFitRequest): RationalFitResult;
+export declare function evaluateRationalModel(request: { model: RationalModel; frequenciesHz: number[] }): { samples: RationalMatrix[] };
+
 export interface AnalysisMaterial { conductivity_s_m: number; state: string }
 export type AnalysisStackEntry = { kind: 'copper'; layer: string; thickness_mm: number }
   | { kind: 'dielectric'; name: string; thickness_mm: number };
