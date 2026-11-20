@@ -68,6 +68,8 @@ export interface AnalysisValidationSuccess {
 }
 export type AnalysisValidationReport = AnalysisValidationSuccess | {operation:'geometry-validation';status:'rejected';diagnostics:AnalysisValidationSuccess['diagnostics'];elapsed_ms:number};
 export declare function validateAnalysisGeometry(request: AnalysisValidationRequest): AnalysisValidationReport;
+/** Drop operators kept for reuse between bands of one calculation. */
+export declare function releaseSharedAnalysisOperators(): void;
 
 export interface AnalysisMaterial { conductivity_s_m: number; state: string }
 export type AnalysisStackEntry = { kind: 'copper'; layer: string; thickness_mm: number }

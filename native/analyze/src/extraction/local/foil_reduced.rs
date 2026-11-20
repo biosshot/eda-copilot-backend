@@ -4403,7 +4403,7 @@ struct CompactMixedMagnetic {
     local_hierarchy:Option<super::volume_integral_magnetic::CompactLocalHierarchy>,
     cross:CrossFast,
     mixed_plan:super::near_far::Plan,
-    hm:Option<super::planar_hmatrix::PlanarHMatrix>,
+    hm:Option<std::sync::Arc<super::planar_hmatrix::PlanarHMatrix>>,
     pl_pool:Option<rayon::ThreadPool>,
     pl_workers:usize,
     cache:std::cell::RefCell<BTreeMap<(usize,usize),f64>>,
@@ -4466,7 +4466,7 @@ impl CompactMixedMagnetic {
         eprintln!("P7_COMPACT_UNIFIED_PLAN supports={} nearPairs={} farPairs={} planBytes={} cacheCapacity={}",mixed_plan.moments.len(),mixed_plan.near_pairs,mixed_plan.far_pairs,mixed_plan.planned_bytes,cache_limit);
         let hm=if hm_wanted {
             let refs:Vec<&super::prism::Prism>=supports.iter().map(|s|&s.prism).collect();
-            let h=super::planar_hmatrix::PlanarHMatrix::build(&refs,total_mixed_budget.saturating_sub(mixed_plan.planned_bytes),super::planar_hmatrix::Params::from_env(),start,wall)?;
+            let h=super::planar_hmatrix::PlanarHMatrix::build_shared(&refs,total_mixed_budget.saturating_sub(mixed_plan.planned_bytes),super::planar_hmatrix::Params::from_env(),start,wall)?;
             eprintln!("P7_COMPACT_HMATRIX {}",h.stats.json());
             if super::planar_operator::prof_on() {eprintln!("P7_PAIR_PROFILE {}",super::planar_operator::prof_json());}
             Some(h)

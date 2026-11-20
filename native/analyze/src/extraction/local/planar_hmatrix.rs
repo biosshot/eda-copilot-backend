@@ -238,7 +238,32 @@ fn aca(k: &Kernel, rows: &[usize], cols: &[usize], eps: f64, st: &mut Stats) -> 
     Ok(Some((rank, u, v, err)))
 }
 
+/// Single in-process slot (the last built H-matrix): consecutive bands of one pi() run call the extractor in the same process and, when the
+/// prisms coincide (bands on the same side of the t/delta = 1 foil split), get identical geometry; the key is the disk-cache key.
+/// Only one entry is kept and a different key drops it before the build, so peak memory is unchanged; the result is the same object.
+static SHARED: std::sync::Mutex<Option<(u128, std::sync::Arc<PlanarHMatrix>)>> = std::sync::Mutex::new(None);
+/// Drop the slot: called when a calculation ends, so the next one does not carry this H-matrix through its own meshing.
+pub(super) fn release_shared() { *SHARED.lock().unwrap_or_else(|e| e.into_inner()) = None; }
+
 impl PlanarHMatrix {
+    /// `build` with in-process reuse (always on; bypassed by the pair probe). Values are bitwise those of a fresh build.
+    pub(super) fn build_shared(prisms: &[&Prism], max_bytes: usize, params: Params, start: Instant, wall: Duration) -> Result<std::sync::Arc<Self>> {
+        if probe_on() { return Self::build(prisms, max_bytes, params, start, wall).map(std::sync::Arc::new); }
+        let key = disk_cache::key(prisms, &params);
+        {
+            let mut slot = SHARED.lock().unwrap_or_else(|e| e.into_inner());
+            if let Some((k, hm)) = slot.as_ref() {
+                if *k == key && hm.n == prisms.len() && hm.stats.stored_bytes <= max_bytes {
+                    eprintln!("P7_COMPACT_HMATRIX_CACHE mem-hit key={key:032x} storedBytes={} originalBuildSeconds={:.2}", hm.stats.stored_bytes, hm.stats.build_seconds);
+                    return Ok(hm.clone());
+                }
+            }
+            *slot = None;
+        }
+        let hm = std::sync::Arc::new(Self::build(prisms, max_bytes, params, start, wall)?);
+        *SHARED.lock().unwrap_or_else(|e| e.into_inner()) = Some((key, hm.clone()));
+        Ok(hm)
+    }
     /// Builds the H-matrix, or loads it from the disk cache (default on, `P7_HMATRIX_CACHE=0` disables).
     pub(super) fn build(prisms: &[&Prism], max_bytes: usize, params: Params, start: Instant, wall: Duration) -> Result<Self> {
         // The probe needs a real build (a cache hit evaluates no pairs).

@@ -19,6 +19,11 @@ fn packer_error(error: pcb_board_packer::Error) -> Error {
 }
 
 #[napi]
+pub fn release_shared_analysis_operators() {
+    pcb_analyze::extraction::local::release_shared_operators()
+}
+
+#[napi]
 pub fn placement_geometry_epsilon() -> f32 {
     pcb_board_packer::placement_geometry_epsilon()
 }

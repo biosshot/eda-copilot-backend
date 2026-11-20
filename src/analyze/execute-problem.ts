@@ -5,6 +5,10 @@ import { backendResource } from '../runtime/resources.ts';
 import type { AnalysisProblem, AnalysisResult } from './types.ts';
 
 let workerModelCache:LocalModelCache|undefined;
+type NodeAddon=typeof import('../../native/node-addon/index.cjs');
+let loadedAddon:NodeAddon|undefined;
+/** Drop operators the native extractor keeps between bands of one calculation; no-op if the addon was never loaded. */
+export function releaseSharedOperators(){loadedAddon?.releaseSharedAnalysisOperators();}
 
 function validateChannelMagneticCache(value:any,physical:any,budget:any){
  const memory=budget?.maxMemoryMiB??1024,seconds=budget?.maxSeconds??300;
@@ -36,7 +40,7 @@ export function createProblemExecutor(retainDcForScenario = false) {
     return coreIdentity;
   };
   return <P extends AnalysisProblem>(problem: P): AnalysisResult<P> => {
-    const loadAddon = () => createRequire(import.meta.url)(backendResource('native', 'node-addon', 'index.cjs')) as typeof import('../../native/node-addon/index.cjs');
+    const loadAddon = () => loadedAddon ??= createRequire(import.meta.url)(backendResource('native', 'node-addon', 'index.cjs')) as NodeAddon;
     if(problem.kind==='board-foil-checked'){
       const started=performance.now();
       try {

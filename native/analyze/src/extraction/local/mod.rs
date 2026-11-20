@@ -99,6 +99,8 @@ mod line_pair;
 mod island_response;
 mod planar_operator;
 mod planar_hmatrix;
+/// Release operators kept for reuse between bands of one calculation (the in-process H-matrix slot).
+pub fn release_shared_operators() { planar_hmatrix::release_shared(); }
 mod planar_layered;
 mod hybrid_applicability;
 mod planar_mixed;

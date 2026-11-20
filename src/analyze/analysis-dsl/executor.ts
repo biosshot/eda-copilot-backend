@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { AnalysisDslError, parse, port, selector, text, timingOptions } from './schema.ts';
 import { freeze, json, unavailable, value } from './data.ts';
 import { createDcExecutor } from './dc-executor.ts';
+import { releaseSharedOperators } from '../execute-problem.ts';
 import { dcObservedVoltage } from './dc-observation.ts';
 import {createElectricalExecutor,circuitObservedVoltage,circuitObservedTransfer} from './electrical-executor.ts';
 import {createThermalExecutor,thermalObservedData} from './thermal-executor.ts';
@@ -67,7 +68,8 @@ export function createAnalysisExecutor(group = createGroupExecutor()): AnalysisE
   const electrothermal=createElectrothermalExecutor(electrical,thermal);
   const tdr=createTdrExecutor(transient);
   const emi=createEmiExecutor(transient);
-  return async task => {
+  // Operators kept between the bands of one calculation are released when it ends (the next calculation would carry them through its meshing).
+  const dispatch = async (task: AnalysisTask): Promise<ExecutionResult> => {
     if (task.kind==='thermal') return thermal(task as AnalysisTask<'thermal'>);
     if (task.kind==='electrothermal') return electrothermal(task as AnalysisTask<'electrothermal'>);
     if (task.kind==='tdr') return tdr(task as AnalysisTask<'tdr'>);
@@ -86,6 +88,7 @@ export function createAnalysisExecutor(group = createGroupExecutor()): AnalysisE
     if (task.kind === 'dc') return dc(task as AnalysisTask<'dc'>);
     throw new AnalysisDslError('ANALYZER_NOT_IMPLEMENTED', `Analysis executor '${task.kind}' is not implemented`, [{ code: 'ANALYZER_NOT_IMPLEMENTED', severity: 'error', message: `No production ${task.kind} solver is installed` }]);
   };
+  return async task => { try { return await dispatch(task); } finally { releaseSharedOperators(); } };
 }
 
 const properties: Record<AnalysisKind, Record<string, string>> = {
