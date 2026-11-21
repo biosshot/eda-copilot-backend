@@ -183,6 +183,8 @@ coupled RLC подтверждены [матрицей исходных пунк
 
 **Объём, статусы A–H, принятые подэтапы и матрица случаев:** [p7-plan.md](p7-plan.md).
 
+**Статус на 2026-11-21 (P7-completion закрыт, [итог](../evidence/p7-completion-summary-2026-11-21.md)):** матрица готовности M1–M10 прогнана один раз (`tests/pcb-analyze/p7-matrix.json`). Результат: TPS pi() по всей сетке, TPS DC→тепло и каналы BandAmp до 1 ГГц каскадом — `complete`; STM32G0/BandAmp pi() на полной сетке — `LOCAL_DEADLINE` 3600 с; каналы без каскада выше 26–40 МГц — `LOCAL_MIXED_FOIL_BAND`; TPS SW→FB и NanoScope — `CHANNEL_RETURN_UNRESOLVED` (0,178 и 0,105 > 0,10); ThunderF722 — отказ по памяти машины. Физическая точность `unverified`.
+
 ### P8. AC и переходный PI по плате
 
 **Статус на 2026-11-02:** не начато. Зависит от закрытия P7.

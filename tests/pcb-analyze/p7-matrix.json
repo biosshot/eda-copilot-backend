@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "source": "P7-completion stage 10.1, commit 4730f95, RAYON_NUM_THREADS=4 P7_HMATRIX_THREADS=4, one run at a time; docs/analyze/evidence/p7-completion-summary-2026-11-21.md",
+  "physicalAccuracy": "unverified",
+  "runner": "npx tsx scripts/run-p7-readiness-row.ts <row>",
+  "rows": [
+    {"id": "M1", "consumer": "P8", "board": "TPS63060DSCR", "scenario": "TPS63060DSCR/p7-matrix-M1.js", "pi": true, "env": {},
+      "expected": {"status": "complete"}, "observed": {"wallSeconds": 2726, "peakMiB": 2628}},
+    {"id": "M2", "consumer": "P8", "board": "BandAmpV5", "scenario": "BandAmpV5/p7-matrix-M2.js", "pi": true, "env": {},
+      "expected": {"status": "failed", "code": "LOCAL_DEADLINE"}, "observed": {"wallSeconds": 3602, "peakMiB": 4155, "note": "full 30-point grid exceeds 3600 s; one point at 1 MHz completes in 732 s"}},
+    {"id": "M3", "consumer": "P8", "board": "STM32G0_CAN_RS485", "scenario": "STM32G0_CAN_RS485/p7-matrix-M3.js", "pi": true, "env": {},
+      "expected": {"status": "failed", "code": "LOCAL_DEADLINE"}, "observed": {"wallSeconds": 3602, "peakMiB": 4192, "note": "full grid exceeds 3600 s; one point completes in 494 s"}},
+    {"id": "M4", "consumer": "P10", "board": "TPS63060DSCR", "scenario": "TPS63060DSCR/p7-matrix-M4.js", "pi": false, "env": {},
+      "expected": {"status": "complete"}, "observed": {"wallSeconds": 6, "peakMiB": 567, "note": "0.02247 W, 25.62-28.05 degC, conditional"}},
+    {"id": "M5", "consumer": "P11", "board": "STM32G0_CAN_RS485", "scenario": "STM32G0_CAN_RS485/p7-matrix-M5.js", "pi": false, "env": {},
+      "expected": {"status": "failed", "code": "LOCAL_MIXED_FOIL_BAND"}, "observed": {"wallSeconds": 2, "peakMiB": 309, "note": "maximum valid frequency 26.1 MHz"}},
+    {"id": "M6", "consumer": "P11", "board": "TPS63060DSCR", "scenario": "TPS63060DSCR/p7-matrix-M6.js", "pi": false, "env": {},
+      "expected": {"status": "failed", "code": "LOCAL_MIXED_FOIL_BAND"}, "observed": {"wallSeconds": 0.6, "peakMiB": 272, "note": "maximum valid frequency 39.8 MHz"}},
+    {"id": "M7a", "consumer": "P11", "board": "BandAmpV5", "scenario": "BandAmpV5/p7-matrix-M7a.js", "pi": false, "env": {"P7_CHANNEL_CASCADE": "1"},
+      "expected": {"status": "complete"}, "observed": {"wallSeconds": 29, "peakMiB": 1177, "note": "without the cascade: LOCAL_MIXED_FOIL_BAND, maximum valid frequency 35.3 MHz"}},
+    {"id": "M7b", "consumer": "P11", "board": "BandAmpV5", "scenario": "BandAmpV5/p7-matrix-M7b.js", "pi": false, "env": {"P7_CHANNEL_CASCADE": "1"},
+      "expected": {"status": "complete"}, "observed": {"wallSeconds": 23, "peakMiB": 1075, "note": "without the cascade: LOCAL_MIXED_FOIL_BAND, maximum valid frequency 35.3 MHz"}},
+    {"id": "M8", "consumer": "P12", "board": "TPS63060DSCR", "scenario": "TPS63060DSCR/p7-matrix-M8.js", "pi": false, "env": {},
+      "expected": {"status": "failed", "code": "CHANNEL_RETURN_UNRESOLVED"}, "observed": {"wallSeconds": 1042, "peakMiB": 1427, "note": "boundary current 0.178 > 0.10 on a budget-shrunken domain"}},
+    {"id": "M9", "consumer": "P7", "board": "NanoScope", "scenario": "NanoScope/p7-matrix-M9.js", "pi": false, "env": {},
+      "expected": {"status": "failed", "code": "CHANNEL_RETURN_UNRESOLVED"}, "observed": {"wallSeconds": 813, "peakMiB": 3297, "note": "boundary current 0.105 > 0.10 on a budget-shrunken domain"}},
+    {"id": "M10", "consumer": "P7", "board": "ThunderF722", "scenario": null, "pi": false, "env": {},
+      "expected": {"status": "refused", "code": "MACHINE_MEMORY"}, "observed": {"note": "not run: exceeds the memory of the development machine (plan 10.1)"}}
+  ]
+}
