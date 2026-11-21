@@ -79,8 +79,10 @@ export interface RationalFitRequest {
   frequenciesHz: number[];
   /** One n x n (1..8) matrix per frequency. */
   samples: RationalMatrix[];
-  /** Pole count; odd counts get one real pole, the rest are conjugate pairs. */
-  poles: number;
+  /** Pole count (odd counts get one real pole, the rest are conjugate pairs), or 'auto': chosen from the fit points only. */
+  poles: number | 'auto';
+  /** Upper bound for poles: 'auto' (default: samples - 2, i.e. at least 2 x as many equations as unknowns per entry). */
+  maxPoles?: number;
   iterations?: number;
   weights?: number[];
   /** Default true. */
@@ -108,6 +110,8 @@ export interface RationalFitResult {
     iterations: number; reached: boolean; reason: string | null;
     maxRelativeErrorBefore: number; maxRelativeErrorAfter: number; rmsRelativeErrorBefore: number; rmsRelativeErrorAfter: number;
   };
+  /** Present for poles: 'auto'. */
+  poleSelection: null | { chosen: number; maxTried: number; trials: { poles: number; entryRelativeError: number | null }[]; rule: string };
 }
 /** Errors start with RATIONAL_FIT_INPUT or RATIONAL_FIT_NOT_CONVERGED. */
 export declare function fitRationalModel(request: RationalFitRequest): RationalFitResult;

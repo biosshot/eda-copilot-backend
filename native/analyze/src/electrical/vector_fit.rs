@@ -13,7 +13,11 @@ mod tests;
 const MAX_PORTS: usize = 8;
 const MAX_POLES: usize = 128;
 const PASSIVITY_TOLERANCE: f64 = 1e-9;
-const ENFORCE_ITERATIONS: usize = 20;
+const ENFORCE_ITERATIONS: usize = 40;
+const MAX_ROWS: usize = 150;
+/// Relative Tikhonov damping of the constraint system: rows outnumber the free parameters, so the exact
+/// solve is inconsistent; damping turns it into a damped least-squares step.
+const ENFORCE_DAMPING: f64 = 1e-6;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
@@ -21,7 +25,10 @@ pub struct Request {
     pub kind: String,
     pub frequencies_hz: Vec<f64>,
     pub samples: Vec<Matrix>,
-    pub poles: usize,
+    /// Pole count, or the string "auto" (chosen from the fit points only, see `max_poles`).
+    pub poles: PoleSpec,
+    /// Upper bound for `poles: "auto"` (default: as many as keep the problem 2x overdetermined).
+    pub max_poles: Option<usize>,
     pub iterations: Option<usize>,
     pub weights: Option<Vec<f64>>,
     pub fit_d: Option<bool>,
@@ -29,6 +36,31 @@ pub struct Request {
     pub enforce_passivity: Option<bool>,
     pub max_relative_error: Option<f64>,
     pub budget: Option<Budget>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+pub enum PoleSpec {
+    Count(usize),
+    Auto(String),
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PoleTrial {
+    pub poles: usize,
+    /// Worst entry's rms error relative to that entry's own peak (the quantity the selection uses).
+    pub entry_relative_error: Option<f64>,
+}
+
+/// Automatic pole count: only the fit points are used.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PoleSelection {
+    pub chosen: usize,
+    pub max_tried: usize,
+    pub trials: Vec<PoleTrial>,
+    pub rule: String,
 }
 
 /// Pole-residue model H(s) = D + s E + sum R_p / (s - p), SI units (s = j 2 pi f). Complex poles come in
@@ -74,6 +106,8 @@ pub struct Enforcement {
     pub iterations: usize,
     pub reached: bool,
     pub reason: Option<String>,
+    /// The fit violated passivity at D itself (f -> infinity); it was refitted with D = 0 before enforcing.
+    pub asymptote_refit: bool,
     pub max_relative_error_before: f64,
     pub max_relative_error_after: f64,
     pub rms_relative_error_before: f64,
@@ -91,6 +125,8 @@ pub struct Output {
     pub passivity_reason: Option<String>,
     pub passivity: Passivity,
     pub enforcement: Option<Enforcement>,
+    /// Present for `poles: "auto"`.
+    pub pole_selection: Option<PoleSelection>,
 }
 
 fn bad(message: impl std::fmt::Display) -> String {
@@ -519,6 +555,23 @@ pub fn evaluate(model: &Model, frequencies_hz: &[f64]) -> Result<Vec<Matrix>> {
     }
     Ok(frequencies_hz.iter().map(|&f| eval_at(model, f)).collect())
 }
+/// Worst entry of the root-mean-square error over the samples, each entry relative to its own peak
+/// magnitude (floored at 1e-6 of the largest entry): does not let a large S21 mask a wrong S11.
+fn entry_error(model: &Model, freqs: &[f64], samples: &[Matrix]) -> f64 {
+    let n = model.ports;
+    let fits: Vec<Matrix> = freqs.iter().map(|&f| eval_at(model, f)).collect();
+    let abs = |z: C| z.real.hypot(z.imaginary);
+    let gmax = samples.iter().flat_map(|h| h.iter().flatten()).map(|z| abs(*z)).fold(0., f64::max);
+    let mut worst = 0_f64;
+    for i in 0..n {
+        for j in 0..n {
+            let peak = samples.iter().map(|h| abs(h[i][j])).fold(0., f64::max).max(1e-6 * gmax).max(1e-300);
+            let ms = fits.iter().zip(samples).map(|(a, b)| abs(a[i][j] - b[i][j]).powi(2)).sum::<f64>() / samples.len() as f64;
+            worst = worst.max(ms.sqrt() / peak);
+        }
+    }
+    worst
+}
 fn frob(h: &Matrix) -> f64 {
     h.iter().flatten().map(|z| z.real * z.real + z.imaginary * z.imaginary).sum::<f64>().sqrt()
 }
@@ -642,7 +695,7 @@ fn passivity(model: &Model, grid: &[f64], values: &[f64], scale: f64, wmax: f64)
     let tol = PASSIVITY_TOLERANCE * scale;
     let mut violations: Vec<Violation> = vec![];
     let mut run: Option<usize> = None;
-    let mut flush = |from: usize, to: usize, out: &mut Vec<Violation>| {
+    let flush = |from: usize, to: usize, out: &mut Vec<Violation>| {
         let w = (from..=to).max_by(|&a, &b| severity(values[a], kind).total_cmp(&severity(values[b], kind))).unwrap();
         out.push(Violation { start_hz: grid[from], end_hz: grid[to], worst_hz: grid[w], worst_value: values[w] });
     };
@@ -722,6 +775,15 @@ fn enforce(
         gram[i][i] += ridge;
     }
     let ginv = invert(gram).ok_or_else(|| fail("RATIONAL_PASSIVITY_NOT_ENFORCED", "Singular fit metric"))?;
+    let gmax = d.h.iter().flat_map(|h| h.iter().flatten()).map(|z| z.real.hypot(z.imaginary)).fold(0., f64::max);
+    let entry_scale2: Vec<f64> = d
+        .els
+        .iter()
+        .map(|&(a, b)| {
+            let m = d.h.iter().map(|h| h[a][b].real.hypot(h[a][b].imaginary)).fold(0., f64::max);
+            m.max(1e-6 * gmax).powi(2)
+        })
+        .collect();
     let sev_of = |model: &Model| -> Result<(Vec<f64>, f64)> {
         let v = scan(model, grid)?;
         let w = v.iter().map(|x| severity(*x, kind)).fold(f64::MIN, f64::max);
@@ -737,28 +799,41 @@ fn enforce(
         }
         used += 1;
         checkpoint(start, budget)?;
-        // Constrain only local violation peaks; neighbours follow and later iterations catch the rest.
+        // Constrain every violating grid point (thinned to MAX_ROWS, peaks always kept) plus the
+        // asymptote D itself (x -> infinity): the response between and beyond constrained points is
+        // nonlinear, so peak-only rows let the violation migrate to neighbours (seen out of band).
         let sev: Vec<f64> = values.iter().map(|v| severity(*v, kind)).collect();
-        let mut picks: Vec<usize> = vec![];
-        for i in 0..grid.len() {
-            if sev[i] <= 0. {
-                continue;
-            }
-            let peak = (i == 0 || sev[i] >= sev[i - 1]) && (i + 1 == grid.len() || sev[i] >= sev[i + 1]);
-            if peak {
-                picks.push(i);
-            }
-        }
+        let near = 0.;
+        let bad: Vec<usize> = (0..grid.len()).filter(|&i| sev[i] > near).collect();
+        let is_peak: Vec<bool> = (0..grid.len())
+            .map(|i| sev[i] > near && (i == 0 || sev[i] >= sev[i - 1]) && (i + 1 == grid.len() || sev[i] >= sev[i + 1]))
+            .collect();
+        let mut picks: Vec<usize> = bad
+            .iter()
+            .copied()
+            .filter(|&i| (i == 0 || sev[i] >= sev[i - 1]) && (i + 1 == grid.len() || sev[i] >= sev[i + 1]))
+            .collect();
+        let stride = bad.len().div_ceil(MAX_ROWS).max(1);
+        picks.extend(bad.iter().copied().step_by(stride));
+        picks.sort_unstable();
+        picks.dedup();
         picks.sort_by(|&a, &b| sev[b].total_cmp(&sev[a]));
-        picks.truncate(150);
+        picks.truncate(MAX_ROWS);
         // Linear rows: change of the passivity value per unit coefficient change.
-        let mut rows: Vec<Vec<Vec<f64>>> = vec![]; // [pick][group][param]
-        let mut goal = vec![];
+        let mut points: Vec<(Matrix, Vec<C>)> = vec![];
         for &i in &picks {
-            let h = eval_at(&current, grid[i]);
-            let (v, u, w) = value_vectors(&h, kind)?;
             let mut phi = vec![];
             basis(grid[i] / (d.wmax / (2. * std::f64::consts::PI)), &rat.poles, &mut phi);
+            points.push((eval_at(&current, grid[i]), phi));
+        }
+        if d.has_d && severity(value(&current.d, kind)?, kind) > 0. {
+            points.push((current.d.clone(), vec![C::new(0., 0.); nc]));
+        }
+        let mut rows: Vec<Vec<Vec<f64>>> = vec![]; // [pick][group][param]
+        let mut goal = vec![];
+        let mut rowv = vec![];
+        for (h, phi) in &points {
+            let (v, u, w) = value_vectors(h, kind)?;
             let per_group: Vec<Vec<f64>> = d
                 .els
                 .iter()
@@ -776,10 +851,13 @@ fn enforce(
                 })
                 .collect();
             rows.push(per_group);
-            goal.push(target - v);
+            rowv.push(v);
+            goal.push(if kind == "S" { (target - v).min(0.) } else { (target - v).max(0.) });
         }
         let q = rows.len();
-        let mult = |g: usize| if d.mirror && d.els[g].0 != d.els[g].1 { 2. } else { 1. };
+        // Relative-error metric: the cost of changing entry g is weighted by 1 / max|H_g|^2, so the
+        // minimal-cost step moves large entries and leaves small ones (S11 next to S21 ~ 1) alone.
+        let mult = |g: usize| (if d.mirror && d.els[g].0 != d.els[g].1 { 2. } else { 1. }) / entry_scale2[g];
         let mut kmat = vec![vec![0.; q]; q];
         let zs: Vec<Vec<Vec<f64>>> = (0..d.els.len())
             .map(|g| {
@@ -796,11 +874,43 @@ fn enforce(
             }
         }
         let tr = (0..q).map(|i| kmat[i][i]).sum::<f64>() / q as f64;
-        for i in 0..q {
-            kmat[i][i] += 1e-9 * tr.max(1e-300);
+        // Active-set solve (linearized inequality constraints): start from the violation peaks and the
+        // asymptote, add every row whose predicted value still violates, until none does. Rows are
+        // minimal-norm equalities at the target, so inactive points are not pushed needlessly.
+        let sign = if kind == "S" { 1. } else { -1. };
+        let mut active: Vec<usize> = (0..q).filter(|&i| i >= picks.len() || is_peak[picks[i]]).collect();
+        if active.is_empty() {
+            active.push(0);
         }
-        let kinv = invert(kmat).ok_or_else(|| fail("RATIONAL_PASSIVITY_NOT_ENFORCED", "Singular constraint system"))?;
-        let y: Vec<f64> = (0..q).map(|i| (0..q).map(|j| kinv[i][j] * goal[j]).sum()).collect();
+        let mut y = vec![0.; q];
+        for _ in 0..12 {
+            let sub: Vec<Vec<f64>> = active
+                .iter()
+                .map(|&i| {
+                    active
+                        .iter()
+                        .map(|&j| kmat[i][j] + if i == j { ENFORCE_DAMPING * kmat[i][i].max(1e-12 * tr).max(1e-300) } else { 0. })
+                        .collect()
+                })
+                .collect();
+            let kinv = invert(sub).ok_or_else(|| fail("RATIONAL_PASSIVITY_NOT_ENFORCED", "Singular constraint system"))?;
+            y = vec![0.; q];
+            for (ai, &i) in active.iter().enumerate() {
+                y[i] = active.iter().enumerate().map(|(aj, &j)| kinv[ai][aj] * goal[j]).sum();
+            }
+            let added: Vec<usize> = (0..q)
+                .filter(|i| !active.contains(i))
+                .filter(|&i| {
+                    let pred = rowv[i] + (0..q).map(|j| kmat[i][j] * y[j]).sum::<f64>();
+                    sign * (pred - target) > 1e-3 * (sign * (rowv[i] - target)).abs().max(1e-12 * scale)
+                })
+                .collect();
+            if added.is_empty() {
+                break;
+            }
+            active.extend(added);
+            active.sort_unstable();
+        }
         let mut trial = rat.clone();
         for g in 0..d.els.len() {
             for t in 0..nb {
@@ -815,6 +925,7 @@ fn enforce(
             current = model;
             values = v2;
             worst = w2;
+            alpha = (alpha * 2.).min(1.);
         } else {
             alpha *= 0.5;
         }
@@ -843,8 +954,12 @@ pub fn fit(req: Request) -> Result<Output> {
     if f.iter().any(|v| !v.is_finite() || *v < 0.) || f.windows(2).any(|w| w[1] <= w[0]) || *f.last().unwrap() <= 0. {
         return Err(bad("frequenciesHz must be finite, >= 0 and strictly increasing with a positive maximum"));
     }
-    if req.poles == 0 || req.poles > MAX_POLES {
-        return Err(bad(format!("poles must be 1..={MAX_POLES}")));
+    match &req.poles {
+        PoleSpec::Count(0) => return Err(bad(format!("poles must be 1..={MAX_POLES} or \"auto\""))),
+        PoleSpec::Count(p) if *p > MAX_POLES => return Err(bad(format!("poles must be 1..={MAX_POLES} or \"auto\""))),
+        PoleSpec::Count(_) => {}
+        PoleSpec::Auto(s) if s == "auto" => {}
+        PoleSpec::Auto(s) => return Err(bad(format!("poles must be a count or \"auto\", got \"{s}\""))),
     }
     let weights = match &req.weights {
         Some(w) if w.len() != m || w.iter().any(|v| !v.is_finite() || *v <= 0.) => {
@@ -858,9 +973,13 @@ pub fn fit(req: Request) -> Result<Output> {
     }
     let has_d = req.fit_d.unwrap_or(true);
     let has_e = req.fit_e.unwrap_or(kind != "S");
-    let unknowns = 2 * req.poles + 3;
-    if 2 * m <= unknowns {
-        return Err(bad(format!("{m} samples are too few for {} poles (need 2 x samples > {unknowns})", req.poles)));
+    if let PoleSpec::Count(p) = req.poles {
+        let unknowns = 2 * p + 3;
+        if 2 * m <= unknowns {
+            return Err(bad(format!("{m} samples are too few for {p} poles (need 2 x samples > {unknowns})")));
+        }
+    } else if m < 3 {
+        return Err(bad("poles \"auto\" needs at least 3 samples"));
     }
     let scale_m = req.samples.iter().map(frob).fold(0., f64::max);
     if scale_m == 0. {
@@ -892,82 +1011,182 @@ pub fn fit(req: Request) -> Result<Output> {
         wmax: 2. * std::f64::consts::PI * fmax,
     };
     let xmin = data.x.iter().copied().find(|v| *v > 0.).unwrap_or(1.);
-    let mut poles = initial_poles(req.poles, xmin);
     let iterations = req.iterations.unwrap_or(10);
-    let mut used = 0;
-    for _ in 0..iterations {
-        checkpoint(start, budget)?;
-        let Some(next) = relocate(&data, &poles, start, budget)? else { break };
-        used += 1;
-        let same = next.len() == poles.len()
-            && next.iter().zip(&poles).all(|(a, b)| {
-                (a.re - b.re).hypot(a.im - b.im) <= 1e-12 * a.re.hypot(a.im).max(1e-300) && (a.im == 0.) == (b.im == 0.)
+    let run = |data: &Data, count: usize| -> Result<(Rat, usize)> {
+        let mut poles = initial_poles(count, xmin);
+        let mut used = 0;
+        for _ in 0..iterations {
+            checkpoint(start, budget)?;
+            let Some(next) = relocate(data, &poles, start, budget)? else { break };
+            used += 1;
+            let same = next.len() == poles.len()
+                && next.iter().zip(&poles).all(|(a, b)| {
+                    (a.re - b.re).hypot(a.im - b.im) <= 1e-12 * a.re.hypot(a.im).max(1e-300) && (a.im == 0.) == (b.im == 0.)
+                });
+            poles = next;
+            if same {
+                break;
+            }
+        }
+        let x = identify(data, &poles, start, budget)?;
+        Ok((Rat { poles, x }, used))
+    };
+    let (rat, used, selection) = match &req.poles {
+        PoleSpec::Count(p) => {
+            let (rat, used) = run(&data, *p)?;
+            (rat, used, None)
+        }
+        PoleSpec::Auto(_) => {
+            // Smallest count after which two further counts no longer cut the fit-point rms error by 2x.
+            // Cap: at least 2 x as many real equations per element as unknowns (poles + D + E).
+            let cap = (m.saturating_sub(2)).min(MAX_POLES).min(req.max_poles.unwrap_or(MAX_POLES));
+            if cap == 0 {
+                return Err(bad("maxPoles / sample count leave no admissible pole count"));
+            }
+            let mut best: Option<(usize, f64, Rat, usize)> = None;
+            let (mut trials, mut stale, mut tried) = (vec![], 0, 0);
+            for count in 1..=cap {
+                tried = count;
+                let fitted = run(&data, count).ok().and_then(|(r, u)| {
+                    let e = entry_error(&to_model(&data, kind, &r), f, &req.samples);
+                    e.is_finite().then_some((r, u, e))
+                });
+                trials.push(PoleTrial { poles: count, entry_relative_error: fitted.as_ref().map(|t| t.2) });
+                let Some((r, u, e)) = fitted else {
+                    stale += 1;
+                    if stale >= 2 {
+                        break;
+                    }
+                    continue;
+                };
+                if best.as_ref().map_or(true, |b| e < 0.5 * b.1) {
+                    best = Some((count, e, r, u));
+                    stale = 0;
+                    if e < 1e-12 {
+                        break;
+                    }
+                } else {
+                    stale += 1;
+                    if stale >= 2 {
+                        break;
+                    }
+                }
+            }
+            let (chosen, _, rat, used) = best.ok_or_else(|| fail("RATIONAL_FIT_NOT_CONVERGED", "No pole count produced a finite fit"))?;
+            let rule = format!(
+                "fit points only: smallest count after which 2 further counts do not halve the worst-entry rms error relative to the entry's peak (or error < 1e-12); cap {cap} = min(samples - 2, maxPoles)"
+            );
+            (rat, used, Some(PoleSelection { chosen, max_tried: tried, trials, rule }))
+        }
+    };
+    let pole_count = selection.as_ref().map_or_else(
+        || match &req.poles {
+            PoleSpec::Count(p) => *p,
+            PoleSpec::Auto(_) => 0,
+        },
+        |s| s.chosen,
+    );
+    let finish = |rat: Rat, used: usize, count: usize, selection: Option<PoleSelection>| -> Result<Output> {
+        let mut model = to_model(&data, kind, &rat);
+        let (rms0, max0) = errors(&model, f, &req.samples);
+        if !rms0.is_finite() {
+            return Err(fail("RATIONAL_FIT_NOT_CONVERGED", "Fit is not finite"));
+        }
+        if let Some(limit) = req.max_relative_error {
+            if max0 > limit {
+                return Err(fail(
+                    "RATIONAL_FIT_NOT_CONVERGED",
+                    format!("max relative error {max0:.3e} above requested {limit:.3e} after {used} iterations"),
+                ));
+            }
+        }
+        let grid = make_grid(&model, f);
+        let scale = data_scale(kind, &req.samples);
+        let mut pass = passivity(&model, &grid, &scan(&model, &grid)?, scale, data.wmax)?;
+        let mut enforcement = None;
+        let (mut rms, mut max) = (rms0, max0);
+        if req.enforce_passivity == Some(true) && !pass.passive {
+            let attempt = |edata: &Data, from: &Rat| -> Result<(Rat, Model, Passivity, usize)> {
+                let mut work = from.clone();
+                let steps = enforce(edata, kind, &mut work, &grid, scale, start, budget)?;
+                let m = to_model(edata, kind, &work);
+                let after = passivity(&m, &grid, &scan(&m, &grid)?, scale, data.wmax)?;
+                Ok((work, m, after, steps))
+            };
+            let (_, mut enforced, mut after, mut steps) = attempt(&data, &rat)?;
+            // An asymptote D that violates by itself (D cancelled by a wide pole in-band) is not
+            // repairable without destroying small entries: retry once from a fit with D fixed to 0.
+            let mut asymptote_refit = false;
+            let asym_bad = data.has_d && severity(pass.asymptotic_d_value, kind) > pass.tolerance;
+            if !after.passive && asym_bad {
+                let alt_data = Data { x: data.x.clone(), w: data.w.clone(), h: data.h, n, els: data.els.clone(), mirror: data.mirror, has_d: false, has_e, wmax: data.wmax };
+                if let Ok((alt_rat, _)) = run(&alt_data, count) {
+                    if let Ok((_, m2, a2, s2)) = attempt(&alt_data, &alt_rat) {
+                        if a2.passive || severity(a2.worst_value, kind) < severity(after.worst_value, kind) {
+                            (enforced, after, steps, asymptote_refit) = (m2, a2, s2, true);
+                        }
+                    }
+                }
+            }
+            let (rms1, max1) = errors(&enforced, f, &req.samples);
+            let reached = after.passive;
+            let reason = (!reached).then(|| {
+                format!(
+                    "RATIONAL_PASSIVITY_NOT_ENFORCED: {} after {steps} iteration(s); asymptotic E is not adjusted",
+                    after.reason.clone().unwrap_or_default()
+                )
             });
-        poles = next;
-        if same {
-            break;
+            enforcement = Some(Enforcement {
+                iterations: steps,
+                reached,
+                reason,
+                asymptote_refit,
+                max_relative_error_before: max0,
+                max_relative_error_after: max1,
+                rms_relative_error_before: rms0,
+                rms_relative_error_after: rms1,
+            });
+            // Return the enforced model whenever it is better than the input; verified status is reported.
+            if reached || severity(after.worst_value, kind) < severity(pass.worst_value, kind) {
+                model = enforced;
+                pass = after;
+                rms = rms1;
+                max = max1;
+            }
+        }
+        Ok(Output {
+            model,
+            rms_relative_error: rms,
+            max_relative_error: max,
+            iterations: used,
+            passive: pass.passive,
+            passivity_reason: pass.reason.clone(),
+            passivity: pass,
+            enforcement,
+            pole_selection: selection.clone(),
+        })
+    };
+    let mut out = finish(rat, used, pole_count, selection.clone())?;
+    // With enforcement, "auto" also tries smaller counts (down to half): a near-interpolating fit has wild
+    // behaviour between points, which costs a large perturbation to repair. Still fit points only; the
+    // passive result with the smallest fit-point error wins.
+    if let (Some(sel), Some(true)) = (&selection, req.enforce_passivity) {
+        let score = |o: &Output| {
+            (!o.passive, if o.passive { entry_error(&o.model, f, &req.samples) } else { severity(o.passivity.worst_value, kind) })
+        };
+        for count in (pole_count.div_ceil(2).max(1)..pole_count).rev() {
+            let Ok((r, u)) = run(&data, count) else { continue };
+            let Ok(cand) = finish(r, u, count, Some(PoleSelection { chosen: count, ..sel.clone() })) else { continue };
+            let (sc, so) = (score(&cand), score(&out));
+            if sc.0 < so.0 || (sc.0 == so.0 && sc.1 < so.1) {
+                out = cand;
+            }
+        }
+        if let Some(s) = out.pole_selection.as_mut() {
+            s.rule.push_str("; with enforcePassivity also counts down to half the chosen one were enforced and the passive one with the smallest fit-point worst-entry error kept");
         }
     }
-    let x = identify(&data, &poles, start, budget)?;
-    let rat = Rat { poles, x };
-    let mut model = to_model(&data, kind, &rat);
-    let (rms0, max0) = errors(&model, f, &req.samples);
-    if !rms0.is_finite() {
-        return Err(fail("RATIONAL_FIT_NOT_CONVERGED", "Fit is not finite"));
-    }
-    if let Some(limit) = req.max_relative_error {
-        if max0 > limit {
-            return Err(fail(
-                "RATIONAL_FIT_NOT_CONVERGED",
-                format!("max relative error {max0:.3e} above requested {limit:.3e} after {used} iterations"),
-            ));
-        }
-    }
-    let grid = make_grid(&model, f);
-    let scale = data_scale(kind, &req.samples);
-    let mut pass = passivity(&model, &grid, &scan(&model, &grid)?, scale, data.wmax)?;
-    let mut enforcement = None;
-    let (mut rms, mut max) = (rms0, max0);
-    if req.enforce_passivity == Some(true) && !pass.passive {
-        let mut work = rat.clone();
-        let steps = enforce(&data, kind, &mut work, &grid, scale, start, budget)?;
-        let enforced = to_model(&data, kind, &work);
-        let after = passivity(&enforced, &grid, &scan(&enforced, &grid)?, scale, data.wmax)?;
-        let (rms1, max1) = errors(&enforced, f, &req.samples);
-        let reached = after.passive;
-        let reason = (!reached).then(|| {
-            format!(
-                "RATIONAL_PASSIVITY_NOT_ENFORCED: {} after {steps} iteration(s); asymptotic E is not adjusted",
-                after.reason.clone().unwrap_or_default()
-            )
-        });
-        enforcement = Some(Enforcement {
-            iterations: steps,
-            reached,
-            reason,
-            max_relative_error_before: max0,
-            max_relative_error_after: max1,
-            rms_relative_error_before: rms0,
-            rms_relative_error_after: rms1,
-        });
-        // Return the enforced model whenever it is better than the input; verified status is reported.
-        if reached || severity(after.worst_value, kind) < severity(pass.worst_value, kind) {
-            model = enforced;
-            pass = after;
-            rms = rms1;
-            max = max1;
-        }
-    }
-    Ok(Output {
-        model,
-        rms_relative_error: rms,
-        max_relative_error: max,
-        iterations: used,
-        passive: pass.passive,
-        passivity_reason: pass.reason.clone(),
-        passivity: pass,
-        enforcement,
-    })
+    Ok(out)
 }
 
 pub fn fit_json(request: Value) -> Result<Value> {

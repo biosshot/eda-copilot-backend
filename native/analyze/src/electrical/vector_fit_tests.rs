@@ -23,7 +23,8 @@ fn request(kind: &str, f: &[f64], h: Vec<Matrix>, poles: usize) -> Request {
         kind: kind.into(),
         frequencies_hz: f.to_vec(),
         samples: h,
-        poles,
+        poles: PoleSpec::Count(poles),
+        max_poles: None,
         iterations: Some(20),
         weights: None,
         fit_d: None,
@@ -178,4 +179,90 @@ fn json_round_trip() {
     .unwrap();
     let ev = evaluate_json(serde_json::json!({"model": out["model"], "frequenciesHz": [1e9]})).unwrap();
     assert_eq!(ev["samples"].as_array().unwrap().len(), 1);
+}
+
+/// 2-port S: large through (|S21| = 1.0005 at low f, a tiny passivity violation) and a tiny reflection.
+fn through_with_small_reflection() -> (Vec<f64>, Vec<Matrix>) {
+    let (w1, w2) = (2. * PI * 3e9, 2. * PI * 1e9);
+    let mut model = Model { kind: "S".into(), ports: 2, poles: vec![c(-w1, 0.), c(-w2, 0.)], residues: vec![zero(2), zero(2)], d: zero(2), e: zero(2) };
+    model.residues[0][0][1] = c(1.0005 * w1, 0.);
+    model.residues[0][1][0] = c(1.0005 * w1, 0.);
+    model.residues[1][0][0] = c(1e-4 * w2, 0.);
+    model.residues[1][1][1] = c(1e-4 * w2, 0.);
+    let f = logspace(1e7, 1e10, 40);
+    let h = evaluate(&model, &f).unwrap();
+    (f, h)
+}
+
+#[test]
+fn enforcement_protects_small_entry() {
+    let (f, h) = through_with_small_reflection();
+    let mut req = request("S", &f, h.clone(), 2);
+    req.fit_d = Some(true);
+    let plain = fit(request("S", &f, h.clone(), 2)).unwrap();
+    assert!(!plain.passive);
+    assert!(plain.passivity.worst_value > 1.0004);
+    req.enforce_passivity = Some(true);
+    let out = fit(req).unwrap();
+    let e = out.enforcement.as_ref().unwrap();
+    assert!(out.passive && e.reached, "{:?}", e.reason);
+    let pred = evaluate(&out.model, &f).unwrap();
+    let rel = |i: usize, j: usize| {
+        f.iter().enumerate().map(|(k, _)| (pred[k][i][j] - h[k][i][j]).abs() / h[k][i][j].abs()).fold(0., f64::max)
+    };
+    eprintln!("small entry: S11 rel {:e}, S21 rel {:e}, frob after {:e}", rel(0, 0), rel(1, 0), e.max_relative_error_after);
+    assert!(rel(0, 0) < 1e-2, "S11 relative error {}", rel(0, 0));
+    assert!(rel(1, 0) < 2e-3, "S21 relative error {}", rel(1, 0));
+}
+
+#[test]
+fn out_of_band_violation_is_reported_and_enforced() {
+    // 1-port S with a resonance at 30 GHz that exceeds 1; data only up to 100 MHz.
+    let w0 = 2. * PI * 3e10;
+    let mut model = Model { kind: "S".into(), ports: 1, poles: vec![], residues: vec![], d: zero(1), e: zero(1) };
+    model.d[0][0] = c(0.9, 0.);
+    push_pair(&mut model, c(-0.1 * w0, w0), vec![vec![c(0.03 * w0, 0.)]]);
+    let f = logspace(1e6, 1e8, 30);
+    let h = evaluate(&model, &f).unwrap();
+    let plain = fit(request("S", &f, h.clone(), 2)).unwrap();
+    eprintln!("oob: {:?}", plain.passivity.violations);
+    assert!(!plain.passive && !plain.passivity.violations.is_empty());
+    assert!(plain.passivity.violations.iter().all(|v| v.start_hz > 10. * 1e8), "violation must be out of band");
+    let mut req = request("S", &f, h, 2);
+    req.enforce_passivity = Some(true);
+    let out = fit(req).unwrap();
+    let e = out.enforcement.as_ref().unwrap();
+    eprintln!("oob enforce: reached {} worst {:e} err {:e} reason {:?}", e.reached, out.passivity.worst_value, e.max_relative_error_after, e.reason);
+    assert!(out.passive && e.reached, "{:?}", e.reason);
+    assert!(e.max_relative_error_after < 1e-2);
+}
+
+#[test]
+fn auto_poles_use_fit_points_only() {
+    let mut model = Model { kind: "Y".into(), ports: 1, poles: vec![], residues: vec![], d: zero(1), e: zero(1) };
+    let (w1, w2) = (2. * PI * 2e8, 2. * PI * 1e9);
+    model.d[0][0] = c(0.01, 0.);
+    push_pair(&mut model, c(-0.05 * w1, w1), vec![vec![c(0.02 * w1, 0.01 * w1)]]);
+    push_pair(&mut model, c(-0.1 * w2, w2), vec![vec![c(0.01 * w2, -0.004 * w2)]]);
+    let f = logspace(1e7, 3e9, 60);
+    let h = evaluate(&model, &f).unwrap();
+    let mut req = request("Y", &f, h, 1);
+    req.poles = PoleSpec::Auto("auto".into());
+    let out = fit(req).unwrap();
+    let sel = out.pole_selection.as_ref().unwrap();
+    eprintln!("auto: chosen {} tried {} err {:e} {:?}", sel.chosen, sel.max_tried, out.rms_relative_error, sel.trials);
+    assert_eq!(sel.chosen, 4);
+    assert_eq!(out.model.poles.len(), 4);
+    assert!(out.rms_relative_error < 1e-10);
+    // Cap by samples: 6 samples allow at most 4 poles; maxPoles lowers it further.
+    let (g, hg) = (f[..6].to_vec(), evaluate(&model, &f[..6]).unwrap());
+    let mut small = request("Y", &g, hg.clone(), 1);
+    small.poles = PoleSpec::Auto("auto".into());
+    assert!(fit(small).unwrap().pole_selection.unwrap().max_tried <= 4);
+    let mut capped = request("Y", &g, hg, 1);
+    capped.poles = PoleSpec::Auto("auto".into());
+    capped.max_poles = Some(2);
+    assert!(fit(capped).unwrap().model.poles.len() <= 2);
+    let bad = fit_json(serde_json::json!({"kind":"Y","frequenciesHz":f,"samples":[],"poles":"many"}));
+    assert!(bad.unwrap_err().starts_with("RATIONAL_FIT_INPUT"));
 }
