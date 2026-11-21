@@ -37,11 +37,15 @@ export function createLocalExecutor(execute=createProblemExecutor(true)){return 
    const choice=chooseChannelModel(task.board,extractionPlan.contacts,signal);
    if(choice.mode==='cascade'){
     const budget={maxSeconds:Number(c.budget?.maxSeconds??defaultBudget.maxSeconds)-(performance.now()-start)/1000,maxMemoryMiB:resolveMemoryMiB(c.budget?.maxMemoryMiB).maxMemoryMiB};
-    const cascade=solveChannelCascade(execute,{boardJson:JSON.stringify(task.board),stack:(geometry as any).stack,choice,returns:extractionPlan.contacts.slice(2),frequencies,budget});
-    return channelCascadeResult(task.contextId,cascade,choice,extractionPlan.contacts,warningDiagnostics());
-   }
+    // A cascade refusal (section or joint check) falls back to the one-domain path, which solved these channels before the cascade became the default.
+    let cascade:ReturnType<typeof solveChannelCascade>|undefined;
+    try { cascade=solveChannelCascade(execute,{boardJson:JSON.stringify(task.board),stack:(geometry as any).stack,choice,returns:extractionPlan.contacts.slice(2),frequencies,budget}); }
+    catch(error) { cascadeNote=' [P7_CHANNEL_CASCADE: cascade refused, one-domain path; '+(error instanceof Error?error.message:String(error))+']'; }
+    if(cascade)return channelCascadeResult(task.contextId,cascade,choice,extractionPlan.contacts,warningDiagnostics());
+   } else {
    // Not a plain chain: say what a cascade would need (blocks); the one-domain path below stays as is and an error carries this note.
    cascadeNote=' [P7_CHANNEL_CASCADE: one-domain path; '+choice.reasons[0]+'; '+describeChannelStructure(task.board,extractionPlan.contacts,signal).summary+']';
+   }
   }
   let firstSolveAt:number|undefined;
   // The unchanged call keeps the request budget; a fallback after the first (grid) call gets what is left of it.

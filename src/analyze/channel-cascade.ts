@@ -1,4 +1,4 @@
-/** Product channel cascade (P7-completion 4.4, switch P7_CHANNEL_CASCADE): a chain of 2D wave sections
+/** Product channel cascade (P7-completion 4.4; on by default, P7_CHANNEL_CASCADE=0 disables): a chain of 2D wave sections
  * stitched by S-parameters, each section sampled and stitched at every requested frequency separately
  * (so frequency-dependent R(f), L(f) need no causal model; that is stage 7). Physical accuracy is `unverified`. */
 import type {AnalysisProblem} from './types.ts';
@@ -7,7 +7,8 @@ import {capturedBoardGeometry} from './geometry-snapshot.ts';
 import {cascadeTwoPorts,cx,maxSingularValue,phaseDelayS,reciprocityError,terminatePorts,type CMatrix} from './channel-cascade-stitch.ts';
 import type {CascadeSection,ChannelModelChoice} from './channel-cascade-policy.ts';
 
-export const cascadeSwitchOn=()=>{const v=process.env.P7_CHANNEL_CASCADE;return v!==undefined&&v!==''&&v!=='0'&&v.toLowerCase()!=='false';};
+// On by default (user decision after P7-completion 10.5); P7_CHANNEL_CASCADE=0 or false restores the one-domain path.
+export const cascadeSwitchOn=()=>{const v=process.env.P7_CHANNEL_CASCADE;return !(v==='0'||v?.toLowerCase()==='false');};
 const EPS0=8.8541878128e-12,C0=299792458;
 /** New internal consistency checks of the stitched result; not acceptance thresholds of the extractor. */
 const PASSIVITY_TOL=1e-8,RECIPROCITY_TOL=1e-8;

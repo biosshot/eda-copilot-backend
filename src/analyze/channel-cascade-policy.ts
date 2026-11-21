@@ -1,4 +1,4 @@
-/** Selection rule and partition for the product channel cascade (P7-completion 4.4, switch P7_CHANNEL_CASCADE).
+/** Selection rule and partition for the product channel cascade (P7-completion 4.4; on by default, P7_CHANNEL_CASCADE=0 disables).
  * Pure geometry, no solver. A channel is cascaded only when its signal copper is one chain
  * pad -> straight tracks -> pad on a single layer: no layer change, branch or extra component pad.
  * Anything else stays on the one-domain path (the caller keeps today's behaviour). */
