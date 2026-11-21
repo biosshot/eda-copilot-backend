@@ -99,7 +99,10 @@ export type FrequencyNetworkData = {
  temporal?:PassiveRelaxationTemporal|PassiveResonantYTemporal;
 };
 export type PhysicalPortSampleData = {
- format:'physical-port-samples';samplePolicy:'exact';representation:'S'|'Y'|'Z';referenceTopology:'physical-pairs';nature:'passive';
+ format:'physical-port-samples';samplePolicy:'exact'|'rational-hybrid';
+ /** With `rational-hybrid`: the frequencies solved directly; the other points come from a rational model. */
+ directFrequenciesHz?:readonly number[];
+ representation:'S'|'Y'|'Z';referenceTopology:'physical-pairs';nature:'passive';
  frequenciesHz:readonly number[]; parameters:FrequencyNetworkData['parameters']; referenceOhm:readonly number[];
  /** Original S table retained by derived Y/Z; referenceOhm keeps producer wave references. */
  producerParameters?:FrequencyNetworkData['parameters'];

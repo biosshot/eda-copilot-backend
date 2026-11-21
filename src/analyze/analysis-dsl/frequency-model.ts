@@ -19,7 +19,7 @@ const physicalPort=z.strictObject({positive:contact,negative:contact}).refine(p=
 const sampleAxis=z.array(positive).min(1);
 const samples=z.array(z.array(z.array(z.strictObject({real:z.number().finite(),imaginary:z.number().finite()}))));
 const data=z.discriminatedUnion('format',[
- z.strictObject({format:z.literal('physical-port-samples'),samplePolicy:z.literal('exact'),representation:z.enum(['S','Y','Z']),
+ z.strictObject({format:z.literal('physical-port-samples'),samplePolicy:z.enum(['exact','rational-hybrid']),directFrequenciesHz:sampleAxis.optional(),representation:z.enum(['S','Y','Z']),
   referenceTopology:z.literal('physical-pairs'),nature:z.literal('passive'),frequenciesHz:sampleAxis,parameters:samples,
   referenceOhm:z.array(positive).min(1).max(16),physicalPorts:z.array(physicalPort).min(1).max(16),producerParameters:samples.optional()}),
  z.strictObject({format:z.literal('delayed-scattering'),referenceTopology:z.literal('common'),nature:z.literal('passive'),referenceOhm:reference,scattering:z.array(z.array(z.number().finite()).max(16)).min(1).max(16),delayS:z.number().finite().nonnegative()}),

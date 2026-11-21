@@ -7,6 +7,7 @@ import type * as T from './spec-doc.js';
 import {createProblemExecutor} from '../execute-problem.ts';
 import {requestedFrequencyInterval} from '../p7-frequency-planning.ts';
 import {AnalysisDslError} from './schema.ts';
+import {solveFrequencySweep} from '../rational-sweep.ts';
 import {withBudgetHint} from './budget-hint.ts';
 import {resolveMemoryMiB} from './machine-memory.ts';
 import {cascadeSwitchOn,solveChannelCascade} from '../channel-cascade.ts';
@@ -42,7 +43,17 @@ export function createLocalExecutor(execute=createProblemExecutor(true)){return 
    // Not a plain chain: say what a cascade would need (blocks); the one-domain path below stays as is and an error carries this note.
    cascadeNote=' [P7_CHANNEL_CASCADE: one-domain path; '+choice.reasons[0]+'; '+describeChannelStructure(task.board,extractionPlan.contacts,signal).summary+']';
   }
-  const solved=solveHybridBoardChannel(execute,task.board,geometry,extractionPlan.terminalRequest??extractionPlan.contacts,frequencies,{maxSeconds:c.budget?.maxSeconds??defaultBudget.maxSeconds,maxMemoryMiB:resolveMemoryMiB(c.budget?.maxMemoryMiB).maxMemoryMiB},[startHz,stopHz]);
-  return boardFoilResult(task.contextId,solved.foil,solved.report,warningDiagnostics());
+  let firstSolveAt:number|undefined;
+  // The unchanged call keeps the request budget; a fallback after the first (grid) call gets what is left of it.
+  const budgetSeconds=()=>firstSolveAt===undefined?c.budget?.maxSeconds??defaultBudget.maxSeconds:Number(c.budget?.maxSeconds??defaultBudget.maxSeconds)-(performance.now()-firstSolveAt)/1000;
+  // P7 stage 7.5: a long axis is solved on a fit grid plus held-out checks and completed by a rational model only if it matched;
+  // an axis shorter than RATIONAL_MIN_POINTS (and every fallback) is the unchanged direct call.
+  const sweep=solveFrequencySweep({frequenciesHz:frequencies,interval:[startHz,stopHz],solve:(grid,interval)=>{
+   const budget={maxSeconds:budgetSeconds(),maxMemoryMiB:resolveMemoryMiB(c.budget?.maxMemoryMiB).maxMemoryMiB};
+   firstSolveAt??=performance.now();
+   return solveHybridBoardChannel(execute,task.board,geometry,extractionPlan!.terminalRequest??extractionPlan!.contacts,grid,budget,interval);
+  }});
+  const solved=sweep.result;
+  return boardFoilResult(task.contextId,solved.foil,solved.report,warningDiagnostics(),sweep);
  } catch(error) { if(error instanceof AnalysisDslError)throw error;const message=error instanceof Error?error.message:String(error);{const code=message.match(/^([A-Z][A-Z0-9_]+):/)?.[1]??'CHANNEL_REJECTED';throw new AnalysisDslError(code,withBudgetHint(code,message+cascadeNote,{maxSeconds:c.budget?.maxSeconds??defaultBudget.maxSeconds,maxMemoryMiB:resolveMemoryMiB(c.budget?.maxMemoryMiB).maxMemoryMiB},c.budget?.maxMemoryMiB===undefined),warningDiagnostics());} }
 };}

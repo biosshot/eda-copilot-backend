@@ -6,9 +6,11 @@ import type {Diagnostic,NetworkResource,Validity} from './spec-doc.js';
 import {json} from './data.ts';
 import {boardFoilPortObservations} from '../board-foil-port-observations.ts';
 import {boardFoilMixedMode} from '../board-foil-mixed-mode.ts';
+import type {RationalSweepRecord} from '../rational-sweep.ts';
 
 export function boardFoilResult(
  contextId:string, plan:AutoFoilPlan, report:BoardFoilRunReport, diagnostics:Diagnostic[],
+ sweep?:{record?:RationalSweepRecord;rational?:{frequenciesHz:number[];parameters:BoardFoilRunReport['parameters'];directFrequenciesHz:number[]}},
 ):ExecutionResult{
  plan=report.resolvedPlan??plan;
  const terminals=new Map(plan.terminals.map(t=>[t.id,t]));
@@ -40,13 +42,14 @@ export function boardFoilResult(
   code:'CHANNEL_FOIL_FREQUENCY_REVIEW',severity:'warning',
   message:'At least one frequency holdout exceeds the 2% sensitivity gate and requires review.',
  });
- const validity:Validity={status:'conditional',reason:'Native residual and power checks cover the exact grid in one bounded '+model+' model. Independent spatial, domain and between-point coverage remain unverified.',
-  domain:json({producer,modelKind,samplePolicy:'exact',evaluatedFrequenciesHz:report.frequenciesHz,spatialCoverage:'unverified',domainCoverage:'unverified',bandCoverage:'unverified',energyVerification:'unverified',jointSensitivity,frequencyAudit:frequency&&{requestedIntervalHz:frequency.requestedIntervalHz,status:frequency.status}})};
+ const rational=sweep?.rational;
+ const validity:Validity={status:'conditional',reason:rational?'Native residual and power checks cover the fit and held-out frequencies in one bounded '+model+' model; the other points come from a passive rational model that matched the held-out points (see rationalSweep). Independent spatial, domain and between-point coverage remain unverified.':'Native residual and power checks cover the exact grid in one bounded '+model+' model. Independent spatial, domain and between-point coverage remain unverified.',
+  domain:json({producer,modelKind,samplePolicy:rational?'rational-hybrid':'exact',evaluatedFrequenciesHz:report.frequenciesHz,...(rational&&{rationalFrequenciesHz:rational.frequenciesHz.filter(f=>!rational.directFrequenciesHz.includes(f))}),spatialCoverage:'unverified',domainCoverage:'unverified',bandCoverage:'unverified',energyVerification:'unverified',jointSensitivity,frequencyAudit:frequency&&{requestedIntervalHz:frequency.requestedIntervalHz,status:frequency.status}})};
  const network:NetworkResource={id,kind:'network',ports:plan.ports.map(port=>port.name),
   source:'Bounded conforming '+model+'; exact checked S50 samples of original finite contact pairs',
-  analyses:['networkParameters'],validity,data:{format:'physical-port-samples',samplePolicy:'exact',
+  analyses:['networkParameters'],validity,data:{format:'physical-port-samples',samplePolicy:rational?'rational-hybrid' as const:'exact' as const,...(rational&&{directFrequenciesHz:rational.directFrequenciesHz}),
    representation:'S',referenceTopology:'physical-pairs',nature:'passive',
-   frequenciesHz:report.frequenciesHz,referenceOhm:report.referenceOhm,parameters:report.parameters,physicalPorts}};
+   frequenciesHz:rational?rational.frequenciesHz:report.frequenciesHz,referenceOhm:report.referenceOhm,parameters:rational?rational.parameters:report.parameters,physicalPorts}};
  const electrodes=new Map(plan.geometry.electrodes.map(({name,sourcePath,layer})=>[name,{sourcePath,layer}]));
  const packages=plan.attachments.map(({id,electrodes:pair,model})=>({
   id,electrodes:pair,physicalContacts:pair.map(name=>electrodes.get(name)!),modelId:model.id,
@@ -59,5 +62,5 @@ export function boardFoilResult(
    'Exact-grid standalone frequency replay uses the original paired contacts and S50 references.'],
   metrics:{segments:{kind:'table',unit:'1',data:json(evidence),validity,diagnostics:[]}},
   network,solution:json({...report,physicalPorts,portNames:network.ports,portObservations:boardFoilPortObservations(plan,report),
-   ...(plan.modePairs?.length&&{mixedMode:boardFoilMixedMode(report,network.ports,plan.modePairs)}),foilPlan:evidence,validity})};
+   ...(plan.modePairs?.length&&{mixedMode:boardFoilMixedMode(report,network.ports,plan.modePairs)}),...(sweep?.record&&{rationalSweep:sweep.record}),foilPlan:evidence,validity})};
 }

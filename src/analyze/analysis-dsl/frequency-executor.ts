@@ -81,8 +81,8 @@ export function createFrequencyExecutor(){const execute=createProblemExecutor(tr
  const sourceValidity=graph.instances[0].model.validity;
  const sourceDomain=object(sourceValidity)&&object(sourceValidity.domain)?sourceValidity.domain:undefined;
  const validity:T.Validity=exact?{
-  status:'conditional',reason:'Standalone replay of native-checked physical S samples at exact producer points',
-  domain:json({samplePolicy:'exact',evaluatedFrequenciesHz:report.frequenciesHz,
+  status:'conditional',reason:exact.samplePolicy==='exact'?'Standalone replay of native-checked physical S samples at exact producer points':'Standalone replay of physical S samples; points outside directFrequenciesHz come from a rational model of the producer',
+  domain:json({samplePolicy:exact.samplePolicy,evaluatedFrequenciesHz:report.frequenciesHz,
    ...(sourceDomain?.producer?{producer:sourceDomain.producer}:{}),
    sourceValiditySha256:createHash('sha256').update(JSON.stringify(json(compactValidity(sourceValidity)??null))).digest('hex'),
   }),
@@ -105,7 +105,7 @@ export function createFrequencyExecutor(){const execute=createProblemExecutor(tr
    diagnostics:report.diagnostics,assumptions:['Only original physical port pairs, references and sampled frequencies are supported.'],
    metrics,network,solution:json({...response,
     topology:{referenceTopology:'physical-pairs',connections:[]},
-    physicalPorts:exact.physicalPorts,samplePolicy:'exact',validity,sourceHashes})};
+    physicalPorts:exact.physicalPorts,samplePolicy:exact.samplePolicy,validity,sourceHashes})};
  }
  const compactProvenance=report.provenance!.map((p:any,i)=>({instanceId:p.instanceId,resourceId:p.resource.id,sha256:sourceHashes[i].sha256,source:p.resource.source,sourcePorts:p.sourcePorts,mapping:p.mapping,sourceRepresentation:p.sourceRepresentation,sourceReferenceOhm:p.sourceReferenceOhm,bandHz:p.bandHz,nature:p.nature,sourceValidity:compactValidity(p.resource.validity)??null,allowedAnalyses:p.resource.analyses??null}));
  const physical=object(report.assembledModel);
