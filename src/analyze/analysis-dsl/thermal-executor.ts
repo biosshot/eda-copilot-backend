@@ -53,7 +53,7 @@ export function createThermalExecutor(resolve?:ThermalSolutionResolver){
   const metrics:Record<string,T.DataDescription>={};
   const unconverged=report.refinement?.converged===false;
   if(unconverged)report.diagnostics.push({code:'THERMAL_MESH_UNCONVERGED',severity:'warning',message:`Sampled mesh convergence not established: ${report.refinement!.reason}`});
-  const validity:T.Validity=unconverged||board?.conditional?{status:'conditional',reason:unconverged?`Numerically computed field; sampled mesh convergence not established (${report.refinement!.reason})`:'Explicit supplied CAD snapshot or conditional material; thermal coefficients are authored assumptions',domain:{boardIdentity:task.boardIdentity??null}}:{status:'valid'};
+  const validity:T.Validity=unconverged||board?.conditional?{status:'conditional',reason:unconverged?`Numerically computed field; sampled mesh convergence not established (${report.refinement!.reason})`:'Explicit supplied CAD snapshot or conditional material; thermal coefficients are authored assumptions'+(board?.conditionalReasons.length?'; '+board.conditionalReasons.join('; '):''),domain:{boardIdentity:task.boardIdentity??null}}:{status:'valid'};
   const datum=(values:readonly number[],unit:string):T.DataDescription=>({kind:mode==='time'?'series':'scalar',unit,validity,diagnostics:[],...(mode==='time'?{values,axis:{name:'timeS',unit:'s',values:report.axis!}}:{value:values[0]})});
   for(const[key,id]of board?.componentNodes??[])if(report.temperaturesC?.[id])metrics[`temperature:${key}`]=datum(report.temperaturesC[id],'degC');
   if(board&&object(report.spatial)&&object(report.spatial.mesh)&&Array.isArray(report.spatial.mesh.fieldNodes)){

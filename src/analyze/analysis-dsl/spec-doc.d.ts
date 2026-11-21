@@ -245,6 +245,8 @@ export interface Configurations {
   dc: CommonOptions & ElectricalOptions & { conductor?: Conductor; currentA?: number; voltageV?: number;
     /** Unknown CAD fill freshness may be used only as an explicitly conditional snapshot. */
     inputPolicy?: { cadFill: 'strict' | 'snapshot' };
+    /** Scenario assertion: these nets carry no DC current. Their copper domains enter the loss map with zero loss and the map is `conditional`. Refused with DC_IDLE_NET_CARRIES_CURRENT if a declared source/load/component reaches the net, DC_IDLE_NET_UNKNOWN if the net is not on the board. */
+    idleNets?: readonly Extract<Selector, { kind: 'net' }>[];
     mesh?: { maxAreaMm2?: number; minAngleDeg?: number; maxNodes?: number; maxTriangles?: number; maxRefinementSteps?: number; geometryDeviationMm?: number };
   };
   pi: CommonOptions & ElectricalOptions & { domain?: 'frequency' | 'time'; frequency?: Frequency; frequencyHz?: number; time?: Time; initial?: 'steady' | FinalState };

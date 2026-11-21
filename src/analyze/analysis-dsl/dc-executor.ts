@@ -15,6 +15,30 @@ function hasConditionalMaterial(task:AnalysisTask<'dc'>):boolean {
   const material=object(descriptor)&&object(descriptor.input)&&object(descriptor.input.material)?descriptor.input.material as T.Material:undefined;
   return [...Object.values(task.config.materials??{}),...(material?[material]:[])].some(m=>m.validity?.status==='conditional'||m.temperatureCoefficientPerK!==undefined);
 }
+interface IdleDomain { domain_id:string; layer:string; nets:string[]; loss_w:number[] }
+/** Resolve scenario-asserted zero-current nets against the native report. Never guesses: only domains
+ * whose copper belongs entirely to idle nets and that carry a real mesh become zero-loss entries. */
+function idleDomains(nets:readonly string[],board:{nets:readonly {name:string}[]}|undefined,r:AnalysisDcReport):IdleDomain[] {
+  const idle=new Set(nets);
+  for(const n of idle)if(!board?.nets.some(b=>b.name===n))throw new AnalysisDslError('DC_IDLE_NET_UNKNOWN',`Idle net ${n} is not present on the board`);
+  if(!r.mesh)return [];
+  const included=new Set(r.included_domains??[]);
+  const netsOf=(d:NonNullable<AnalysisDcReport['mesh']>['domains'][number])=>{
+    const found=new Set<string>();let unknown=false;
+    for(const path of d.source_paths){const s=r.mesh!.sources.filter(x=>x.path===path);if(!s.length||s.some(x=>!x.net))unknown=true;for(const x of s)if(x.net)found.add(x.net);}
+    return {found,unknown};
+  };
+  const out:IdleDomain[]=[];
+  for(const d of r.mesh.domains){
+    const {found,unknown}=netsOf(d);const hit=[...found].filter(n=>idle.has(n));
+    if(!hit.length)continue;
+    if(included.has(d.id))throw new AnalysisDslError('DC_IDLE_NET_CARRIES_CURRENT',`Idle net ${hit.join(', ')} is reached by declared sources, loads or components (domain ${d.id}); it cannot carry zero DC current`);
+    if(unknown||hit.length!==found.size)throw new AnalysisDslError('DC_IDLE_NET_MIXED_DOMAIN',`Domain ${d.id} mixes idle net ${hit.join(', ')} with other or unattributed copper`);
+    if(!d.triangles.length)throw new AnalysisDslError('DC_IDLE_NET_UNKNOWN',`Idle net ${hit.join(', ')} domain ${d.id} has no mesh triangles to carry zero loss`);
+    out.push({domain_id:d.id,layer:d.layer,nets:hit.sort(),loss_w:d.triangles.map(()=>0)});
+  }
+  return out;
+}
 /** One closure per scenario, retaining at most one native preparation/matrix. */
 export function createDcExecutor() {
   const execute = createProblemExecutor(true);
@@ -22,6 +46,7 @@ export function createDcExecutor() {
   return async (task: AnalysisTask<'dc'>): Promise<ExecutionResult> => {
     const c = task.config;
     if (task.variantChanges.length) unsupported('DC variant geometry/material rebuilding is not implemented');
+    if (c.idleNets && c.conductor) unsupported('idleNets applies only to a board DC solve');
     if (c.circuit) unsupported('General circuit DC/MNA is not supported; use board or rectangular conductor');
     if (c.numerics && Object.keys(c.numerics).length) unsupported('Custom DC solver tolerances/iterations are not implemented; fixed residual/KCL/energy guards are reported');
     const description = (id: string) => task.descriptors.find(d => object(d) && d.id === id) as { input?: unknown } | undefined;
@@ -116,18 +141,20 @@ export function createDcExecutor() {
     const measuredRss=process.memoryUsage().rss;
     const id=`dc-${randomUUID()}`;
     const geometryKey=JSON.stringify([task.contextId,task.boardIdentity,request.conduction]);
+    const idle=c.idleNets?.length&&report.status==='complete'?idleDomains(c.idleNets.map(n=>n.name),task.board,report):[];
     const participating=new Set(report.domains?.map(d=>d.domain_id)??[]);
+    const kept=new Set([...participating,...idle.map(d=>d.domain_id)]);
     const reuseGeometry=report.reused_preparation&&geometryReference?.key===geometryKey
-      && [...participating].every(id=>geometryReference!.domains.has(id));
-    const compactMesh=report.mesh?{...report.mesh,domains:report.mesh.domains.filter(d=>participating.has(d.id)),
-      omitted_domains:report.mesh.domains.filter(d=>!participating.has(d.id)).map(({nodes,triangles,boundaries,terminals,...d})=>({...d,omitted:true,node_count:nodes.length,triangle_count:triangles.length,boundary_count:boundaries.length,terminal_count:terminals.length})),
-      detail_policy:'Node/element arrays retained only for computed domains. Other domains retain readiness/counts; physical copper/bores remain in geometry. Omitted is not an empty physical domain.'}:undefined;
-    const solution=json({...report,conditional:report.conditional||hasConditionalMaterial(task),mesh:compactMesh,...(reuseGeometry?{mesh:undefined,geometry:undefined,meshReference:geometryReference!.solutionId}:{}),id,boardIdentity:task.boardIdentity??null,request:{...request,board_json:undefined},assignments:task.resolvedLoads??[],memory:{rss_before_bytes:startRss,rss_after_bytes:measuredRss,metric:'process RSS at native call boundaries; not peak allocation'}});
-    if(report.mesh&&!reuseGeometry)geometryReference={key:geometryKey,solutionId:id,domains:participating};
-    return result(task,id,report,solution,ports,portElements);
+      && [...kept].every(id=>geometryReference!.domains.has(id));
+    const compactMesh=report.mesh?{...report.mesh,domains:report.mesh.domains.filter(d=>kept.has(d.id)),
+      omitted_domains:report.mesh.domains.filter(d=>!kept.has(d.id)).map(({nodes,triangles,boundaries,terminals,...d})=>({...d,omitted:true,node_count:nodes.length,triangle_count:triangles.length,boundary_count:boundaries.length,terminal_count:terminals.length})),
+      detail_policy:'Node/element arrays retained only for computed (and scenario-asserted idle) domains. Other domains retain readiness/counts; physical copper/bores remain in geometry. Omitted is not an empty physical domain.'}:undefined;
+    const solution=json({...report,conditional:report.conditional||hasConditionalMaterial(task),mesh:compactMesh,...(idle.length?{idle_domains:idle}:{}),...(reuseGeometry?{mesh:undefined,geometry:undefined,meshReference:geometryReference!.solutionId}:{}),id,boardIdentity:task.boardIdentity??null,request:{...request,board_json:undefined},assignments:task.resolvedLoads??[],memory:{rss_before_bytes:startRss,rss_after_bytes:measuredRss,metric:'process RSS at native call boundaries; not peak allocation'}});
+    if(report.mesh&&!reuseGeometry)geometryReference={key:geometryKey,solutionId:id,domains:kept};
+    return result(task,id,report,solution,ports,portElements,idle);
   };
 }
-function result(task:AnalysisTask<'dc'>,id:string,r:AnalysisDcReport,solution:T.Json,ports:Map<string,[string,string]>,portElements:Map<string,string[]>):ExecutionResult {
+function result(task:AnalysisTask<'dc'>,id:string,r:AnalysisDcReport,solution:T.Json,ports:Map<string,[string,string]>,portElements:Map<string,string[]>,idle:IdleDomain[]=[]):ExecutionResult {
   const diagnostics:T.Diagnostic[]=r.diagnostics.map(d=>({...d,severity:'error'}));
   const conditionalMaterials=hasConditionalMaterial(task);
   const validity:T.Validity=r.status==='rejected' ? {status:'unavailable',reason:r.diagnostics.map(d=>d.message).join('; ')} : r.conditional||conditionalMaterials ? {status:'conditional',reason:[...(r.conditional?['CAD fill freshness unknown: explicitly accepted supplied snapshot']:[]),...(conditionalMaterials?['Supplied conditional material / linear resistivity law with no inferred empirical validity range']:[])].join('; '),domain:{boardIdentity:task.boardIdentity??null,cadFill:task.config.inputPolicy?.cadFill??'strict',originalFreshness:r.mesh?.fills.map(f=>({path:f.source.path,layer:f.layer,freshness:f.freshness}))??[]}} : {status:'valid'};
@@ -141,11 +168,17 @@ function result(task:AnalysisTask<'dc'>,id:string,r:AnalysisDcReport,solution:T.
     metrics.resistance=scalar('Ohm',undefined);
     if(task.board)Object.assign(metrics,dcPadPotentials(task.board,r,validity,diagnostics));
     for(const [key,unit,field] of [['voltageMap','V','voltage_v'],['currentDensityMap','A/mm2','current_density_a_mm2'],['lossMap','W','loss_w']] as const){
+      const idleHere=key==='lossMap'?idle:[];
       const values=r.domains?.flatMap(d=>d[field]);
+      if(values)for(const d of idleHere)values.push(...d.loss_w);
       let offset=0;
       const slices=(r.domains??[]).map(d=>{const start=offset;offset+=d[field].length;return {domainId:d.domain_id,start,count:d[field].length};});
-      const mapValidity:T.Validity=r.excluded_domains?.length&&validity.status!=='unavailable'?{status:'conditional',reason:[validity.reason,'Map covers participating domains only; excluded regions have no computed value'].filter(Boolean).join('; '),domain:{...(object(validity.domain)?validity.domain:{}),solutionId:id,excludedDomains:r.excluded_domains}}:validity;
-      metrics[key]={kind:'map',unit,validity:values?mapValidity:{status:'unavailable',reason:validity.reason??'DC field unavailable'},diagnostics,...(values?{values}:{}),data:{solutionId:id,field,association:key==='voltageMap'?'mesh-node':'triangle',slices,coverage:'participating physical domains only; excluded/unbuilt regions unknown',domains:r.included_domains??[],excludedDomains:r.excluded_domains??[],reference:'separate mathematical gauge per connected system component',...(key==='voltageMap'?{independentReferences:[...new Set(r.domains?.map(d=>d.reference_node)??[])]}:{}),...(key==='currentDensityMap'?{peak:'mesh-dependent at sharp corners'}:{})}};
+      for(const d of idleHere){slices.push({domainId:d.domain_id,start:offset,count:d.loss_w.length});offset+=d.loss_w.length;}
+      const idleIds=new Set(idleHere.map(d=>d.domain_id));
+      const excludedHere=(r.excluded_domains??[]).filter(d=>!idleIds.has(d));
+      const idleReason=idleHere.length?`zero DC current asserted by the scenario for nets ${[...new Set(idleHere.flatMap(d=>d.nets))].join(', ')}`:undefined;
+      const mapValidity:T.Validity=(excludedHere.length||idleHere.length)&&validity.status!=='unavailable'?{status:'conditional',reason:[validity.reason,idleReason,excludedHere.length?'Map covers participating domains only; excluded regions have no computed value':undefined].filter(Boolean).join('; '),domain:{...(object(validity.domain)?validity.domain:{}),solutionId:id,excludedDomains:excludedHere,...(idleHere.length?{idleDomains:idleHere.map(d=>({domainId:d.domain_id,nets:d.nets}))}:{})}}:validity;
+      metrics[key]={kind:'map',unit,validity:values?mapValidity:{status:'unavailable',reason:validity.reason??'DC field unavailable'},diagnostics,...(values?{values}:{}),data:{solutionId:id,field,association:key==='voltageMap'?'mesh-node':'triangle',slices,coverage:'participating physical domains only; excluded/unbuilt regions unknown',domains:r.included_domains??[],excludedDomains:excludedHere,...(idleHere.length?{idleDomains:idleHere.map(d=>({domainId:d.domain_id,nets:d.nets}))}:{}),reference:'separate mathematical gauge per connected system component',...(key==='voltageMap'?{independentReferences:[...new Set(r.domains?.map(d=>d.reference_node)??[])]}:{}),...(key==='currentDensityMap'?{peak:'mesh-dependent at sharp corners'}:{})}};
     }
     for(const [port,[p,n]]of ports){
       const ids=portElements.get(port)??[],e=ids.length===1?r.elements?.find(e=>e.id===ids[0]):undefined;

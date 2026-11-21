@@ -146,6 +146,7 @@ export const schemas = {
   geometry: z.strictObject({ ...common, scope: z.array(selector).optional(), rules: z.array(rule).optional() }),
   dc: z.strictObject({ ...common, ...electrical, conductor: hs(['conductor']).optional(), currentA: finite.optional(), voltageV: finite.optional(),
     inputPolicy: z.strictObject({ cadFill: z.enum(['strict', 'snapshot']) }).optional(),
+    idleNets: z.array(net).min(1).optional(),
     mesh: z.strictObject({ maxAreaMm2: positive.min(1e-8).max(1e6).optional(), minAngleDeg: nonnegative.max(30).optional(), maxNodes: integer.min(3).max(2_000_000).optional(), maxTriangles: integer.max(4_000_000).optional(), maxRefinementSteps: nonnegative.int().max(64).optional(), geometryDeviationMm: positive.min(1e-6).max(.01).optional() }).optional(),
   }),
   pi: z.strictObject({ ...common, ...electrical, ...freq, frequencyHz: nonnegative.optional(), domain: z.enum(['frequency', 'time']).optional(), time: time.optional(), initial: z.union([z.literal('steady'), finalState]).optional() }),
