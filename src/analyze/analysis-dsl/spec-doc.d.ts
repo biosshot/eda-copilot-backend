@@ -249,7 +249,7 @@ export interface Configurations {
     idleNets?: readonly Extract<Selector, { kind: 'net' }>[];
     mesh?: { maxAreaMm2?: number; minAngleDeg?: number; maxNodes?: number; maxTriangles?: number; maxRefinementSteps?: number; geometryDeviationMm?: number };
   };
-  pi: CommonOptions & ElectricalOptions & { domain?: 'frequency' | 'time'; frequency?: Frequency; frequencyHz?: number; time?: Time; initial?: 'steady' | FinalState };
+  pi: CommonOptions & ElectricalOptions & { /** Scenario-wide target for the frequency magnitude chart only. */ targetImpedanceOhm?: number; domain?: 'frequency' | 'time'; frequency?: Frequency; frequencyHz?: number; time?: Time; initial?: 'steady' | FinalState };
   thermal: CommonOptions & ThermalOptions;
   electrothermal: CommonOptions & Pick<PhysicalOptions, 'stackup' | 'materials'> & { electrical?: ElectricalOptions & { operating?: readonly { target: Selector; gateVoltageV: number }[] }; thermal?: ThermalOptions; couplings?: readonly Coupling[]; time?: Time; coupling?: { toleranceK?: number; relativeLossTolerance?: number; maxIterations?: number; relaxation?: number } };
   impedance: CommonOptions & PhysicalOptions & { mesh?: CrossSectionMesh; target?: Line | Channel | Differential | Resource; method?: 'formula' | 'cross-section' | 'layered'; frequency?: Frequency; frequencyHz?: number; temperatureC?: number };

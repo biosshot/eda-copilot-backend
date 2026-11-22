@@ -30,7 +30,7 @@ function pack(cwd) {
 
 const backendPack = pack(backend);
 const filenames = backendPack.files.map(file => file.path);
-for (const file of ['dist/spec-doc.d.ts', 'dist/analysis-spec-doc.d.ts', 'dist/run-analysis-dsl.worker.js', 'dist/run-pcb-layout.worker.js', 'dist/tree-subtree.worker.js', 'dist/run-analysis.worker.js', 'dist/analysis-runtime.js', 'native/node-addon/index.cjs', 'native/node-addon/platform.cjs', 'native/node-addon/index.d.cts', 'native/pcb-board-packer/index.d.ts', 'native/analyze/index.d.ts']) assert.ok(filenames.includes(file), file);
+for (const file of ['dist/spec-doc.d.ts', 'dist/analysis-spec-doc.d.ts', 'dist/analyze.js', 'dist/analyze.d.ts', 'dist/run-analysis-dsl.worker.js', 'dist/run-pcb-layout.worker.js', 'dist/tree-subtree.worker.js', 'dist/run-analysis.worker.js', 'dist/analysis-runtime.js', 'native/node-addon/index.cjs', 'native/node-addon/platform.cjs', 'native/node-addon/index.d.cts', 'native/pcb-board-packer/index.d.ts', 'native/analyze/index.d.ts']) assert.ok(filenames.includes(file), file);
 const { nativeFilename } = require('../native/node-addon/platform.cjs');
 assert.ok(filenames.includes('native/node-addon/' + nativeFilename()), 'Host native addon missing');
 assert.equal(filenames.filter(name => name.endsWith('/' + nativeFilename())).length, 1, 'Exactly one installed host addon');
@@ -46,7 +46,8 @@ console.log('Installing standalone backend archive into an isolated consumer...'
 run([npmCli, 'install', '--ignore-scripts', '--no-audit', '--no-fund', '--fetch-timeout=30000', '--fetch-retries=0', '--registry=https://registry.npmjs.org', backendPack.archive], consumer);
 const manifest = JSON.parse(readFileSync(join(consumer, 'node_modules/eda-copilot-backend/package.json'), 'utf8'));
 assert.ok(!manifest.dependencies['@copilot/shared'] && !manifest.devDependencies['@copilot/shared']);
-assert.ok(!manifest.exports['./analyze'], 'Analysis runtime stays internal');
+assert.deepEqual(manifest.exports['./analyze'], { types: './dist/analyze.d.ts', import: './dist/analyze.js' });
+assert.ok(!manifest.exports['./analysis-runtime'], 'Low-level analysis runtime stays internal');
 assert.ok(!manifest.dependencies.tsx, 'Installed workers do not require tsx');
 copyFileSync(join(backend, 'tests/fixtures/api-fixtures.mjs'), join(consumer, 'fixtures.mjs'));
 const localNative = require('../native/node-addon/index.cjs');
@@ -77,6 +78,7 @@ import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { componentSearch, searchReusedBlock, extractCircuit, getPcbComponentSizes, makePcbLayout, disposeBackend, runAnalysisDsl, analysisDslDocumentation } from 'eda-copilot-backend';
+import { runAnalysisDsl as runAnalysisSubpath, analysisDslDocumentation as analysisDocsSubpath, renderAnalysisReport } from 'eda-copilot-backend/analyze';
 import { installEasyEdaFixture, schematicInput, pcbInput } from './fixtures.mjs';
 const nativeRequire = createRequire(import.meta.url);
 const backendRoot = join(process.cwd(), 'node_modules/eda-copilot-backend');
@@ -86,6 +88,9 @@ assert.match(analysisDslDocumentation(), /ANALYZER_NOT_IMPLEMENTED/);
 assert.match(analysisDslDocumentation(), /eda-copilot-backend\\/types/);
 assert.match(readFileSync(join(backendRoot, 'dist/spec-doc.d.ts'), 'utf8'), /BlockOptions/);
 const dsl = await runAnalysisDsl({ code: 'const a=analysis(); await Promise.resolve(); a.check({name:"retained",actual:2,max:1,unit:"V"}); const c=a.conductor({lengthMm:10,widthMm:1,thicknessMm:.035,material:{conductivitySM:58e6,state:"constant coupon"}}); const dc=await a.dc().conductor(c).currentA(1).run(); a.check({name:"physical resistance",actual:dc.resistance,target:0.0049261083743842365,tolerance:1e-14,unit:"Ohm"}); a.plot({title:"DC",data:dc.lossMap});' });
+assert.equal(runAnalysisSubpath, runAnalysisDsl);
+assert.equal(analysisDocsSubpath, analysisDslDocumentation);
+assert.equal(renderAnalysisReport(dsl).summary.status, 'complete');
 assert.equal(dsl.status, 'complete');
 assert.equal(dsl.reports[0].checks[0].status, 'fail');
 assert.equal(dsl.reports[0].checks[1].status, 'pass');

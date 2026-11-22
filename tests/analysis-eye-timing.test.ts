@@ -1,3 +1,4 @@
+import { renderAnalysisReport } from '../src/analyze.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { eyeFromSignal, timingFromSignals } from '../src/analyze/analysis-dsl/timing-eye.ts';
@@ -151,6 +152,15 @@ test('ideal NRZ with 0.2 UI linear edges gives the analytic eye', () => {
   assert.ok(Math.abs((r.metrics.width.value as number) - 0.9 * UI) < 0.05 * UI, `width ${r.metrics.width.value}`);
   assert.ok(Math.abs((r.metrics.timingMargin.value as number) - 0.35 * UI) < 0.05 * UI, `timingMargin ${r.metrics.timingMargin.value}`);
   assert.equal(r.metrics.diagram.kind, 'eye');
+  const report = renderAnalysisReport({ status: 'complete', reports: [{
+    contextId: 'eye-fixture', descriptors: [], checks: [], logs: [], plots: [], diagnostics: [],
+    summary: { pass: 0, fail: 0, unknown: 0 },
+    calculations: [{ phase: 'completed', result: { kind: 'eye', status: r.status,
+      diagram: { kind: 'eye', data: r.metrics.diagram.data ?? null } } }],
+  }] });
+  const image = report.images.find(image => image.kind === 'eye');
+  assert.match(image?.svg ?? '', /High maximum/);
+  assert.match(image?.svg ?? '', /Phase within the unit interval/);
   assert.equal(r.assumptions.length, 6);
 });
 

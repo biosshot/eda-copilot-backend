@@ -27,6 +27,10 @@
       "types": "./dist/pcb.d.ts",
       "import": "./dist/pcb.js"
     },
+    "./analyze": {
+      "types": "./dist/analyze.d.ts",
+      "import": "./dist/analyze.js"
+    },
     "./types": {
       "types": "./dist/types.d.ts",
       "import": "./dist/types.js"

@@ -6,6 +6,7 @@ export default defineConfig({
     components: 'src/components.ts',
     schematic: 'src/schematic.ts',
     pcb: 'src/pcb.ts',
+    analyze: 'src/analyze.ts',
     types: 'src/types.ts',
     'run-pcb-layout.worker': 'src/pcb-layout/run-pcb-layout.worker.ts',
     'tree-subtree.worker': 'src/pcb-layout/pcb-auto-place-v2/tree-subtree.worker.ts',
@@ -18,5 +19,5 @@ export default defineConfig({
   target: 'node20',
   clean: true,
   splitting: true,
-  dts: { entry: ['src/index.ts', 'src/components.ts', 'src/schematic.ts', 'src/pcb.ts', 'src/types.ts'] },
+  dts: { entry: ['src/index.ts', 'src/components.ts', 'src/schematic.ts', 'src/pcb.ts', 'src/analyze.ts', 'src/types.ts'] },
 });
