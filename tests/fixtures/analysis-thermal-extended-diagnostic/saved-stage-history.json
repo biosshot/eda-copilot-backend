@@ -1,0 +1,944 @@
+{
+  "scope": "Scalar histories only; intermediate full fields are absent and cannot be re-evaluated per point",
+  "table": [
+    {
+      "source": "debugging/thermal-verification/TPS63060DSCR-2026-10-24T10-53-36-958Z-thermal-final-time-zi5hXc-checkpoint.json",
+      "stage": 0,
+      "role": "seed",
+      "ms": 42929.546,
+      "nodes": 18300
+    },
+    {
+      "source": "debugging/thermal-verification/TPS63060DSCR-2026-10-24T10-53-36-958Z-thermal-final-time-zi5hXc-checkpoint.json",
+      "stage": 1,
+      "role": "directional",
+      "ms": 71057.1085,
+      "nodes": 25527,
+      "changeK": 4.966752660367197,
+      "relative": 0.2113062626671399,
+      "compactK": 0.11955676904953094,
+      "compactPass": true,
+      "oldSpatialPass": false,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 45.91538562178119,
+        "denominatorK": 39.68747180769702,
+        "differenceK": 4.966752660367197,
+        "differenceUnit": "K",
+        "fineTemperatureC": 40.94863296141399,
+        "gateAllowanceK": 0.7937494371539404,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -1.956291988492012,
+          -7.2115089893341064
+        ],
+        "relativeChange": 0.12514661262459004,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 34.25273172328805,
+        "denominatorK": 11.220331716418695,
+        "differenceK": 2.3709263608820095,
+        "differenceUnit": "K",
+        "fineTemperatureC": 31.881805362406038,
+        "gateAllowanceK": 0.2244066353283739,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -1.7400999963283539,
+          1.748056249693036
+        ],
+        "relativeChange": 0.2113062626671399,
+        "temperatureUnit": "degC",
+        "timeS": 20
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/TPS63060DSCR-2026-10-24T10-53-36-958Z-thermal-final-time-zi5hXc-checkpoint.json",
+      "stage": 2,
+      "role": "directional",
+      "ms": 87896.1094,
+      "nodes": 30900,
+      "changeK": 3.706893571172543,
+      "relative": 0.17682042542755405,
+      "compactK": 0.03346000575243124,
+      "compactPass": true,
+      "oldSpatialPass": false,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 61.319883853887944,
+        "denominatorK": 39.73148353872137,
+        "differenceK": 3.706893571172543,
+        "differenceUnit": "K",
+        "fineTemperatureC": 57.6129902827154,
+        "gateAllowanceK": 0.7946296717744274,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          1.2197499871253967,
+          1.698139989376068
+        ],
+        "relativeChange": 0.09329864482809688,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 36.351294383476485,
+        "denominatorK": 11.225854119463236,
+        "differenceK": 1.9849603011911494,
+        "differenceUnit": "K",
+        "fineTemperatureC": 34.366334082285334,
+        "gateAllowanceK": 0.2245170833892647,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -1.1949499994516373,
+          1.3119687222500596
+        ],
+        "relativeChange": 0.17682042542755405,
+        "temperatureUnit": "degC",
+        "timeS": 20
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/TPS63060DSCR-2026-10-24T10-53-36-958Z-thermal-final-time-zi5hXc-checkpoint.json",
+      "stage": 3,
+      "role": "directional",
+      "ms": 92862.45139999999,
+      "nodes": 33093,
+      "changeK": 1.79076838993673,
+      "relative": 0.07021070325976318,
+      "compactK": 0.0060672003714117295,
+      "compactPass": true,
+      "oldSpatialPass": false,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 50.263699487891635,
+        "denominatorK": 39.738216241614296,
+        "differenceK": 1.79076838993673,
+        "differenceUnit": "K",
+        "fineTemperatureC": 48.472931097954906,
+        "gateAllowanceK": 0.794764325832286,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -1.8406772390007973,
+          -7.115622986108065
+        ],
+        "relativeChange": 0.045064136222134135,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 32.033640132230175,
+        "denominatorK": 11.226832041713376,
+        "differenceK": 0.788243773027939,
+        "differenceUnit": "K",
+        "fineTemperatureC": 31.245396359202235,
+        "gateAllowanceK": 0.22453664183426753,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -1.8406772390007973,
+          -7.115622986108065
+        ],
+        "relativeChange": 0.07021070325976318,
+        "temperatureUnit": "degC",
+        "timeS": 20
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/TPS63060DSCR-2026-10-24T10-53-36-958Z-thermal-final-time-zi5hXc-checkpoint.json",
+      "stage": 4,
+      "role": "directional",
+      "ms": 83553.3505,
+      "nodes": 33438,
+      "changeK": 0.5651076245682809,
+      "relative": 0.02464493291329656,
+      "compactK": 0.00016393976452633297,
+      "compactPass": true,
+      "oldSpatialPass": false,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 54.87157338016449,
+        "denominatorK": 39.73828062388152,
+        "differenceK": 0.5651076245682809,
+        "differenceUnit": "K",
+        "fineTemperatureC": 54.306465755596214,
+        "gateAllowanceK": 0.7947656134776304,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          1.369671255350113,
+          3.0154432579874992
+        ],
+        "relativeChange": 0.014220736672453514,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 34.13409379564103,
+        "denominatorK": 11.226871670834587,
+        "differenceK": 0.27668549915390805,
+        "differenceUnit": "K",
+        "fineTemperatureC": 33.85740829648712,
+        "gateAllowanceK": 0.22453743441669174,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          1.369671255350113,
+          3.0154432579874992
+        ],
+        "relativeChange": 0.02464493291329656,
+        "temperatureUnit": "degC",
+        "timeS": 20
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/TPS63060DSCR-2026-10-24T10-53-36-958Z-thermal-final-time-zi5hXc-checkpoint.json",
+      "stage": 5,
+      "role": "directional",
+      "ms": 80538.4073,
+      "nodes": 33492,
+      "changeK": 0.3514609446118371,
+      "relative": 0.015084394599285355,
+      "compactK": 0.000027387837711501106,
+      "compactPass": true,
+      "oldSpatialPass": true,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 37.78251562522266,
+        "denominatorK": 39.73831170314976,
+        "differenceK": 0.3514609446118371,
+        "differenceUnit": "K",
+        "fineTemperatureC": 37.43105468061083,
+        "gateAllowanceK": 0.7947662350629953,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          10.039081029862707,
+          2.227724999189377
+        ],
+        "relativeChange": 0.00884438541922201,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 35.39069869958362,
+        "denominatorK": 11.226875790479976,
+        "differenceK": 0.16935062454076366,
+        "differenceUnit": "K",
+        "fineTemperatureC": 35.22134807504286,
+        "gateAllowanceK": 0.22453751680959952,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -1.3292375095188618,
+          1.315469585774188
+        ],
+        "relativeChange": 0.015084394599285355,
+        "temperatureUnit": "degC",
+        "timeS": 20
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/TPS63060DSCR-2026-10-24T10-53-36-958Z-thermal-final-time-zi5hXc-checkpoint.json",
+      "stage": 6,
+      "role": "independent-control",
+      "ms": 106812.01280000001,
+      "nodes": 42660,
+      "changeK": 0.4576128587808572,
+      "relative": 0.015467159444344491,
+      "compactK": 0.029666114780773967,
+      "compactPass": true,
+      "oldSpatialPass": true,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 39.153954199790405,
+        "denominatorK": 39.76689237907542,
+        "differenceK": 0.4576128587808572,
+        "differenceUnit": "K",
+        "fineTemperatureC": 39.61156705857126,
+        "gateAllowanceK": 0.7953378485815085,
+        "kind": "fineNodes",
+        "layer": "BOTTOM",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -11.422002054571744,
+          2.1383000016212463
+        ],
+        "relativeChange": 0.011507382936003426,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 27.42942172050827,
+        "denominatorK": 11.23246696631961,
+        "differenceK": 0.17373435752139788,
+        "differenceUnit": "K",
+        "fineTemperatureC": 27.60315607802967,
+        "gateAllowanceK": 0.2246493403263922,
+        "kind": "fineNodes",
+        "layer": "BOTTOM",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -11.422002054571744,
+          2.1383000016212463
+        ],
+        "relativeChange": 0.015467159444344491,
+        "temperatureUnit": "degC",
+        "timeS": 20
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/extended-convergence/checkpoint.json",
+      "stage": 0,
+      "role": "seed",
+      "ms": 79249.8023,
+      "nodes": 18300
+    },
+    {
+      "source": "debugging/thermal-verification/extended-convergence/checkpoint.json",
+      "stage": 1,
+      "role": "directional",
+      "ms": 112867.89450000001,
+      "nodes": 25527,
+      "changeK": 4.968204107399023,
+      "relative": 0.21131101436205824,
+      "compactK": 0.11955964697723687,
+      "compactPass": true,
+      "oldSpatialPass": false,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 45.918810115501245,
+        "denominatorK": 39.69758704263472,
+        "differenceK": 4.968204107399023,
+        "differenceUnit": "K",
+        "fineTemperatureC": 40.95060600810222,
+        "gateAllowanceK": 0.7939517418526945,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -1.956291988492012,
+          -7.2115089893341064
+        ],
+        "relativeChange": 0.12515128695512986,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 34.253811228859995,
+        "denominatorK": 11.22330680786257,
+        "differenceK": 2.3716083460660338,
+        "differenceUnit": "K",
+        "fineTemperatureC": 31.882202882793962,
+        "gateAllowanceK": 0.22446613715725142,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -1.7400999963283539,
+          1.748056249693036
+        ],
+        "relativeChange": 0.21131101436205824,
+        "temperatureUnit": "degC",
+        "timeS": 20
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/extended-convergence/checkpoint.json",
+      "stage": 2,
+      "role": "directional",
+      "ms": 141708.3171,
+      "nodes": 30900,
+      "changeK": 3.7078758970329417,
+      "relative": 0.17682385499985265,
+      "compactK": 0.03333075929789686,
+      "compactPass": true,
+      "oldSpatialPass": false,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 61.327749663567815,
+        "denominatorK": 39.741484055858,
+        "differenceK": 3.7078758970329417,
+        "differenceUnit": "K",
+        "fineTemperatureC": 57.61987376653487,
+        "gateAllowanceK": 0.79482968211716,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          1.2197499871253967,
+          1.698139989376068
+        ],
+        "relativeChange": 0.09329988512309698,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 36.352947380852704,
+        "denominatorK": 11.228824777426265,
+        "differenceK": 1.9855240842623747,
+        "differenceUnit": "K",
+        "fineTemperatureC": 34.36742329659033,
+        "gateAllowanceK": 0.2245764965485253,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -1.1949499994516373,
+          1.3119687222500596
+        ],
+        "relativeChange": 0.17682385499985265,
+        "temperatureUnit": "degC",
+        "timeS": 20
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/extended-convergence/checkpoint.json",
+      "stage": 3,
+      "role": "directional",
+      "ms": 154895.0586,
+      "nodes": 33093,
+      "changeK": 1.7912123765756647,
+      "relative": 0.07021127201867104,
+      "compactK": 0.0062637364079805025,
+      "compactPass": true,
+      "oldSpatialPass": false,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 50.268412599100174,
+        "denominatorK": 39.74839668323434,
+        "differenceK": 1.7912123765756647,
+        "differenceUnit": "K",
+        "fineTemperatureC": 48.47720022252451,
+        "gateAllowanceK": 0.7949679346646867,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -1.8406772390007973,
+          -7.115622986108065
+        ],
+        "relativeChange": 0.0450637642280346,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 32.03408580337927,
+        "denominatorK": 11.229791214560699,
+        "differenceK": 0.7884579256784034,
+        "differenceUnit": "K",
+        "fineTemperatureC": 31.245627877700866,
+        "gateAllowanceK": 0.22459582529121397,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -1.8406772390007973,
+          -7.115622986108065
+        ],
+        "relativeChange": 0.07021127201867104,
+        "temperatureUnit": "degC",
+        "timeS": 20
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/extended-convergence/checkpoint.json",
+      "stage": 4,
+      "role": "directional",
+      "ms": 154897.2191,
+      "nodes": 33438,
+      "changeK": 0.5651431911969915,
+      "relative": 0.024645262593264848,
+      "compactK": 0.0002784107162980831,
+      "compactPass": true,
+      "oldSpatialPass": false,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 54.877681655525095,
+        "denominatorK": 39.7486548911834,
+        "differenceK": 0.5651431911969915,
+        "differenceUnit": "K",
+        "fineTemperatureC": 54.3125384643281,
+        "gateAllowanceK": 0.794973098823668,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          1.369671255350113,
+          3.0154432579874992
+        ],
+        "relativeChange": 0.014217919895506834,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 34.13512025849616,
+        "denominatorK": 11.229830831932098,
+        "differenceK": 0.2767621297309084,
+        "differenceUnit": "K",
+        "fineTemperatureC": 33.858358128765246,
+        "gateAllowanceK": 0.22459661763864197,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          1.369671255350113,
+          3.0154432579874992
+        ],
+        "relativeChange": 0.024645262593264848,
+        "temperatureUnit": "degC",
+        "timeS": 20
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/extended-convergence/checkpoint.json",
+      "stage": 5,
+      "role": "directional",
+      "ms": 167856.2444,
+      "nodes": 33492,
+      "changeK": 0.3515805633039424,
+      "relative": 0.015084640352013677,
+      "compactK": 0.000020016645677856104,
+      "compactPass": true,
+      "oldSpatialPass": true,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 37.78338454231047,
+        "denominatorK": 39.74866606856372,
+        "differenceK": 0.3515805633039424,
+        "differenceUnit": "K",
+        "fineTemperatureC": 37.431803979006524,
+        "gateAllowanceK": 0.7949733223712744,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          10.039081029862707,
+          2.227724999189377
+        ],
+        "relativeChange": 0.008845090869149924,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 35.39206512204963,
+        "denominatorK": 11.229834948827403,
+        "differenceK": 0.16939802141553528,
+        "differenceUnit": "K",
+        "fineTemperatureC": 35.2226671006341,
+        "gateAllowanceK": 0.22459669997654805,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -1.3292375095188618,
+          1.315469585774188
+        ],
+        "relativeChange": 0.015084640352013677,
+        "temperatureUnit": "degC",
+        "timeS": 20
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/extended-convergence/checkpoint.json",
+      "stage": 6,
+      "role": "independent-control",
+      "ms": 206165.1314,
+      "nodes": 42660,
+      "changeK": 0.4576967616886165,
+      "relative": 0.015467114499808417,
+      "compactK": 0.029147794452811127,
+      "compactPass": true,
+      "oldSpatialPass": true,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 39.15529153260873,
+        "denominatorK": 39.77677365596103,
+        "differenceK": 0.4576967616886165,
+        "differenceUnit": "K",
+        "fineTemperatureC": 39.61298829429734,
+        "gateAllowanceK": 0.7955354741192205,
+        "kind": "fineNodes",
+        "layer": "BOTTOM",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -11.422002054571744,
+          2.1383000016212463
+        ],
+        "relativeChange": 0.01150663363618545,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 27.4287468745447,
+        "denominatorK": 11.235382563669297,
+        "differenceK": 0.17377894856142406,
+        "differenceUnit": "K",
+        "fineTemperatureC": 27.602525823106124,
+        "gateAllowanceK": 0.22470765227338596,
+        "kind": "fineNodes",
+        "layer": "BOTTOM",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -11.422002054571744,
+          2.1383000016212463
+        ],
+        "relativeChange": 0.015467114499808417,
+        "temperatureUnit": "degC",
+        "timeS": 20
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/BandAmpV5-2026-10-24T11-14-25-916Z-thermal-final-time-W8pzml-checkpoint.json",
+      "stage": 0,
+      "role": "seed",
+      "ms": 44542.9165,
+      "nodes": 21397
+    },
+    {
+      "source": "debugging/thermal-verification/BandAmpV5-2026-10-24T11-14-25-916Z-thermal-final-time-W8pzml-checkpoint.json",
+      "stage": 1,
+      "role": "directional",
+      "ms": 57962.0042,
+      "nodes": 25420,
+      "changeK": 1.2918212647345193,
+      "relative": 0.28819671231148897,
+      "compactK": 0.0027505488161612135,
+      "compactPass": true,
+      "oldSpatialPass": false,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 32.74995211629295,
+        "denominatorK": 4.483521477787839,
+        "differenceK": 1.2918212647345193,
+        "differenceUnit": "K",
+        "fineTemperatureC": 31.458130851558437,
+        "gateAllowanceK": 0.08967043055575678,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -0.15195000171661377,
+          0.17599999904632568
+        ],
+        "relativeChange": 0.2881264807438597,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 31.106226818243943,
+        "denominatorK": 3.7875386639769797,
+        "differenceK": 1.0915561907108149,
+        "differenceUnit": "K",
+        "fineTemperatureC": 30.01467062753313,
+        "gateAllowanceK": 0.07575077427953959,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -0.15195000171661377,
+          0.17599999904632568
+        ],
+        "relativeChange": 0.28819671231148897,
+        "temperatureUnit": "degC",
+        "timeS": 45
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/BandAmpV5-2026-10-24T11-14-25-916Z-thermal-final-time-W8pzml-checkpoint.json",
+      "stage": 2,
+      "role": "directional",
+      "ms": 56919.4965,
+      "nodes": 29659,
+      "changeK": 0.9033517877372992,
+      "relative": 0.2022427574811352,
+      "compactK": 0.0007246609453037678,
+      "compactPass": true,
+      "oldSpatialPass": false,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 32.39492120217861,
+        "denominatorK": 4.487161940532582,
+        "differenceK": 0.9033517877372992,
+        "differenceUnit": "K",
+        "fineTemperatureC": 31.491569414441305,
+        "gateAllowanceK": 0.08974323981065165,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -0.15195000171661377,
+          -0.8130433576090357
+        ],
+        "relativeChange": 0.2013191856476836,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 30.806684215903854,
+        "denominatorK": 3.788848620000686,
+        "differenceK": 0.7662671925875326,
+        "differenceUnit": "K",
+        "fineTemperatureC": 30.040417023316323,
+        "gateAllowanceK": 0.07577697340001373,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -0.15195000171661377,
+          -0.8130433576090357
+        ],
+        "relativeChange": 0.2022427574811352,
+        "temperatureUnit": "degC",
+        "timeS": 45
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/BandAmpV5-2026-10-24T11-14-25-916Z-thermal-final-time-W8pzml-checkpoint.json",
+      "stage": 3,
+      "role": "directional",
+      "ms": 58621.2899,
+      "nodes": 31312,
+      "changeK": 0.4241309723315654,
+      "relative": 0.09450355333203395,
+      "compactK": 0.00012652846096905535,
+      "compactPass": true,
+      "oldSpatialPass": false,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 32.036977475862365,
+        "denominatorK": 4.487989682688443,
+        "differenceK": 0.4241309723315654,
+        "differenceUnit": "K",
+        "fineTemperatureC": 31.612846503530797,
+        "gateAllowanceK": 0.08975979465376886,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          3.226021371781826,
+          -1.477345746010542
+        ],
+        "relativeChange": 0.09450355333203395,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 32.036977475862365,
+        "denominatorK": 4.487989682688443,
+        "differenceK": 0.4241309723315654,
+        "differenceUnit": "K",
+        "fineTemperatureC": 31.612846503530797,
+        "gateAllowanceK": 0.08975979465376886,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          3.226021371781826,
+          -1.477345746010542
+        ],
+        "relativeChange": 0.09450355333203395,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/BandAmpV5-2026-10-24T11-14-25-916Z-thermal-final-time-W8pzml-checkpoint.json",
+      "stage": 4,
+      "role": "directional",
+      "ms": 59273.5632,
+      "nodes": 31570,
+      "changeK": 0.1110107803282272,
+      "relative": 0.024734866542419923,
+      "compactK": 0.000010814966723948771,
+      "compactPass": true,
+      "oldSpatialPass": false,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 30.84540324315993,
+        "denominatorK": 4.488028271260141,
+        "differenceK": 0.1110107803282272,
+        "differenceUnit": "K",
+        "fineTemperatureC": 30.734392462831703,
+        "gateAllowanceK": 0.08976056642520283,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          1.8382125087082386,
+          2.739106237888336
+        ],
+        "relativeChange": 0.024734866542419923,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 30.84540324315993,
+        "denominatorK": 4.488028271260141,
+        "differenceK": 0.1110107803282272,
+        "differenceUnit": "K",
+        "fineTemperatureC": 30.734392462831703,
+        "gateAllowanceK": 0.08976056642520283,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          1.8382125087082386,
+          2.739106237888336
+        ],
+        "relativeChange": 0.024734866542419923,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/BandAmpV5-2026-10-24T11-14-25-916Z-thermal-final-time-W8pzml-checkpoint.json",
+      "stage": 5,
+      "role": "directional",
+      "ms": 59086.4764,
+      "nodes": 31615,
+      "changeK": 0.08136977315899774,
+      "relative": 0.018282585460047875,
+      "compactK": 1.752347529304643e-7,
+      "compactPass": true,
+      "oldSpatialPass": true,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 30.687384199565805,
+        "denominatorK": 4.48802833381095,
+        "differenceK": 0.08136977315899774,
+        "differenceUnit": "K",
+        "fineTemperatureC": 30.60601442640681,
+        "gateAllowanceK": 0.08976056767621901,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -0.2279999926686287,
+          -1.9149256257340315
+        ],
+        "relativeChange": 0.018130405404527306,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 29.37068015734451,
+        "denominatorK": 3.7890554104097203,
+        "differenceK": 0.06927372935367249,
+        "differenceUnit": "K",
+        "fineTemperatureC": 29.301406427990837,
+        "gateAllowanceK": 0.0757811092081944,
+        "kind": "fineNodes",
+        "layer": "TOP",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          -0.2279999926686287,
+          -1.9149256257340315
+        ],
+        "relativeChange": 0.018282585460047875,
+        "temperatureUnit": "degC",
+        "timeS": 45
+      }
+    },
+    {
+      "source": "debugging/thermal-verification/BandAmpV5-2026-10-24T11-14-25-916Z-thermal-final-time-W8pzml-checkpoint.json",
+      "stage": 6,
+      "role": "independent-control",
+      "ms": 88471.3962,
+      "nodes": 42877,
+      "changeK": 0.05944445095865536,
+      "relative": 0.013243102510501752,
+      "compactK": 0.00041827668705174403,
+      "compactPass": true,
+      "oldSpatialPass": true,
+      "missing": 0,
+      "absWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 28.568207867191507,
+        "denominatorK": 4.488710323847153,
+        "differenceK": 0.05944445095865536,
+        "differenceUnit": "K",
+        "fineTemperatureC": 28.62765231815016,
+        "gateAllowanceK": 0.08977420747694306,
+        "kind": "fineNodes",
+        "layer": "core",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          3.1991499960422516,
+          -1.000799998641014
+        ],
+        "relativeChange": 0.013243102510501752,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      },
+      "relWitness": {
+        "ambientC": 30,
+        "coarseTemperatureC": 28.568207867191507,
+        "denominatorK": 4.488710323847153,
+        "differenceK": 0.05944445095865536,
+        "differenceUnit": "K",
+        "fineTemperatureC": 28.62765231815016,
+        "gateAllowanceK": 0.08977420747694306,
+        "kind": "fineNodes",
+        "layer": "core",
+        "normalization": "Maximum physical fine-field rise relative to instantaneous ambient at this output/event time",
+        "pointMm": [
+          3.1991499960422516,
+          -1.000799998641014
+        ],
+        "relativeChange": 0.013243102510501752,
+        "temperatureUnit": "degC",
+        "timeS": 60
+      }
+    }
+  ]
+}

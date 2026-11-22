@@ -63,7 +63,7 @@ alternatives.forEach((p,i)=>writeFileSync(`${dir}/usb-variant-${i+1}.svg`,usbSvg
 writeFileSync(`${dir}/summary.json`,JSON.stringify({spacing:boardSpacingPolicy(input),results:summary,usbVariants:alternatives.length,
     control:control?{ok:control.report.ok,validChange:control.validChange,metrics:control.metrics}:undefined,
     inputSha256:createHash('sha256').update(readFileSync('docs/experimental/pcb/global-placement-2026-09-27/Telemetry/input.json')).digest('hex'),
-    nativeSha256:createHash('sha256').update(readFileSync('native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node')).digest('hex')},null,2));
+    nativeSha256:createHash('sha256').update(readFileSync('native/node-addon/eda-copilot-node.win32-x64-msvc.node')).digest('hex')},null,2));
 for(const name of ['before','after','after-final'])if(existsSync(`${dir}/${name}.json`))
     writeFileSync(`${dir}/${name}.json.gz`,gzipSync(readFileSync(`${dir}/${name}.json`)));
 const n=v=>typeof v==='number'?v.toFixed(2):v;

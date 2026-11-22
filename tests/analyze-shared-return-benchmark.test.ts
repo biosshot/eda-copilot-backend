@@ -1,0 +1,33 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { evaluate, fixturePath } from '../scripts/verify-p7-shared-return-prototype.js';
+const manifest=JSON.parse(readFileSync(fixturePath,'utf8'));
+const synthetic=()=>({schema:'p7-shared-return-output-v1',cases:manifest.cases.map((c:any)=>({id:c.id,status:'ok',units:'ohm',ports:structuredClone(c.model.ports),impedance_ohm:structuredClone(c.reference.impedance_ohm)}))});
+test('synthetic harness self-check, not independent prototype evidence',()=>assert.equal(evaluate(manifest,synthetic()).counts.pass,8));
+test('units corruption fails',()=>{const o=synthetic();o.cases[0].units='mohm';assert.equal(evaluate(manifest,o).counts.fail,1);});
+test('ordered port corruption fails',()=>{const o=synthetic();o.cases[0].ports[0].positive='other';assert.equal(evaluate(manifest,o).counts.fail,1);});
+test('beyond tolerance and nonfinite values fail',()=>{const o=synthetic();o.cases[0].impedance_ohm[0][0]*=1.081;o.cases[1].impedance_ohm[0][0]=NaN;assert.equal(evaluate(manifest,o).counts.fail,2);});
+test('missing comparisons stay unavailable; no empty success',()=>{const r=evaluate(manifest);assert.equal(r.counts.pass,0);assert.equal(r.counts.unavailable,32);});
+test('mutual impedance corruption fails',()=>{const o=synthetic();o.cases[6].impedance_ohm[0][1]=0;assert.equal(evaluate(manifest,o).counts.fail,1);});
+test('JSON property ordering has no physical meaning',()=>{const o=synthetic();o.cases[0].ports=[{negative:'g',positive:'p'}];assert.equal(evaluate(manifest,o).counts.pass,8);});
+test('saved actual prototype current split and subdivision agree independently',()=>{
+  const saved=JSON.parse(readFileSync('tests/fixtures/analysis-shared-return-prototype/observed-dc-result.json','utf8')).prototype_output;
+  assert.equal(evaluate(manifest,saved).counts.pass,8);
+  const find=(id:string)=>saved.cases.find((c:any)=>c.id===id);
+  for(const current of find('two-planes').edge_currents_a_per_port_amp[0]) assert.ok(Math.abs(current-.5)<1e-12);
+  const a=find('shared-narrow').impedance_ohm,b=find('shared-split').impedance_ohm;
+  for(let i=0;i<2;i++)for(let j=0;j<2;j++)assert.ok(Math.abs(a[i][j]-b[i][j])<1e-12);
+});
+const binary='native/analyze/target/debug/examples/shared_return_prototype.exe';
+for(const mutation of ['disconnected return','negative resistance','duplicate node']) test(`prototype rejects ${mutation}`,{skip:!existsSync(binary)},()=>{
+ const m=structuredClone(manifest);m.cases=[m.cases[0]];
+ if(mutation==='disconnected return')m.cases[0].model.edges=[];
+ if(mutation==='negative resistance')m.cases[0].model.edges[0].resistance_ohm=-1;
+ if(mutation==='duplicate node')m.cases[0].model.nodes.push({...m.cases[0].model.nodes[0]});
+ const result=spawnSync(binary,[],{input:JSON.stringify(m),encoding:'utf8',timeout:10000,maxBuffer:1024*1024});
+ assert.ifError(result.error);
+ if(result.status===0){const o=JSON.parse(result.stdout);assert.notEqual(o.cases[0].status,'ok');}else assert.notEqual(result.status,0);
+});

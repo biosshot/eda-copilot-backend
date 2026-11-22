@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "fixture": "ESPower",
+  "rules": [
+    {
+      "kind": "connectivity"
+    },
+    {
+      "kind": "clearance",
+      "minMm": 0.152
+    },
+    {
+      "kind": "edge-clearance",
+      "minMm": 0.3
+    }
+  ],
+  "expectedChecks": [
+    "unknown",
+    "fail",
+    "pass"
+  ],
+  "plotTitle": "ESPower geometry measurements",
+  "snapshot": {
+    "measurements": 725,
+    "violations": 24,
+    "uncertain": 33,
+    "regions": 668,
+    "measurementSha256": "2622ddb33da6bfd93f27a6bd35dee083f9ce0150391dce664b7cf970c9c1f968",
+    "violationSha256": "2d210d0896df86727cea1fa1694927d745fe639e009d8ecbdc954ecf7e836c10",
+    "regionSha256": "e00bfaa7d2a3e75c48add39268e09d369803d45742df3700c9e67c10a77feb7d",
+    "diagnosticsSha256": "7789659062f01e038a4786e29ba56751f2dc4392525311c5ac0b6b6e2025914c",
+    "coverageSha256": "9795f321115b7e22bfd3a64bdce1ef41142250319f85f44a599aed61eb5dee89",
+    "graphSha256": "5a19ebf01c1ace2b5f0b262e5d11826d627bc0da675688b81307a40466b73fea",
+    "fillsSha256": "3e613474b6a1505c8299a5b663dfdd7a76e6fe7a6578148cf56dd373de8f47ec",
+    "excludedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  }
+}

@@ -7,7 +7,7 @@ import type { NativeBoardPackProblemV7, NativePassiveIslandProblemV1 } from '../
 import { loadNativeBoardPacker } from '../src/pcb-layout/pcb-auto-place-v2/native/load-native-board-packer.ts';
 import { minimalProblem, minimalPrimitive } from './helpers/native-board-problem.ts';
 
-const nativeDirectory = resolve('native', 'pcb-board-packer');
+const nativeDirectory = resolve('native', 'node-addon');
 const nativeTest = test;
 
 nativeTest('parallel board search matches serial poses and rank with obstacles and routed relations', (t) => {

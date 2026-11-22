@@ -166,6 +166,8 @@ export interface NativeBlockSolveSolutionV4 extends NativePrimitivePackSolution 
 }
 
 export interface NativeBoardPackerAddon {
+    /** Internal structural import; not a physical analysis or public DSL entry point. */
+    importAnalysisBoard(json: string): import('../../../../native/node-addon/index.cjs').AnalysisImportReport;
     placementAccessProfile(request: { role: string; body: Box; pads: Array<{box: Box; net?: string; through: boolean}> }): {minimumExtra: number; rows: NativeAccessRow[]};
     evaluateBlockQuality(problem: NativeBlockSolveProblemV4): import('../block-quality.ts').BlockQuality;
     evaluateBoardQuality(problem: NativeBoardPackProblemV7): { rank: NativePrimitivePackSolution['rank']; spacing: number; alignment: number };

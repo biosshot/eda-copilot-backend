@@ -1,0 +1,227 @@
+{
+  "name": "NanoScope",
+  "project": {
+    "name": "NanoSpec",
+    "uuid": "68e8515756854180a5480226148d80b6"
+  },
+  "pcb": {
+    "name": "NanoScopePCB",
+    "uuid": "c1d1ed0f8472b770"
+  },
+  "capturedAt": "2026-10-21T14:28:04.897Z",
+  "versions": {
+    "editor": "3.2.206",
+    "extension": "1.3.2",
+    "mcp": "1.3.2",
+    "revisions": {
+      "backend": "832dca321367d1e292afa1db2141420f8d13166a",
+      "copilot": "3654a69166deab037f9c7d1a4a51511d9899754f"
+    },
+    "backendRoutingBoardV2Sha256": "9b7be233eae5ff446e9eb7833300ca68fb482cb0e13198182c8e750c96cd396b"
+  },
+  "export": {
+    "status": "exported",
+    "diagnostics": [
+      {
+        "code": "EASYEDA_V2_SEQUENTIAL_CAPTURE",
+        "severity": "warning",
+        "message": "CAD reads are sequential, not atomic. Do not edit the PCB during export; native pour freshness is unknown."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e2412: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e7176: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e8180: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e7718: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e7719: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e7177: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e8181: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e8736: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e3475: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "e5486: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_SINGLE_LAYER_POLYGON_HOLE_IGNORED",
+        "severity": "warning",
+        "message": "SJ4.2 (e26e6): ignored API hole on BOTTOM POLYGON pad (EasyEDA compatibility workaround)."
+      },
+      {
+        "code": "EASYEDA_V2_SINGLE_LAYER_POLYGON_HOLE_IGNORED",
+        "severity": "warning",
+        "message": "SJ4.1 (e26e7): ignored API hole on BOTTOM POLYGON pad (EasyEDA compatibility workaround)."
+      },
+      {
+        "code": "EASYEDA_V2_SINGLE_LAYER_POLYGON_HOLE_IGNORED",
+        "severity": "warning",
+        "message": "SJ2.2 (e69e6): ignored API hole on BOTTOM POLYGON pad (EasyEDA compatibility workaround)."
+      },
+      {
+        "code": "EASYEDA_V2_SINGLE_LAYER_POLYGON_HOLE_IGNORED",
+        "severity": "warning",
+        "message": "SJ2.1 (e69e7): ignored API hole on BOTTOM POLYGON pad (EasyEDA compatibility workaround)."
+      },
+      {
+        "code": "EASYEDA_V2_SINGLE_LAYER_POLYGON_HOLE_IGNORED",
+        "severity": "warning",
+        "message": "SJ5.2 (e1036e6): ignored API hole on TOP POLYGON pad (EasyEDA compatibility workaround)."
+      },
+      {
+        "code": "EASYEDA_V2_SINGLE_LAYER_POLYGON_HOLE_IGNORED",
+        "severity": "warning",
+        "message": "SJ5.1 (e1036e7): ignored API hole on TOP POLYGON pad (EasyEDA compatibility workaround)."
+      },
+      {
+        "code": "EASYEDA_V2_SINGLE_LAYER_POLYGON_HOLE_IGNORED",
+        "severity": "warning",
+        "message": "SJ3.2 (e12539e6): ignored API hole on TOP POLYGON pad (EasyEDA compatibility workaround)."
+      },
+      {
+        "code": "EASYEDA_V2_SINGLE_LAYER_POLYGON_HOLE_IGNORED",
+        "severity": "warning",
+        "message": "SJ3.1 (e12539e7): ignored API hole on TOP POLYGON pad (EasyEDA compatibility workaround)."
+      },
+      {
+        "code": "EASYEDA_V2_SINGLE_LAYER_POLYGON_HOLE_IGNORED",
+        "severity": "warning",
+        "message": "SJ1.2 (e13372e6): ignored API hole on TOP POLYGON pad (EasyEDA compatibility workaround)."
+      },
+      {
+        "code": "EASYEDA_V2_SINGLE_LAYER_POLYGON_HOLE_IGNORED",
+        "severity": "warning",
+        "message": "SJ1.1 (e13372e7): ignored API hole on TOP POLYGON pad (EasyEDA compatibility workaround)."
+      }
+    ],
+    "inventory": {
+      "layers": 4,
+      "components": 203,
+      "pads": 724,
+      "padDrills": 36,
+      "independentHoles": 0,
+      "tracks": 1135,
+      "vias": 249,
+      "pours": 8,
+      "fills": 2
+    }
+  },
+  "nativeSummary": {
+    "components": 203,
+    "pads": 724,
+    "tracks": 1135,
+    "arcs": 0,
+    "vias": 249,
+    "pours": 8,
+    "fillFragments": 691,
+    "layers": [
+      "TOP",
+      "INNER_1",
+      "INNER_2",
+      "BOTTOM"
+    ],
+    "viaTypes": {
+      "0": 197,
+      "2": 52
+    },
+    "padDrills": 46,
+    "slottedPadDrills": 4
+  },
+  "verification": {
+    "sourceRecordsUnchanged": true,
+    "sourceRecordCount": 3626,
+    "audit": "Captured and inventoried; physical completeness has not yet been accepted as an analysis reference",
+    "v2InventoryVerified": true,
+    "archiveComparison": {
+      "projectArchiveContainsSelectedPcb": true,
+      "archiveCrcVerified": true,
+      "nativeRecordCount": 3625,
+      "archiveRecordCount": 4647,
+      "archiveRecordsMatchSelectedSource": false,
+      "mismatch": {
+        "LAYER": 119,
+        "ACTIVE_LAYER": 1,
+        "RULE": 8,
+        "RULE_SELECTOR": 1,
+        "ELE_PLACEHOLDER": 976,
+        "VIA": 249,
+        "PAD": 14,
+        "LINE": 1,
+        "REGION": 2,
+        "FILL": 2,
+        "POURED": 8,
+        "STRING": 15,
+        "PAD_NET": 710,
+        "ATTR": 872,
+        "META": 1
+      },
+      "note": "Project archive and editor-selected source are distinct native representations. Record equality and physical equivalence are not assumed; V2 uses the captured editor input."
+    },
+    "v2ReplayMatchesSavedCapture": true,
+    "liveExportAfterReexport": "not-repeated; replay of original native capture"
+  },
+  "files": {
+    "source.epro2": {
+      "bytes": 1565372,
+      "sha256": "70674921da4230b0d775fb06552617bd626eab02b7cb80421f74ae2832922e6e",
+      "normalization": "binary"
+    },
+    "source-pcb.txt": {
+      "bytes": 1283352,
+      "sha256": "c08e95a85c31d47f4e6e6fdcbd204c458f268d4a6f22ac52cd9d98aa9a5098ce",
+      "normalization": "lf"
+    },
+    "export-evidence.json": {
+      "bytes": 1630873,
+      "sha256": "f8c8373e4397e3d72305fef9acd8ef70b5914a2eb1fd716294cdf49e89ed9eaa",
+      "normalization": "lf"
+    },
+    "NanoScope.json": {
+      "bytes": 9298996,
+      "sha256": "8515e761f131df0731c3cc84fa293457f526e0d6ea91eff8fe73aa8a587b65e6",
+      "normalization": "lf"
+    }
+  },
+  "reexport": {
+    "at": "2026-10-22T17:50:03.252Z",
+    "method": "Replay unchanged captured autoroute JSON, Raw PCB and DRC through corrected V2 exporter",
+    "copilotRevision": "c7b40f257ef507f7ebfcc15ec044af46ef9152fd",
+    "captureSha256": "30bd1c13fe479abda423fed87b31de9b07c1b3309dbf94850f8fa0248006dd6d",
+    "previousBoardSha256": "232aa21f922a253c590901fb33ee491deccadea40460ad0048fee9e7580c85d7",
+    "note": "Original capturedAt/versions/nativeSummary describe the unchanged CAD capture. Export inventory/diagnostics/file hashes describe this replay; no CAD edits, refill or fresh capture."
+  }
+}

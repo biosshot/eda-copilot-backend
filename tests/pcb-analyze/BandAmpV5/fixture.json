@@ -1,0 +1,106 @@
+{
+  "name": "BandAmpV5",
+  "project": {
+    "name": "BandAmpV5",
+    "uuid": "cd019c589d1e44249a13abf2dbe2c682"
+  },
+  "pcb": {
+    "name": "RFAmplifierPCB",
+    "uuid": "f780b587c3940ba0"
+  },
+  "capturedAt": "2026-10-21T14:29:04.150Z",
+  "versions": {
+    "editor": "3.2.206",
+    "extension": "1.3.2",
+    "mcp": "1.3.2",
+    "revisions": {
+      "backend": "832dca321367d1e292afa1db2141420f8d13166a",
+      "copilot": "3654a69166deab037f9c7d1a4a51511d9899754f"
+    },
+    "backendRoutingBoardV2Sha256": "9b7be233eae5ff446e9eb7833300ca68fb482cb0e13198182c8e750c96cd396b"
+  },
+  "export": {
+    "status": "exported",
+    "diagnostics": [
+      {
+        "code": "EASYEDA_V2_SEQUENTIAL_CAPTURE",
+        "severity": "warning",
+        "message": "CAD reads are sequential, not atomic. Do not edit the PCB during export; native pour freshness is unknown."
+      }
+    ],
+    "inventory": {
+      "layers": 2,
+      "components": 9,
+      "pads": 29,
+      "padDrills": 3,
+      "independentHoles": 0,
+      "tracks": 21,
+      "vias": 133,
+      "pours": 2,
+      "fills": 0
+    }
+  },
+  "nativeSummary": {
+    "components": 9,
+    "pads": 29,
+    "tracks": 21,
+    "arcs": 0,
+    "vias": 133,
+    "pours": 2,
+    "fillFragments": 2,
+    "layers": [
+      "TOP",
+      "BOTTOM"
+    ],
+    "viaTypes": {
+      "0": 133
+    },
+    "padDrills": 3,
+    "slottedPadDrills": 0
+  },
+  "verification": {
+    "sourceRecordsUnchanged": true,
+    "sourceRecordCount": 400,
+    "audit": "Captured and inventoried; physical completeness has not yet been accepted as an analysis reference",
+    "v2InventoryVerified": true,
+    "v2ReplayMatchesLiveExport": true,
+    "archiveComparison": {
+      "projectArchiveContainsSelectedPcb": true,
+      "archiveCrcVerified": true,
+      "nativeRecordCount": 399,
+      "archiveRecordCount": 419,
+      "archiveRecordsMatchSelectedSource": false,
+      "mismatch": {
+        "META": 1,
+        "LAYER": 2,
+        "POURED": 14,
+        "ELE_PLACEHOLDER": 8,
+        "COMPONENT": 4,
+        "RULE_SELECTOR": 1
+      },
+      "note": "Project archive and editor-selected source are distinct native representations. Record equality and physical equivalence are not assumed; V2 uses the captured editor input."
+    }
+  },
+  "files": {
+    "source.epro2": {
+      "bytes": 419567,
+      "sha256": "c92d3d25b9caf9686c4ac0c5e867848119012e9bbc8ced0c5c0cef0acd83746d",
+      "normalization": "binary"
+    },
+    "source-pcb.txt": {
+      "bytes": 120954,
+      "sha256": "511f96fb50e4954fc9a16482d8990ffabdaaa3220e4b0b07d499df3153cd6b95",
+      "normalization": "lf"
+    },
+    "export-evidence.json": {
+      "bytes": 236011,
+      "sha256": "58c596139fdf78ab119b4621a677219593500a2d09339ebf8f09374d6f8cdb0a",
+      "normalization": "lf"
+    },
+    "BandAmpV5.json": {
+      "bytes": 165458,
+      "sha256": "032f0965d31f76474501fe10494b4de5c7c054bd24b4c30df964c4cc5590d1fc",
+      "normalization": "lf"
+    }
+  }
+}

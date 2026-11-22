@@ -1,0 +1,92 @@
+{
+  "cases": [
+    {
+      "id": "mesh-1/load-1",
+      "maxAreaMm2": 1,
+      "loadScale": 1
+    },
+    {
+      "id": "mesh-1/load-2",
+      "maxAreaMm2": 1,
+      "loadScale": 2
+    },
+    {
+      "id": "mesh-0.5/load-1",
+      "maxAreaMm2": 0.5,
+      "loadScale": 1
+    },
+    {
+      "id": "mesh-0.5/load-2",
+      "maxAreaMm2": 0.5,
+      "loadScale": 2
+    }
+  ],
+  "measurements": [
+    "U2.1",
+    "U12.1"
+  ],
+  "convergence": {
+    "relative": 0.02,
+    "voltageFloorV": 1e-09,
+    "lossFloorW": 1e-09
+  },
+  "checks": [
+    {
+      "name": "mesh-1/load-1/U2.1/drop",
+      "status": "fail",
+      "max": 0.005
+    },
+    {
+      "name": "mesh-1/load-1/U12.1/drop",
+      "status": "fail",
+      "max": 0.005
+    },
+    {
+      "name": "mesh-1/load-1/copper-loss",
+      "status": "pass"
+    },
+    {
+      "name": "mesh-1/load-2/U2.1/drop",
+      "status": "fail",
+      "max": 0.005
+    },
+    {
+      "name": "mesh-1/load-2/U12.1/drop",
+      "status": "fail",
+      "max": 0.005
+    },
+    {
+      "name": "mesh-1/load-2/copper-loss",
+      "status": "pass"
+    },
+    {
+      "name": "mesh-0.5/load-1/U2.1/drop",
+      "status": "fail",
+      "max": 0.005
+    },
+    {
+      "name": "mesh-0.5/load-1/U12.1/drop",
+      "status": "fail",
+      "max": 0.005
+    },
+    {
+      "name": "mesh-0.5/load-1/copper-loss",
+      "status": "pass"
+    },
+    {
+      "name": "mesh-0.5/load-2/U2.1/drop",
+      "status": "fail",
+      "max": 0.005
+    },
+    {
+      "name": "mesh-0.5/load-2/U12.1/drop",
+      "status": "fail",
+      "max": 0.005
+    },
+    {
+      "name": "mesh-0.5/load-2/copper-loss",
+      "status": "pass"
+    }
+  ],
+  "requireBarrelCurrent": false
+}

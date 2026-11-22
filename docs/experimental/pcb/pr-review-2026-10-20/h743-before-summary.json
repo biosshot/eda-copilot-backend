@@ -1,0 +1,22 @@
+{
+  "label": "before",
+  "binary": "debugging/pr-review-2026-10-20/main-native.node",
+  "results": [
+    {
+      "backend": "cpu",
+      "status": 0,
+      "fallback": false,
+      "rank": {
+        "hardCount": 0,
+        "hardSeverity": 0,
+        "score": 2090.879150390625
+      }
+    },
+    {
+      "backend": "cubecl",
+      "status": 1,
+      "fallback": false
+    }
+  ],
+  "equal": false
+}

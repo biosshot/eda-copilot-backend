@@ -1,0 +1,64 @@
+{
+  "source": {
+    "title": "Johnson and Graham, High-Speed Signal Propagation, chapter 6, Table 6.1",
+    "url": "https://ptgmedia.pearsoncmg.com/images/013084408X/samplechapter/013084408X_ch06.pdf",
+    "printedPage": 389,
+    "pdfPage": 27,
+    "method": "Method-of-moments magnetic simulator;120 segments per trace; linear current variation; author estimates +/-2% (not a rigorous bound)",
+    "authorEstimatedRelativeUncertainty": 0.02
+  },
+  "scope": "Supplementary published conductor-R comparison only; incomplete nominal copper thickness prevents exact-reference claim. Nonmagnetic mask excluded from magnetic R; no C, Z or attenuation comparison.",
+  "frequencyHz": 1000000000.0,
+  "conductivitySM": 59800000.0,
+  "epsilonR": 4.3,
+  "mask": {
+    "thicknessMm": 0.0127,
+    "epsilonR": 3.3,
+    "usedInMagneticComparison": false
+  },
+  "normalization": "Table loop RAC = 2*(R11-R12) = 2*Rodd. At 100 ohm differential impedance, 60.7/(2*100)*20/log(10)=2.636 dB/m agrees with table 2.63.",
+  "thicknessBracket": {
+    "declaredBeforeEvaluation": true,
+    "valuesMm": [
+      0.03429,
+      0.03556
+    ],
+    "meaning": "Nominal one-ounce conversion conventions 1.35 and 1.4 mil; not a manufacturing tolerance or claimed exact thickness. All endpoints evaluated without selecting by result.",
+    "source": "https://www.upmediagroup.net/publications/WhitePapers/Divsys_COPPER_FOIL_WEIGHT.pdf",
+    "sourcePage": 1
+  },
+  "referencePlane": {
+    "thicknessMm": 0.03556,
+    "state": "Explicit thick-plane hypothesis; published reference thickness unspecified; canonical surface model assumes thickness much greater than skin depth."
+  },
+  "rows": [
+    {
+      "heightMil": 5,
+      "widthMil": 8,
+      "gapMil": 30,
+      "loopResistanceOhmPerM": 60.7,
+      "tableAlphaDbPerM": 2.63
+    },
+    {
+      "heightMil": 5,
+      "widthMil": 7,
+      "gapMil": 11,
+      "loopResistanceOhmPerM": 61.7,
+      "tableAlphaDbPerM": 2.68
+    },
+    {
+      "heightMil": 5,
+      "widthMil": 6,
+      "gapMil": 7,
+      "loopResistanceOhmPerM": 66.5,
+      "tableAlphaDbPerM": 2.89
+    },
+    {
+      "heightMil": 5,
+      "widthMil": 5,
+      "gapMil": 5,
+      "loopResistanceOhmPerM": 74.4,
+      "tableAlphaDbPerM": 3.23
+    }
+  ]
+}

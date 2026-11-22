@@ -1,0 +1,105 @@
+{
+  "method": "independent five-point Laplace Dirichlet energy on Cartesian grid; no native/producer import",
+  "geometry": {
+    "widthMm": 0.3,
+    "gapMm": 0.3,
+    "copperThicknessMm": 0.035,
+    "groundPlanesYMm": [
+      0,
+      0.635
+    ],
+    "conductorYMm": [
+      0.3,
+      0.335
+    ],
+    "relativePermittivity": 4
+  },
+  "runs": [
+    {
+      "hMm": 0.005,
+      "halfWidthMm": 1.5,
+      "nodes": 76928,
+      "capacitanceFPerM": [
+        [
+          1.4709733997744827e-10,
+          -1.337317091674982e-11
+        ],
+        [
+          -1.337317091674982e-11,
+          1.470973399774483e-10
+        ]
+      ],
+      "normalizedResidual": 2.6772859497967e-15
+    },
+    {
+      "hMm": 0.0025,
+      "halfWidthMm": 1.5,
+      "nodes": 306255,
+      "capacitanceFPerM": [
+        [
+          1.4692146839366907e-10,
+          -1.3326712156403744e-11
+        ],
+        [
+          -1.3326712156403744e-11,
+          1.4692146839366907e-10
+        ]
+      ],
+      "normalizedResidual": 3.805279038064469e-15
+    },
+    {
+      "hMm": 0.0025,
+      "halfWidthMm": 2.0,
+      "nodes": 408255,
+      "capacitanceFPerM": [
+        [
+          1.469197194318689e-10,
+          -1.3326725162916361e-11
+        ],
+        [
+          -1.3326725162916361e-11,
+          1.4691971943186898e-10
+        ]
+      ],
+      "normalizedResidual": 3.83324536203367e-15
+    }
+  ],
+  "data": {
+    "capacitanceFPerM": [
+      [
+        1.469197194318689e-10,
+        -1.3326725162916361e-11
+      ],
+      [
+        -1.3326725162916361e-11,
+        1.4691971943186898e-10
+      ]
+    ],
+    "inductanceHPerM": [
+      [
+        3.054404769910865e-07,
+        2.7705751863880386e-08
+      ],
+      [
+        2.7705751863880386e-08,
+        3.054404769910863e-07
+      ]
+    ],
+    "impedanceOhm": [
+      49.937363410930516,
+      41.63138795891973
+    ],
+    "effectivePermittivity": [
+      4,
+      4
+    ]
+  },
+  "uncertainty": {
+    "relativeBound": 0.02,
+    "kind": "engineering numerical estimate, not rigorous bound",
+    "meshDifference": 0.003485158826768778,
+    "domainDifference": 1.190420051805926e-05,
+    "policy": "preassigned 2% allowance; mesh and domain differences each must be below 1%; included additively within 8% acceptance"
+  },
+  "wallSeconds": 47.10831046104431
+}

@@ -1,0 +1,23 @@
+//! Native all-coordinate field assembly on replayed actual-board geometry.
+//! Saved C/solutions are never inputs; physical acceptance remains external.
+#[path="../tests/reference/local/mod.rs"] mod local_reference;
+use local_reference::volume_matrix;
+use pcb_analyze::{import_json,extraction::local::{board_mesh,field_refinement,volume_current,volume_field,AllocationBudget}};
+use pcb_analyze::extraction::local::volume_field::ElectricApply;
+use std::time::{Duration,Instant};
+fn main()->Result<(),String>{
+ let a=std::env::args().collect::<Vec<_>>();if a.len()!=5{return Err("board_field_refined <board.json> <current-request.json> <seed-request.json> <saved-refinement.json>".into());}let started=Instant::now();let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:100000,max_tetrahedra:512*1024*1024/2048};
+ let board=import_json(&std::fs::read_to_string(&a[1]).map_err(|e|e.to_string())?).board.ok_or("board import rejected")?;
+ let request:board_mesh::Request=serde_json::from_reader(std::fs::File::open(&a[2]).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;let seed_request:board_mesh::Request=serde_json::from_reader(std::fs::File::open(&a[3]).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+ if board_mesh::physical_signature(&request)!=board_mesh::physical_signature(&seed_request){return Err("field seed changed physical current geometry/materials/contacts".into());}
+ let current=board_mesh::build(&board,&request,budget,Duration::from_secs(100))?;let electrodes=request.electrodes.iter().map(|e|current.electrode_nodes(e)).collect::<Result<Vec<_>,_>>()?;let space=volume_current::assemble(&current.mesh,&current.conductivity_s_m,&electrodes,budget)?;
+ let seed=board_mesh::build(&board,&seed_request,AllocationBudget{max_bytes:budget.max_bytes.checked_sub(space.planned_bytes).ok_or("seed live budget exhausted")?,..budget},Duration::from_secs(100))?;
+ let current_mesh=current.into_mesh();drop(board);let seed_mesh=seed.into_mesh();let source_live=current_mesh.retained_bytes()?.checked_add(space.planned_bytes).and_then(|v|v.checked_add(65536)).ok_or("source live budget overflow")?;
+ let live=source_live.checked_add(seed_mesh.retained_bytes()?).ok_or("saved field live budget overflow")?;let saved=field_refinement::Saved::read(&a[4],live,budget)?;let coordinate_model=saved.field_coordinate_model.clone();
+ let replay_budget=AllocationBudget{max_bytes:budget.max_bytes.checked_sub(space.planned_bytes+65536).ok_or("replay source live budget exhausted")?,..budget};
+ let mut refined=field_refinement::replay(seed_mesh,&current_mesh,&space,&saved,replay_budget,Duration::from_secs(100).checked_sub(started.elapsed()).ok_or("native field preparation deadline")?)?;drop(saved);
+ let trace=std::mem::take(&mut refined.metal_trace);let field_budget=AllocationBudget{max_bytes:budget.max_bytes.checked_sub(source_live).ok_or("native field live budget exhausted")?,..budget};let field=volume_field::Field::new_conforming_trace(&refined.mesh,space.potential_count(),trace,field_budget)?;let retained_operator_bytes=field.operator.retained_bytes()?;
+ eprintln!("native replayed field: nodes={}, tets={}, bisections={}, replayPlan={}, fieldPlan={}",refined.mesh.nodes_m.len(),refined.mesh.tetrahedra.len(),refined.bisections,refined.replay_peak_bytes,field.operator.planned_peak_bytes);
+ let dense=volume_field::DenseField::new_parallel(&field,field_budget,4)?;drop(field);let n=space.potential_count();let mut cap=vec![vec![0.;n];n];for j in 0..n{if started.elapsed().as_secs_f64()>110.{return Err("native full-field deadline before completed source matrix".into());}let mut unit=vec![0.;n];unit[j]=1.;let q=dense.apply(&unit)?;for i in 0..n{cap[i][j]=q[i];}}
+ println!("{}",serde_json::json!({"kind":"native-replayed-complete-source-P1-field-v1","physicalAdmission":false,"fieldCoordinateModel":coordinate_model,"signature":volume_matrix::Signature::new(&current_mesh,&space,vec![]),"physicalInputs":board_mesh::physical_signature(&request),"potentialMeshNodes":space.mesh_nodes,"potentialCount":n,"fullTraceComplete":true,"capacitanceF":cap,"fieldTetrahedra":refined.mesh.tetrahedra.len(),"fieldNodes":refined.mesh.nodes_m.len(),"bisections":refined.bisections,"maximumParentVolumeError":refined.maximum_parent_volume_error,"replayPeakBytes":refined.replay_peak_bytes,"assemblyPeakBytes":dense.assembly_peak_bytes,"retainedFieldBytes":dense.planned_bytes(),"fieldWorkers":4,"retainedOperatorBytes":retained_operator_bytes,"sourceLiveBytes":source_live,"chargeEnergyRelativeError":dense.max_charge_energy_column_error,"directedReciprocity":dense.max_directed_reciprocity,"elapsedSeconds":started.elapsed().as_secs_f64()}));Ok(())
+}

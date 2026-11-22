@@ -1,0 +1,62 @@
+{
+  "cases": {
+    "failed-d32": {
+      "pythonCapacitanceF": [
+        [
+          5.0397616831846566e-14,
+          -1.5993261353938954e-14
+        ],
+        [
+          -1.5993261353938957e-14,
+          5.041307604773344e-14
+        ]
+      ],
+      "pythonOutputSha256": "f5c5f60e5c7a5ea8a669a6504afdca1937d580e3c7d1cd7d05713373f2d00eed",
+      "independentFullError": 0.055964308469414775,
+      "parityTolerance": 1e-10
+    },
+    "accepted-d64-domain": {
+      "pythonCapacitanceF": [
+        [
+          5.0263935784207664e-14,
+          -1.6126703417188705e-14
+        ],
+        [
+          -1.6126703417188683e-14,
+          5.027927490134901e-14
+        ]
+      ],
+      "pythonOutputSha256": "6a00bba85cd71d810f337d056b44de48f2adc9752a8919e82ea39c8a544b551a",
+      "independentFullError": 0.04776650377659311,
+      "parityTolerance": 1e-10
+    },
+    "accepted-d64-mesh": {
+      "pythonCapacitanceF": [
+        [
+          5.000602066984243e-14,
+          -1.5985072846104004e-14
+        ],
+        [
+          -1.598507284610399e-14,
+          5.00213334802852e-14
+        ]
+      ],
+      "pythonOutputSha256": "68222aac804a36b09000d59bf17b1fe60d07c97995c31e96bbcc5ebf5720d711",
+      "independentFullError": 0.04419738624634453,
+      "parityTolerance": 1e-10
+    }
+  },
+  "frozenVacuumRawCapacitanceF": [
+    [
+      4.8364283971279784e-14,
+      -1.5775671386302734e-14
+    ],
+    [
+      -1.5775667394379073e-14,
+      4.836375260162879e-14
+    ]
+  ],
+  "independentEnergyTolerance": 0.05,
+  "separateDomainMeshTolerance": 0.02,
+  "balanceRecoveryTolerance": 1e-09
+}

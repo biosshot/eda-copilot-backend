@@ -1,0 +1,106 @@
+{
+  "source": "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\analyze-p7-extraction\\tests\\pcb-analyze\\STM32G0_CAN_RS485\\source-pcb.txt",
+  "sourceSha256": "021e986d71c6f5c3480fb3c26d7c323f1b3be673abd4ce86b7675adca5fc0c5e",
+  "records": [
+    {
+      "header": {
+        "type": "LINE",
+        "ticket": 568,
+        "id": "54abddda771675b4"
+      },
+      "native": {
+        "partitionId": "",
+        "groupId": 0,
+        "netName": "+3V3",
+        "layerId": 1,
+        "startX": -145.8307,
+        "startY": -528.5433,
+        "endX": -145.8307,
+        "endY": -489.1732,
+        "width": 19.685,
+        "locked": false,
+        "zIndex": -1
+      }
+    },
+    {
+      "header": {
+        "type": "LINE",
+        "ticket": 569,
+        "id": "bef1aae594813e2c"
+      },
+      "native": {
+        "partitionId": "",
+        "groupId": 0,
+        "netName": "+3V3",
+        "layerId": 1,
+        "startX": -145.8307,
+        "startY": -489.1732,
+        "endX": -145.8307,
+        "endY": -460.0039,
+        "width": 19.685,
+        "locked": false,
+        "zIndex": -1
+      }
+    },
+    {
+      "header": {
+        "type": "LINE",
+        "ticket": 572,
+        "id": "5ff3f2845c577b5b"
+      },
+      "native": {
+        "partitionId": "",
+        "groupId": 0,
+        "netName": "+3V3",
+        "layerId": 1,
+        "startX": -189.8031,
+        "startY": -489.1732,
+        "endX": -145.8307,
+        "endY": -489.1732,
+        "width": 19.685,
+        "locked": false,
+        "zIndex": -1
+      }
+    },
+    {
+      "header": {
+        "type": "LINE",
+        "ticket": 585,
+        "id": "88d9932c804b2bb2"
+      },
+      "native": {
+        "partitionId": "",
+        "groupId": 0,
+        "netName": "+3V3",
+        "layerId": 1,
+        "startX": -162.0472,
+        "startY": -359.4488,
+        "endX": -122.6772,
+        "endY": -359.4488,
+        "width": 9.567,
+        "locked": false,
+        "zIndex": -1
+      }
+    },
+    {
+      "header": {
+        "type": "LINE",
+        "ticket": 586,
+        "id": "ddd0394190d6ae65"
+      },
+      "native": {
+        "partitionId": "",
+        "groupId": 0,
+        "netName": "+3V3",
+        "layerId": 1,
+        "startX": -122.6772,
+        "startY": -359.4488,
+        "endX": -118.5,
+        "endY": -355.2717,
+        "width": 9.567,
+        "locked": false,
+        "zIndex": -1
+      }
+    }
+  ]
+}

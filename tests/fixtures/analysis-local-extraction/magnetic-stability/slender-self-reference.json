@@ -1,0 +1,42 @@
+{
+  "method": "Independent exact-double-z1D triangle marginal convolution with finite-width transport enclosure",
+  "geometry": {
+    "areaM2": 2.0608840155256233e-15,
+    "baseWidthM": 8.243536062102486e-12,
+    "medianLengthM": 0.0005590169943749476,
+    "thicknessM": 3.500000000000009e-05
+  },
+  "derivation": [
+    "Uniform triangle marginal2r gives pair distance density g(v)=8/3-4v+4v^3/3.",
+    "Each transverse displacement <=w/2; pair radial perturbation<=w. Split v at epsilon=2w/L.",
+    "Far: |Hprime(rho)|<=2h/rho and rho>=Lv/2 give difference<=4hw/(Lv); g<=8/3.",
+    "Near finite source strip has XYarea<=8Aw/L. Symmetric decreasing rearrangement bounds its point potential by equal-area disk with source-z upper kernel2asinh(h/rho). Multiply by target volumeAh.",
+    "Near collapsed integral uses g<=8/3 and H(rho)<=2h*asinh(h/rho).",
+    "Finite-width geometry is not discarded: its entire change is included in the enclosure. MP50/80 numeric change recorded separately; this is not a native geometry replacement."
+  ],
+  "levels": [
+    {
+      "digits": 50,
+      "collapsedReferenceM5": "9.0874542461753181317414103472045212078920272766383e-35"
+    },
+    {
+      "digits": 80,
+      "collapsedReferenceM5": "9.0874542461753181317414103472045212078920272766382753106591447198044937698487381e-35"
+    }
+  ],
+  "referenceM5": 9.087454246175318e-35,
+  "absoluteGeometryEnclosureM5": 1.3605132998310173e-39,
+  "absoluteNumericalChangeM5": 2.4689340855280197e-85,
+  "absoluteTotalUncertaintyM5": 1.3605132998310173e-39,
+  "relativeUncertaintyToLowerEndpoint": 1.4971560042904089e-05,
+  "lowerM5": 9.087318194845335e-35,
+  "upperM5": 9.087590297505301e-35,
+  "boundComponentsM5": {
+    "nearCollapsed": 3.802341454415527e-40,
+    "nearFinite": 5.74845963450557e-40,
+    "farDifference": 4.054331909389076e-40
+  },
+  "seconds": 0.2471573999937391,
+  "inputSha256": "bebd77841dd394aacbac2bf479da0da02e62816779a5ea45528e3468753a4fb3",
+  "scriptSha256": "1c463198ef252bd881b87fedf18da2d3b2de93a05e32b4fcc52a4918b9ddf5f3"
+}

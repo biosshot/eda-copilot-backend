@@ -1,0 +1,9 @@
+# Agent task: oriented local domains and physical interface contacts
+
+Implement native prerequisites of p7-route-partition-plan.md. Own Rust local geometry/contact handling and required native transport declarations, focused tests. Read AGENTS/CHANGELOG and existing board_mesh clipping, areas and port creation. Do not edit TS planner/executor or shared CHANGELOG. Coordinate exact schema with route-partition agent before implementation.
+
+Current CutPlane is axis+at+span and only permits rectangular ROI boundary contacts. Provide correct oriented boundaries for arbitrary route directions including a corner with distinct incoming/outgoing normals. Use shared physical clipping/contact geometry; do not rely on float exact equality after rotations, introduce arbitrary gaps or merge contacts merely by coordinate tolerance. Preserve holes, finite widths, layer spans, barrels, original source identity and deterministic geometry tolerance policy. Reject unsupported ambiguity explicitly, no invented copper.
+
+Prefer small additive internal polygon-domain/oriented-cut representation compatible with existing rectangles; no CAD export or public DSL change. Reuse geometry primitives and keep one physical implementation where feasible. Test 0/45/90-degree equivalence, reversed orientations, corner two-face contacts, branch and finite return, disconnected near-contact and through-via retention; native results must match valid old cases and physical area/continuity invariants.
+
+Run focused tests and normal native build, then hand native files/schema/addon and exact checks to route-partition agent. Own heavy build slot until explicit handoff; no concurrent large calculation, no full STM32 run (route agent owns it). Results: p7-oriented-boundaries-results.md. No commits/push/subagents. Preserve user native/analyze/debugging and physical references. Do not claim high-frequency readiness from geometric rotation tests.

@@ -1,0 +1,85 @@
+"""Render only captured native/DSL results. No solver or synthetic current map."""
+from pathlib import Path
+import json,sys,textwrap
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
+from matplotlib.patches import Rectangle
+root=Path(__file__).resolve().parents[4];base=root/'debugging/p6-p7-integration'/sys.argv[1]
+refusal_only='--refusal' in sys.argv[2:]
+names=[v for v in sys.argv[2:] if v!='--refusal'] or ['STM32G0_CAN_RS485','TPS63060DSCR','BandAmpV5']
+summary={}
+for name in names:
+ folder=base/name;cold_folder=folder/('cold-retry' if not refusal_only and (folder/'cold-retry/run.json').exists() else 'cold');run=json.loads((cold_folder/'run.json').read_text());assert not run.get('inputsChangedDuringRun',False)
+ if run['exitCode']!=0 or run['refusal']:
+  # A stopped preparation has no field/current/loss result. Show only the real
+  # frozen selection and completed stage timings, never a zero or prior map.
+  assert name=='STM32G0_CAN_RS485','no frozen failure selection for this fixture'
+  request=json.loads(Path(__file__).with_name('single-method-via-request.json').read_text());board=json.loads((root/'tests/pcb-analyze'/name/(name+'.json')).read_text())
+  fig,axes=plt.subplots(1,2,figsize=(12,5),layout='constrained');roi=request['roiMm'];axes[0].add_patch(Rectangle(roi[0],roi[1][0]-roi[0][0],roi[1][1]-roi[0][1],fill=False,label='unchanged original insulated ROI'))
+  for electrode in request['electrodes']:
+   index=int(electrode['sourcePath'].split('[')[1].split(']')[0]);via=board['copper']['fixed']['vias'][index];axes[0].scatter(via['at']['x'],via['at']['y'],marker='x',label=electrode['name'])
+  axes[0].set(xlabel='board x (mm)',ylabel='board y (mm)',title='Actual requested contacts; no recovered field result');axes[0].autoscale();axes[0].invert_yaxis();axes[0].legend(fontsize=8)
+  text=f"FAILED cold preparation: {run['refusal']}\nWall {run['wallSeconds']:.6f}s / peak {run['peakRssBytes']/1048576:.3f}MiB\nCap300s /2048MiB retained.\nNo successful cache entry or current/loss map.\nCompleted native stages:\n"
+  text+='\n'.join(line for line in (cold_folder/'stderr.txt').read_text().splitlines() if line.startswith('P7_STAGE'))
+  axes[1].axis('off');axes[1].text(0,1,'\n'.join(textwrap.fill(line,58) for line in text.split('\n')),va='top',fontsize=10);fig.suptitle(name+' — actual bounded cold refusal');fig.savefig(folder/'integration-refusal.png',dpi=150);plt.close(fig)
+  summary[name]=dict(cold=run,warmCache=dict(status='none-failed-preparation'),localVolumeStatus='failed-cold-runtime',visual=str((folder/'integration-refusal.png').relative_to(root)));continue
+ result=json.loads((cold_folder/'result.json').read_text());assert result['status']=='complete'
+ reports=result['reports'];plots=[p for r in reports for p in r['plots']];checks=[c for r in reports for c in r['checks']]
+ plot=lambda title:next(p['data'] for p in plots if p['title'].startswith(title))
+ restart=json.loads((folder/'restart/run.json').read_text()) if (folder/'restart/run.json').exists() else None
+ fig,axes=plt.subplots(2,2,figsize=(13,9),layout='constrained');ax=axes.ravel()
+ if name!='BandAmpV5':
+  data=plot('Selected ROI')['data'];warm=plot('Same-worker')['data'];after=plot('Check-only')['data'];solution=plot('Cold stage')
+  points=np.array(data['nodesM'])*1000;points[:,:2]+=np.array(data['originMm']);cells=np.array(data['copperCells']);centers=points[cells].mean(axis=1);loss=np.array(data['samples'][0]['cellLossW']);assert len(loss)==len(cells)
+  positive=loss>0
+  if positive.any():
+   values=loss[positive];scatter=ax[0].scatter(centers[positive,0],centers[positive,1],c=values,s=8,norm=LogNorm(vmin=values.min(),vmax=max(values.max(),values.min()*1.01)),cmap='inferno');fig.colorbar(scatter,ax=ax[0],label='mean Joule W / tetrahedron (RMS drive)')
+  for e,nodes in zip(data['request']['electrodes'],data['electrodeNodes']):
+   xyz=points[nodes];ax[0].scatter(xyz[:,0],xyz[:,1],s=10,marker='x',label=e['name'])
+  ax[0].set(xlabel='board x (mm)',ylabel='board y (mm)',title='Actual finite Cu: all-z projection; recovered cell losses');ax[0].invert_yaxis();ax[0].set_aspect('equal');ax[0].legend(fontsize=8)
+  for title,label in [('Input impedance','Z input'),('Transfer impedance','Z transfer')]:
+   curve=plot(title);ax[1].loglog(curve['axis']['values'],curve['values'],label=label)
+  ax[1].set(xlabel='Hz',ylabel='Ohm',title='Exterior charge retained; direct port Z');ax[1].legend()
+  order=np.argsort(loss)[::-1];ax[2].semilogy(np.arange(len(loss)),np.maximum(loss[order],1e-30));ax[2].set(xlabel='tetrahedra sorted by loss',ylabel='mean Joule W / tetrahedron',title=f"10 kHz total copper loss = {loss.sum():.6g} W")
+  labels=['family cold','same-worker warm','after plot/check'];times=[run['wallSeconds'],warm['wallSeconds'],after['wallSeconds']]
+  if restart:labels+=['fresh-process restore'];times+=[restart['wallSeconds']]
+  ax[3].bar(labels,times);ax[3].set_yscale('log');ax[3].set(ylabel='measured seconds (log)',title='Measured model reuse; observed timings');ax[3].tick_params(axis='x',labelrotation=15)
+  for i,t in enumerate(times):ax[3].text(i,t,f'{t:.4g}',ha='center',va='bottom',fontsize=9)
+  summary[name]=dict(cold=run,warmCache=warm['cache'],warmSolve=warm.get('solveStageCounts'),warmSeconds=warm['wallSeconds'],afterCheck=after['cache'],nativeColdSeconds=solution['prepared']['candidate']['coldPrepareSeconds'],restart=restart,totalLossW=float(loss.sum()),checks=checks,localVolumeStatus='complete-conditional')
+ else:
+  cold=plot('Supported section cold');warm=plot('Supported section warm');curve=plot('Supported P7b RF section S21');rlgc=plot('RF section supported')['data'];failure=plot('Local ground channel refused')
+  board=json.loads((root/'tests/pcb-analyze'/name/(name+'.json')).read_text());track=next(t for t in board['copper']['fixed']['tracks'] if t['id']=='dcc17162579803b7');xy=np.array([[p['x'],p['y']] for p in track['points']]);ax[0].plot(xy[:,0],xy[:,1],lw=6,label='captured RF_IN_PORT straight track')
+  polygon=failure['roi']['outer'];xs=[p['x'] for p in polygon];ys=[p['y'] for p in polygon];ax[0].add_patch(Rectangle((min(xs),min(ys)),max(xs)-min(xs),max(ys)-min(ys),fill=False,edgecolor='red',label='local ground ROI: rejected, no solution'))
+  for contact in failure['contacts']:
+   via=next(v for v in board['copper']['fixed']['vias'] if v['id']==contact['viaId']);ax[0].scatter(via['at']['x'],via['at']['y'],c='red',marker='x')
+  ax[0].set(xlabel='board x (mm)',ylabel='board y (mm)',title='Captured selections; RF section has explicit stack hypothesis');ax[0].invert_yaxis();ax[0].legend(fontsize=8)
+  ax[1].plot(np.array(curve['axis']['values'])/1e9,curve['values'],'o-');ax[1].set(xlabel='GHz',ylabel='|S21| at 50 Ohm',title='Supported weak-loss P7b section; no full RF-channel claim')
+  frequencies=np.array(rlgc['frequenciesHz'])/1e9;mode=[s['modes'][0] for s in rlgc['samples']];ax[2].plot(frequencies,[m['resistanceOhmPerM'] for m in mode],'o-',label='conductor R');ax[2].set(xlabel='GHz',ylabel='Ohm/m',title='Conductor and regional dielectric losses');twin=ax[2].twinx();twin.plot(frequencies,[m['conductanceSPerM'] for m in mode],'s-',c='orange',label='dielectric G');twin.set_ylabel('S/m');ax[2].legend(loc='upper left');twin.legend(loc='lower right')
+  ax[3].axis('off');text='Local ground-via model: REJECTED\n'+failure['diagnostic']+'\n\nRF model cache: cold='+cold['cache']['status']+', warm='+warm['cache']['status']+'\nRF warm assembly/training: '+str(warm['cache']['assembly'])+'/'+str(warm['cache']['training'])+'\nFamily cold: '+format(run['wallSeconds'],'.4f')+' s / '+format(run['peakRssBytes']/1048576,'.2f')+' MiB\n'+failure['fullRfChannel'];text='\n'.join(textwrap.fill(line,76) for line in text.split('\n'));ax[3].text(0,1,text,va='top',fontsize=9)
+  summary[name]=dict(cold=run,warmCache=warm['cache'],restart=restart,checks=checks,localVolumeStatus='rejected-2GiB',localDiagnostic=failure['diagnostic'],rfBandHz=[500000000,1000000000],rfTransmissionMin=min(curve['values']))
+ title=name+' — direct DSL / CPU F64 / conditional applicability'
+ if cold_folder.name=='cold-retry':
+  prior=json.loads((folder/'cold/run.json').read_text());summary[name]['priorFailedCold']=prior;title+='\nOne cold retest; original '+format(prior['wallSeconds'],'.3f')+'s refusal retained'
+ completed=[c['result'] for r in reports for c in r['calculations'] if c['phase']=='completed' and c['kind']=='impedance']
+ if len(completed)>1:summary[name]['warmWorkerPeakRssBytes']=completed[1]['solution']['resources']['peakRssBytes']
+ measurement=folder/'warm-measurement/measurement.json'
+ if measurement.exists():summary[name]['warmMeasurement']=json.loads(measurement.read_text())
+ fig.suptitle(title,fontsize=14);path=folder/'integration-report.png';fig.savefig(path,dpi=150);plt.close(fig);summary[name]['visual']=str(path.relative_to(root))
+(base/'integration-summary.json').write_text(json.dumps(summary,indent=2));print(json.dumps({n:{'wall':s['cold']['wallSeconds'],'rssMiB':s['cold']['peakRssBytes']/1048576,'warm':s['warmCache']['status'],'volume':s['localVolumeStatus']} for n,s in summary.items()},indent=2))
+temporal=base/'model-reuse/temporal-dc-hypothesis.json'
+if temporal.exists():
+ result=json.loads(temporal.read_text());assert result['status']=='complete'
+ plots=[p for r in result['reports'] for p in r['plots']];curve=plots[0]['data'];solution=plots[1]['data'];quality=solution['quality']
+ fig,axes=plt.subplots(1,2,figsize=(12,5),layout='constrained');t=np.array(curve['axis']['values'])
+ axes[0].plot(t*1000,np.array(curve['values'])*1000,'o-',label='actual extracted RLC / P6 time')
+ axes[0].plot(t*1000,.5*np.minimum(t/1e-4,1),'--',label='loaded quasi-static DC target')
+ axes[0].set(xlabel='ms',ylabel='output mV',title='Finite 100 us ramp; explicit physical zero initial state');axes[0].legend(fontsize=8)
+ text='NUMERICAL COMPATIBILITY ONLY\nAuthored developer DC-extension hypothesis.\nProduction band remains 1 kHz..100 kHz.\nNo physical transient-band certification.\n\n'
+ for name in ['STM32G0_CAN_RS485','TPS63060DSCR']:
+  dc=json.loads((base/'model-reuse'/(name+'-dc.json')).read_text());text+=name+' full conductive DC: '+dc['status']+'\nmax coordinate error: '+format(dc['maxCurrentCoordinateError']*100,'.6g')+'%\n'
+ text+='\nP6 time normalized energy balance: '+format(quality['normalizedEnergyBalance'],'.6g')+'\nP6 time relative residual: '+format(quality['relativeResidual'],'.6g')+'\nSource band and initial-charge refusals saved separately.'
+ axes[1].axis('off');axes[1].text(0,1,'\n'.join(textwrap.fill(line,58) for line in text.split('\n')),va='top',fontsize=10)
+ fig.suptitle('Actual STM32 condensed RLC — bounded developer compatibility probe');fig.savefig(base/'model-reuse/temporal-compatibility.png',dpi=150);plt.close(fig)

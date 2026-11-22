@@ -1,0 +1,46 @@
+{
+  "rows": [
+    {
+      "threads": 1,
+      "wallSeconds": 189.0486232000003,
+      "peakRssBytes": 1026469888,
+      "stages": {
+        "basisTraining": 125.9259474,
+        "currentAssembly": 0.0031913,
+        "developerVerification": 0.0004265,
+        "electricAssemblyAndFactor": 0.0034116,
+        "fullSolvePreparation": 0.0049535,
+        "geometry": 1.3523828,
+        "harmonicBasis": 0.0019034,
+        "initialMagneticBasis": 6.7205224999999995,
+        "magneticAssemblyAndFactor": 20.5884774,
+        "reduction": 34.0135929,
+        "userP6Solve": 4.2e-06
+      },
+      "exeSha256": "24094af9b68589a38d0edb537b3a02c083a781354b95e29867ef6f53a975e9a8"
+    },
+    {
+      "threads": 4,
+      "wallSeconds": 195.1336932999984,
+      "peakRssBytes": 1030148096,
+      "stages": {
+        "basisTraining": 129.0433325,
+        "currentAssembly": 0.0023592,
+        "developerVerification": 0.0004565,
+        "electricAssemblyAndFactor": 0.0029677,
+        "fullSolvePreparation": 0.0074213,
+        "geometry": 0.8584587,
+        "harmonicBasis": 0.001433,
+        "initialMagneticBasis": 6.3747421,
+        "magneticAssemblyAndFactor": 16.3476216,
+        "reduction": 42.336132,
+        "userP6Solve": 4.5e-06
+      },
+      "exeSha256": "24094af9b68589a38d0edb537b3a02c083a781354b95e29867ef6f53a975e9a8"
+    }
+  ],
+  "chosenDefaultThreads": 1,
+  "reason": "same binary comparison; four-thread numeric factor improves but total prepare does not",
+  "physicalAdmission": false,
+  "scope": "Cold prepare only: necessary4 training solves included; user solve/developer verification were skipped"
+}

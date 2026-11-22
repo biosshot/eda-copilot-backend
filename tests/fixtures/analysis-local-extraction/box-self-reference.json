@@ -1,0 +1,47 @@
+{
+  "derivation": "Difference convolution: 8\u222b[0,l]\u00d7[0,w]\u00d7[0,t](l-x)(w-y)(t-z)/sqrt(x\u00b2+y\u00b2+z\u00b2). Normalize cube and split by largest normalized coordinate; radial r integral exactly 1/6-(s+t)/12+st/20.",
+  "dimensionsM": [
+    0.01,
+    0.0005,
+    3.5e-05
+  ],
+  "referenceOnly": true,
+  "results": [
+    {
+      "order": 16,
+      "selfVolumeIntegralM5": 2.5360494305721247e-17,
+      "selfInductanceH": 8.280977732480407e-09,
+      "seconds": 0.0027494000096339732
+    },
+    {
+      "order": 32,
+      "selfVolumeIntegralM5": 2.533399561854249e-17,
+      "selfInductanceH": 8.272325099932243e-09,
+      "seconds": 0.0009942000033333898
+    },
+    {
+      "order": 64,
+      "selfVolumeIntegralM5": 2.5333936917761503e-17,
+      "selfInductanceH": 8.272305932330288e-09,
+      "seconds": 0.002921000006608665
+    },
+    {
+      "order": 128,
+      "selfVolumeIntegralM5": 2.533393287114363e-17,
+      "selfInductanceH": 8.272304610985676e-09,
+      "seconds": 0.004641899999114685
+    },
+    {
+      "order": 256,
+      "selfVolumeIntegralM5": 2.5333932871129388e-17,
+      "selfInductanceH": 8.272304610981025e-09,
+      "seconds": 0.015278299993951805
+    },
+    {
+      "order": 512,
+      "selfVolumeIntegralM5": 2.533393287113003e-17,
+      "selfInductanceH": 8.272304610981235e-09,
+      "seconds": 0.07308980000379961
+    }
+  ]
+}

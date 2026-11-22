@@ -11,7 +11,7 @@ import type { NativeBoardPackProblemV7 } from '../src/pcb-layout/pcb-auto-place-
 
 const require = createRequire(import.meta.url);
 const addonPath = resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH
-    ?? resolve('native/pcb-board-packer', require('../native/pcb-board-packer/platform.cjs').nativeFilename()));
+    ?? resolve('native/node-addon', require('../native/node-addon/platform.cjs').nativeFilename()));
 const gpuEnabled = process.env.PCB_BOARD_GPU_TESTS === '1';
 
 for (const count of [4, 16]) test(`${count} repeated channels use joint CPU/GPU search even with zero orientation weight`, { skip: !gpuEnabled }, () => {

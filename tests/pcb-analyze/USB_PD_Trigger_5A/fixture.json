@@ -1,0 +1,106 @@
+{
+  "name": "USB_PD_Trigger_5A",
+  "project": {
+    "name": "USB PD Trigger 5A",
+    "uuid": "c72a71856bd14126a8f44ec0edc3aa40"
+  },
+  "pcb": {
+    "name": "PCB1",
+    "uuid": "ebb6d6338e00da05"
+  },
+  "capturedAt": "2026-10-21T14:29:18.266Z",
+  "versions": {
+    "editor": "3.2.206",
+    "extension": "1.3.2",
+    "mcp": "1.3.2",
+    "revisions": {
+      "backend": "832dca321367d1e292afa1db2141420f8d13166a",
+      "copilot": "3654a69166deab037f9c7d1a4a51511d9899754f"
+    },
+    "backendRoutingBoardV2Sha256": "9b7be233eae5ff446e9eb7833300ca68fb482cb0e13198182c8e750c96cd396b"
+  },
+  "export": {
+    "status": "exported",
+    "diagnostics": [
+      {
+        "code": "EASYEDA_V2_SEQUENTIAL_CAPTURE",
+        "severity": "warning",
+        "message": "CAD reads are sequential, not atomic. Do not edit the PCB during export; native pour freshness is unknown."
+      }
+    ],
+    "inventory": {
+      "layers": 2,
+      "components": 17,
+      "pads": 65,
+      "padDrills": 12,
+      "independentHoles": 0,
+      "tracks": 144,
+      "vias": 80,
+      "pours": 2,
+      "fills": 0
+    }
+  },
+  "nativeSummary": {
+    "components": 17,
+    "pads": 65,
+    "tracks": 144,
+    "arcs": 0,
+    "vias": 80,
+    "pours": 2,
+    "fillFragments": 6,
+    "layers": [
+      "TOP",
+      "BOTTOM"
+    ],
+    "viaTypes": {
+      "0": 80
+    },
+    "padDrills": 12,
+    "slottedPadDrills": 4
+  },
+  "verification": {
+    "sourceRecordsUnchanged": true,
+    "sourceRecordCount": 555,
+    "audit": "Captured and inventoried; physical completeness has not yet been accepted as an analysis reference",
+    "v2InventoryVerified": true,
+    "v2ReplayMatchesLiveExport": true,
+    "archiveComparison": {
+      "projectArchiveContainsSelectedPcb": true,
+      "archiveCrcVerified": true,
+      "nativeRecordCount": 554,
+      "archiveRecordCount": 577,
+      "archiveRecordsMatchSelectedSource": false,
+      "mismatch": {
+        "META": 1,
+        "LAYER": 2,
+        "POURED": 6,
+        "ELE_PLACEHOLDER": 19,
+        "COMPONENT": 4,
+        "RULE_SELECTOR": 1
+      },
+      "note": "Project archive and editor-selected source are distinct native representations. Record equality and physical equivalence are not assumed; V2 uses the captured editor input."
+    }
+  },
+  "files": {
+    "source.epro2": {
+      "bytes": 208026,
+      "sha256": "ae3c9ed10cf6cee62f596a436654c23b4641df5bab60d7f5e78bc471414f8a1f",
+      "normalization": "binary"
+    },
+    "source-pcb.txt": {
+      "bytes": 162342,
+      "sha256": "fb03d556a90538204aba09e076e96d5f71b38b57388c53b3a27efe925e737485",
+      "normalization": "lf"
+    },
+    "export-evidence.json": {
+      "bytes": 303621,
+      "sha256": "f558f442ba4552c35470712971ebdeb1007f8a08412c242e65a5ee83108c9ce1",
+      "normalization": "lf"
+    },
+    "USB_PD_Trigger_5A.json": {
+      "bytes": 388878,
+      "sha256": "70d3a549ded67bbee3b187f868ab82d2a6f7f9708d0aa488767fd9ca5a814ac4",
+      "normalization": "lf"
+    }
+  }
+}

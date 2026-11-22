@@ -1,0 +1,278 @@
+//! Sagitta-bounded circular boundaries: inscribed copper, enclosing drills.
+use super::{
+    areas::{self, AreaSet, Poly},
+    GeometryOptions,
+};
+use crate::model::{self, Drill, DrillShape, PadShape, Point};
+use geo::{Coord, LineString, Polygon};
+use std::f64::consts::{PI, TAU};
+
+pub struct Builder {
+    pub options: GeometryOptions,
+    pub generated: usize,
+}
+impl Builder {
+    pub(super) fn reserve(&mut self, n: usize) -> Result<(), String> {
+        let generated = self
+            .generated
+            .checked_add(n)
+            .ok_or("Vertex counter overflow")?;
+        if generated > self.options.max_generated_vertices {
+            return Err("Generated vertex budget exceeded; tolerance was not relaxed".into());
+        }
+        self.generated = generated;
+        Ok(())
+    }
+    fn rect(&mut self, w: f64, h: f64) -> Result<Poly, String> {
+        self.reserve(4)?;
+        rect(w, h)
+    }
+    pub fn circle(&mut self, at: Point, radius: f64) -> Result<Poly, String> {
+        self.circle_bound(at, radius, false)
+    }
+    fn circle_bound(&mut self, at: Point, radius: f64, enclosing: bool) -> Result<Poly, String> {
+        if !(radius > 0.0 && radius.is_finite()) {
+            return Err("Non-positive circle radius".into());
+        }
+        if !at.x.is_finite()
+            || !at.y.is_finite()
+            || radius > 10000.
+            || at.x.abs().max(at.y.abs()) + radius > 10000.
+        {
+            return Err("Circular boundary exceeds finite +/-10000 mm coordinate limit".into());
+        }
+        let angle = if enclosing {
+            (radius / (radius + self.options.max_deviation_mm)).acos()
+        } else {
+            (1.0 - (self.options.max_deviation_mm / radius).min(1.0)).acos()
+        };
+        let n = ((PI / angle).ceil() as usize).max(8).div_ceil(4) * 4;
+        if n > self.options.max_vertices_per_curve {
+            return Err("Curve vertex limit exceeded; tolerance was not relaxed".into());
+        }
+        let r = if enclosing {
+            radius / (PI / n as f64).cos()
+        } else {
+            radius
+        };
+        if at.x.abs().max(at.y.abs()) + r > 10000. {
+            return Err("Circular boundary exceeds coordinate limit".into());
+        }
+        self.reserve(n)?;
+        let mut c: Vec<_> = (0..n)
+            .map(|i| {
+                let a = TAU * i as f64 / n as f64;
+                Coord {
+                    x: at.x + r * a.cos(),
+                    y: at.y + r * a.sin(),
+                }
+            })
+            .collect();
+        // Exact cardinal coordinates avoid artificial trigonometric gaps.
+        if !enclosing {
+            c[0] = Coord {
+                x: at.x + radius,
+                y: at.y,
+            };
+            c[n / 4] = Coord {
+                x: at.x,
+                y: at.y + radius,
+            };
+            c[n / 2] = Coord {
+                x: at.x - radius,
+                y: at.y,
+            };
+            c[3 * n / 4] = Coord {
+                x: at.x,
+                y: at.y - radius,
+            };
+        }
+        c.push(c[0]);
+        Ok(Polygon::new(LineString(c), vec![]))
+    }
+    pub fn stroke(&mut self, points: &[Point], width: f64) -> Result<AreaSet, String> {
+        self.stroke_with_splits(points,width,&[])
+    }
+    /// Splits are proven analytic pad/track edge coincidences supplied by the
+    /// board adapter; they are not an epsilon-based geometric snap.
+    pub(super) fn stroke_with_splits(&mut self, points: &[Point], width: f64, splits: &[Point]) -> Result<AreaSet, String> {
+        let mut pieces = Vec::new();
+        for p in points {
+            pieces.push(self.circle(*p, width / 2.0)?);
+        }
+        for pair in points.windows(2) {
+            let a = pair[0];
+            let b = pair[1];
+            let d = (b.x - a.x).hypot(b.y - a.y);
+            if d == 0.0 {
+                continue;
+            }
+            let x = -(b.y - a.y) / d * width / 2.0;
+            let y = (b.x - a.x) / d * width / 2.0;
+            let dx=b.x-a.x; let dy=b.y-a.y;
+            let mut positive=Vec::new(); let mut negative=Vec::new();
+            if points.len()==2 {
+                for &q in splits {
+                    let along=(q.x-a.x)*dx+(q.y-a.y)*dy;
+                    let cross=dx*(q.y-a.y)-dy*(q.x-a.x);
+                    if along>0. && along<d*d {
+                        if cross>0. {positive.push((along,q));} else if cross<0. {negative.push((along,q));}
+                    }
+                }
+            }
+            positive.sort_by(|a,b|a.0.total_cmp(&b.0));
+            negative.sort_by(|a,b|b.0.total_cmp(&a.0));
+            self.reserve(4+positive.len()+negative.len())?;
+            let mut outer=vec![Point{x:a.x+x,y:a.y+y}];
+            outer.extend(positive.into_iter().map(|(_,p)|p));
+            outer.push(Point{x:b.x+x,y:b.y+y});outer.push(Point{x:b.x-x,y:b.y-y});
+            outer.extend(negative.into_iter().map(|(_,p)|p));
+            outer.push(Point{x:a.x-x,y:a.y-y});
+            pieces.push(areas::polygon(&model::Polygon {outer,holes:vec![]})?);
+        }
+        Ok(areas::union(pieces))
+    }
+    pub fn shape(&mut self, s: &PadShape) -> Result<(AreaSet, f64), String> {
+        let e = self.options.max_deviation_mm;
+        Ok(match s {
+            PadShape::Circle { diameter_mm } => (
+                areas::one(self.circle(Point { x: 0., y: 0. }, diameter_mm / 2.)?),
+                e,
+            ),
+            PadShape::Rect {
+                width_mm,
+                height_mm,
+            } => (areas::one(self.rect(*width_mm, *height_mm)?), 0.),
+            PadShape::Oval {
+                width_mm,
+                height_mm,
+            } => (
+                self.round_rect(*width_mm, *height_mm, width_mm.min(*height_mm) / 2.)?,
+                e,
+            ),
+            PadShape::RoundRect {
+                width_mm,
+                height_mm,
+                corner_radius_mm,
+            } => (
+                self.round_rect(*width_mm, *height_mm, *corner_radius_mm)?,
+                e,
+            ),
+            PadShape::Polygon(p) => (areas::one(areas::polygon(p)?), 0.),
+        })
+    }
+    pub fn shape_at(&mut self, s: &PadShape, at: Point, rotation: f64) -> Result<(AreaSet, f64), String> {
+        let scope=super::context::Context::frame(at, rotation);
+        let (shape,error)=self.shape(s)?;
+        drop(scope);
+        Ok((transform(shape,at,rotation),error))
+    }
+    fn round_rect(&mut self, w: f64, h: f64, r: f64) -> Result<AreaSet, String> {
+        self.round_rect_bound(w, h, r, false)
+    }
+    fn round_rect_bound(
+        &mut self,
+        w: f64,
+        h: f64,
+        r: f64,
+        enclosing: bool,
+    ) -> Result<AreaSet, String> {
+        if r == 0. {
+            return Ok(areas::one(self.rect(w, h)?));
+        }
+        if r > w.min(h) / 2. {
+            return Err("Corner radius exceeds half minimum dimension".into());
+        }
+        let mut pieces = Vec::new();
+        if w > 2. * r {
+            pieces.push(self.rect(w - 2. * r, h)?);
+        }
+        if h > 2. * r {
+            pieces.push(self.rect(w, h - 2. * r)?);
+        }
+        for x in [-w / 2. + r, w / 2. - r] {
+            for y in [-h / 2. + r, h / 2. - r] {
+                pieces.push(self.circle_bound(Point { x, y }, r, enclosing)?);
+            }
+        }
+        Ok(areas::union(pieces))
+    }
+    pub fn drill(&mut self, drill: &Drill, at: Point, rotation: f64) -> Result<AreaSet, String> {
+        self.drill_bound(drill, at, rotation, false, 0.)
+    }
+    pub fn enclosing_drill(
+        &mut self,
+        drill: &Drill,
+        at: Point,
+        rotation: f64,
+        guard: f64,
+    ) -> Result<AreaSet, String> {
+        self.drill_bound(drill, at, rotation, true, guard)
+    }
+    fn drill_bound(
+        &mut self,
+        drill: &Drill,
+        at: Point,
+        rotation: f64,
+        enclosing: bool,
+        guard: f64,
+    ) -> Result<AreaSet, String> {
+        let r = drill.diameter_mm / 2. + guard;
+        let offset = drill.offset.unwrap_or(Point { x: 0., y: 0. });
+        let center = transform_point(offset, at, rotation);
+        let scope=super::context::Context::frame(center,rotation+drill.rotation_deg.unwrap_or(0.));
+        let shape = match drill.shape {
+            DrillShape::Round => {
+                areas::one(self.circle_bound(Point { x: 0., y: 0. }, r, enclosing)?)
+            }
+            DrillShape::Slot { length_mm } => {
+                self.round_rect_bound(length_mm + 2. * guard, 2. * r, r, enclosing)?
+            }
+        };
+        // Hole offset is pad-local; its own rotation rotates the slot, not offset.
+        drop(scope);
+        Ok(transform(
+            shape,
+            center,
+            rotation + drill.rotation_deg.unwrap_or(0.),
+        ))
+    }
+}
+fn rect(w: f64, h: f64) -> Result<Poly, String> {
+    areas::polygon(&model::Polygon {
+        outer: vec![
+            Point {
+                x: -w / 2.,
+                y: -h / 2.,
+            },
+            Point {
+                x: w / 2.,
+                y: -h / 2.,
+            },
+            Point {
+                x: w / 2.,
+                y: h / 2.,
+            },
+            Point {
+                x: -w / 2.,
+                y: h / 2.,
+            },
+        ],
+        holes: vec![],
+    })
+}
+pub fn transform_point(p: Point, at: Point, rotation: f64) -> Point {
+    let (s, c) = rotation.to_radians().sin_cos();
+    Point {
+        x: at.x + p.x * c - p.y * s,
+        y: at.y + p.x * s + p.y * c,
+    }
+}
+pub fn transform(mut shape: AreaSet, at: Point, rotation: f64) -> AreaSet {
+    use geo::MapCoordsInPlace;
+    shape.map_coords_in_place(|p| {
+        let q = transform_point(Point { x: p.x, y: p.y }, at, rotation);
+        Coord { x: q.x, y: q.y }
+    });
+    shape
+}

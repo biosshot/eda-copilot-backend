@@ -27,6 +27,10 @@
       "types": "./dist/pcb.d.ts",
       "import": "./dist/pcb.js"
     },
+    "./analyze": {
+      "types": "./dist/analyze.d.ts",
+      "import": "./dist/analyze.js"
+    },
     "./types": {
       "types": "./dist/types.d.ts",
       "import": "./dist/types.js"
@@ -38,8 +42,11 @@
   },
   "files": [
     "dist",
-    "native/pcb-board-packer/*.node",
-    "native/pcb-board-packer/*.cjs",
+    "native/node-addon/*.node",
+    "native/node-addon/*.cjs",
+    "native/node-addon/*.d.cts",
+    "native/pcb-board-packer/*.d.ts",
+    "native/analyze/*.d.ts",
     "README.md",
     "LICENSE"
   ],
@@ -51,6 +58,7 @@
     "test:pcb": "node scripts/test.mjs pcb-",
     "test:recovery": "node --import tsx --test --test-concurrency=1 --test-name-pattern=\"failure|recovery|disabled|absent|allocation|empty|unsupported|runtime selection|driver|unavailable|do not initialize\" tests/pcb-block-gpu.test.ts tests/pcb-board-gpu.test.ts tests/pcb-post-place-refiner.test.ts",
     "test:pcb-layout": "node scripts/test-pcb-layout.mjs",
+    "test:pcb-analyze": "node scripts/test-pcb-analyze.mjs",
     "debug:pcb-layout": "node --import tsx scripts/debug-pcb-layout.mjs",
     "debug:pcb-validation": "node --import tsx scripts/debug-pcb-validation.mjs",
     "test:schematics": "node scripts/test-schematic-layout.ts",

@@ -1,0 +1,940 @@
+{
+  "status": "R1 and reviewer-authorized R2 equivalent physical references accepted; interactive HTML controls remain unverified",
+  "conventions": "exp(+j omega t), currents into both ends, peak phasors; physical matrices per metre",
+  "sources": [
+    {
+      "url": "https://qucs.sourceforge.net/tech/node75.html",
+      "scope": "single engineering attenuation, not a pair oracle"
+    },
+    {
+      "url": "https://www.sonnetsoftware.com/support/downloads/techdocs/miccondloss_mar03.pdf",
+      "scope": "surface impedance validity and side currents"
+    },
+    {
+      "url": "https://doi.org/10.1109/75.222778",
+      "scope": "candidate pair loss reference; numeric data pending; not yet a validation"
+    }
+  ],
+  "plate": {
+    "widthM": 0.002,
+    "heightM": 0.001,
+    "epsilonR": 4,
+    "conductivitySM": 58000000.0,
+    "frequencyHz": 1000000000.0,
+    "lossTangent": 0.015,
+    "gramEachPerM": 500,
+    "RTotalOhmPerM": 8.250226499069328,
+    "LinternalTotalHPerM": 1.3130643289546258e-09,
+    "C_FPerM": 7.08335025024e-11,
+    "G_SPerM": 0.006675900332687223
+  },
+  "propagation": [
+    {
+      "name": "single mismatch 0.02",
+      "frequencyHz": 1000000000.0,
+      "lengthM": 0.02,
+      "referenceOhm": 50,
+      "R": [
+        [
+          10
+        ]
+      ],
+      "L": [
+        [
+          4e-07
+        ]
+      ],
+      "G": [
+        [
+          0.002
+        ]
+      ],
+      "C": [
+        [
+          1e-10
+        ]
+      ],
+      "modes": [
+        {
+          "name": "single",
+          "resistanceOhmPerM": 10,
+          "conductanceSPerM": 0.002,
+          "alphaNpPerM": 0.14230248344345942,
+          "betaRadPerM": 39.7383562087197,
+          "characteristicImpedanceOhm": {
+            "real": 63.24563831015201,
+            "imaginary": -0.02516431722153484
+          }
+        }
+      ],
+      "scattering": [
+        [
+          {
+            "real": 0.12085748932816344,
+            "imaginary": 0.11440166424432877
+          },
+          {
+            "real": 0.6790653163742009,
+            "imaginary": -0.7109254593689461
+          }
+        ],
+        [
+          {
+            "real": 0.6790653163742009,
+            "imaginary": -0.7109254593689461
+          },
+          {
+            "real": 0.12085748932816344,
+            "imaginary": 0.11440166424432877
+          }
+        ]
+      ]
+    },
+    {
+      "name": "coupled full matrix 0.02",
+      "frequencyHz": 1000000000.0,
+      "lengthM": 0.02,
+      "referenceOhm": 50,
+      "R": [
+        [
+          10,
+          2
+        ],
+        [
+          2,
+          10
+        ]
+      ],
+      "L": [
+        [
+          4e-07,
+          1e-07
+        ],
+        [
+          1e-07,
+          4e-07
+        ]
+      ],
+      "G": [
+        [
+          0.002,
+          -0.0005
+        ],
+        [
+          -0.0005,
+          0.002
+        ]
+      ],
+      "C": [
+        [
+          1e-10,
+          -2e-11
+        ],
+        [
+          -2e-11,
+          1e-10
+        ]
+      ],
+      "modes": [
+        {
+          "name": "even",
+          "resistanceOhmPerM": 12.0,
+          "conductanceSPerM": 0.0015,
+          "alphaNpPerM": 0.13518735817442837,
+          "betaRadPerM": 39.73835653114139,
+          "characteristicImpedanceOhm": {
+            "real": 79.05704696478657,
+            "imaginary": -0.033028207261924576
+          }
+        },
+        {
+          "name": "odd",
+          "resistanceOhmPerM": 8.0,
+          "conductanceSPerM": 0.0025,
+          "alphaNpPerM": 0.14249998464702818,
+          "betaRadPerM": 37.69911590478604,
+          "characteristicImpedanceOhm": {
+            "real": 50.00008234439974,
+            "imaginary": -0.023209802473426452
+          }
+        }
+      ],
+      "scattering": [
+        [
+          {
+            "real": 0.12009016931853599,
+            "imaginary": 0.10558141090914307
+          },
+          {
+            "real": 0.11985902371808406,
+            "imaginary": 0.10579814726054655
+          },
+          {
+            "real": 0.6769222476726444,
+            "imaginary": -0.694551030725211
+          },
+          {
+            "real": -0.049971794815163506,
+            "imaginary": -0.01195205224832857
+          }
+        ],
+        [
+          {
+            "real": 0.11985902371808406,
+            "imaginary": 0.10579814726054655
+          },
+          {
+            "real": 0.12009016931853599,
+            "imaginary": 0.10558141090914307
+          },
+          {
+            "real": -0.049971794815163506,
+            "imaginary": -0.01195205224832857
+          },
+          {
+            "real": 0.6769222476726444,
+            "imaginary": -0.694551030725211
+          }
+        ],
+        [
+          {
+            "real": 0.6769222476726444,
+            "imaginary": -0.694551030725211
+          },
+          {
+            "real": -0.049971794815163506,
+            "imaginary": -0.01195205224832857
+          },
+          {
+            "real": 0.12009016931853599,
+            "imaginary": 0.10558141090914307
+          },
+          {
+            "real": 0.11985902371808406,
+            "imaginary": 0.10579814726054655
+          }
+        ],
+        [
+          {
+            "real": -0.049971794815163506,
+            "imaginary": -0.01195205224832857
+          },
+          {
+            "real": 0.6769222476726444,
+            "imaginary": -0.694551030725211
+          },
+          {
+            "real": 0.11985902371808406,
+            "imaginary": 0.10579814726054655
+          },
+          {
+            "real": 0.12009016931853599,
+            "imaginary": 0.10558141090914307
+          }
+        ]
+      ],
+      "independentPower": {
+        "incident": [
+          {
+            "real": 1.0,
+            "imaginary": 0.3
+          },
+          {
+            "real": -0.7,
+            "imaginary": 0.2
+          },
+          {
+            "real": 0.2,
+            "imaginary": -0.1
+          },
+          {
+            "real": 0.4,
+            "imaginary": 0.5
+          }
+        ],
+        "incidentW": 1.04,
+        "outgoingW": 1.0344122546821897,
+        "integratedDissipatedW": 0.005587745317809684,
+        "normalizedResidual": 6.563593151893015e-16,
+        "method": "Python complex ABCD boundary solution; Simpson 2048 physical-space quadratic R/G integral, including mutual terms"
+      }
+    },
+    {
+      "name": "single mismatch 0.04",
+      "frequencyHz": 1000000000.0,
+      "lengthM": 0.04,
+      "referenceOhm": 50,
+      "R": [
+        [
+          10
+        ]
+      ],
+      "L": [
+        [
+          4e-07
+        ]
+      ],
+      "G": [
+        [
+          0.002
+        ]
+      ],
+      "C": [
+        [
+          1e-10
+        ]
+      ],
+      "modes": [
+        {
+          "name": "single",
+          "resistanceOhmPerM": 10,
+          "conductanceSPerM": 0.002,
+          "alphaNpPerM": 0.14230248344345942,
+          "betaRadPerM": 39.7383562087197,
+          "characteristicImpedanceOhm": {
+            "real": 63.24563831015201,
+            "imaginary": -0.02516431722153484
+          }
+        }
+      ],
+      "scattering": [
+        [
+          {
+            "real": 0.229417258871709,
+            "imaginary": -0.0045348173166497655
+          },
+          {
+            "real": -0.0175585122575358,
+            "imaginary": -0.9674845902149178
+          }
+        ],
+        [
+          {
+            "real": -0.0175585122575358,
+            "imaginary": -0.9674845902149178
+          },
+          {
+            "real": 0.229417258871709,
+            "imaginary": -0.0045348173166497655
+          }
+        ]
+      ]
+    },
+    {
+      "name": "coupled full matrix 0.04",
+      "frequencyHz": 1000000000.0,
+      "lengthM": 0.04,
+      "referenceOhm": 50,
+      "R": [
+        [
+          10,
+          2
+        ],
+        [
+          2,
+          10
+        ]
+      ],
+      "L": [
+        [
+          4e-07,
+          1e-07
+        ],
+        [
+          1e-07,
+          4e-07
+        ]
+      ],
+      "G": [
+        [
+          0.002,
+          -0.0005
+        ],
+        [
+          -0.0005,
+          0.002
+        ]
+      ],
+      "C": [
+        [
+          1e-10,
+          -2e-11
+        ],
+        [
+          -2e-11,
+          1e-10
+        ]
+      ],
+      "modes": [
+        {
+          "name": "even",
+          "resistanceOhmPerM": 12.0,
+          "conductanceSPerM": 0.0015,
+          "alphaNpPerM": 0.13518735817442837,
+          "betaRadPerM": 39.73835653114139,
+          "characteristicImpedanceOhm": {
+            "real": 79.05704696478657,
+            "imaginary": -0.033028207261924576
+          }
+        },
+        {
+          "name": "odd",
+          "resistanceOhmPerM": 8.0,
+          "conductanceSPerM": 0.0025,
+          "alphaNpPerM": 0.14249998464702818,
+          "betaRadPerM": 37.69911590478604,
+          "characteristicImpedanceOhm": {
+            "real": 50.00008234439974,
+            "imaginary": -0.023209802473426452
+          }
+        }
+      ],
+      "scattering": [
+        [
+          {
+            "real": 0.21319662638843248,
+            "imaginary": -0.003991605090681592
+          },
+          {
+            "real": 0.2131661288074337,
+            "imaginary": -0.0035319588090151127
+          },
+          {
+            "real": 0.023677588841767457,
+            "imaginary": -0.945680370552341
+          },
+          {
+            "real": -0.03875589571849748,
+            "imaginary": 0.046673903833720054
+          }
+        ],
+        [
+          {
+            "real": 0.2131661288074337,
+            "imaginary": -0.0035319588090151127
+          },
+          {
+            "real": 0.21319662638843248,
+            "imaginary": -0.003991605090681592
+          },
+          {
+            "real": -0.03875589571849748,
+            "imaginary": 0.046673903833720054
+          },
+          {
+            "real": 0.023677588841767457,
+            "imaginary": -0.945680370552341
+          }
+        ],
+        [
+          {
+            "real": 0.023677588841767457,
+            "imaginary": -0.945680370552341
+          },
+          {
+            "real": -0.03875589571849748,
+            "imaginary": 0.046673903833720054
+          },
+          {
+            "real": 0.21319662638843248,
+            "imaginary": -0.003991605090681592
+          },
+          {
+            "real": 0.2131661288074337,
+            "imaginary": -0.0035319588090151127
+          }
+        ],
+        [
+          {
+            "real": -0.03875589571849748,
+            "imaginary": 0.046673903833720054
+          },
+          {
+            "real": 0.023677588841767457,
+            "imaginary": -0.945680370552341
+          },
+          {
+            "real": 0.2131661288074337,
+            "imaginary": -0.0035319588090151127
+          },
+          {
+            "real": 0.21319662638843248,
+            "imaginary": -0.003991605090681592
+          }
+        ]
+      ],
+      "independentPower": {
+        "incident": [
+          {
+            "real": 1.0,
+            "imaginary": 0.3
+          },
+          {
+            "real": -0.7,
+            "imaginary": 0.2
+          },
+          {
+            "real": 0.2,
+            "imaginary": -0.1
+          },
+          {
+            "real": 0.4,
+            "imaginary": 0.5
+          }
+        ],
+        "incidentW": 1.04,
+        "outgoingW": 1.028503388485689,
+        "integratedDissipatedW": 0.011496611514310815,
+        "normalizedResidual": 3.1191662500736817e-16,
+        "method": "Python complex ABCD boundary solution; Simpson 2048 physical-space quadratic R/G integral, including mutual terms"
+      }
+    },
+    {
+      "name": "single mismatch 100000",
+      "frequencyHz": 1000000000.0,
+      "lengthM": 100000,
+      "referenceOhm": 50,
+      "R": [
+        [
+          10
+        ]
+      ],
+      "L": [
+        [
+          4e-07
+        ]
+      ],
+      "G": [
+        [
+          0.002
+        ]
+      ],
+      "C": [
+        [
+          1e-10
+        ]
+      ],
+      "modes": [
+        {
+          "name": "single",
+          "resistanceOhmPerM": 10,
+          "conductanceSPerM": 0.002,
+          "alphaNpPerM": 0.14230248344345942,
+          "betaRadPerM": 39.7383562087197,
+          "characteristicImpedanceOhm": {
+            "real": 63.24563831015201,
+            "imaginary": -0.02516431722153484
+          }
+        }
+      ],
+      "scattering": [
+        [
+          {
+            "real": 0.11696382700060513,
+            "imaginary": -0.00019621949866703936
+          },
+          {
+            "real": 0.0,
+            "imaginary": 0.0
+          }
+        ],
+        [
+          {
+            "real": 0.0,
+            "imaginary": 0.0
+          },
+          {
+            "real": 0.11696382700060513,
+            "imaginary": -0.00019621949866703936
+          }
+        ]
+      ]
+    },
+    {
+      "name": "coupled full matrix 100000",
+      "frequencyHz": 1000000000.0,
+      "lengthM": 100000,
+      "referenceOhm": 50,
+      "R": [
+        [
+          10,
+          2
+        ],
+        [
+          2,
+          10
+        ]
+      ],
+      "L": [
+        [
+          4e-07,
+          1e-07
+        ],
+        [
+          1e-07,
+          4e-07
+        ]
+      ],
+      "G": [
+        [
+          0.002,
+          -0.0005
+        ],
+        [
+          -0.0005,
+          0.002
+        ]
+      ],
+      "C": [
+        [
+          1e-10,
+          -2e-11
+        ],
+        [
+          -2e-11,
+          1e-10
+        ]
+      ],
+      "modes": [
+        {
+          "name": "even",
+          "resistanceOhmPerM": 12.0,
+          "conductanceSPerM": 0.0015,
+          "alphaNpPerM": 0.13518735817442837,
+          "betaRadPerM": 39.73835653114139,
+          "characteristicImpedanceOhm": {
+            "real": 79.05704696478657,
+            "imaginary": -0.033028207261924576
+          }
+        },
+        {
+          "name": "odd",
+          "resistanceOhmPerM": 8.0,
+          "conductanceSPerM": 0.0025,
+          "alphaNpPerM": 0.14249998464702818,
+          "betaRadPerM": 37.69911590478604,
+          "characteristicImpedanceOhm": {
+            "real": 50.00008234439974,
+            "imaginary": -0.023209802473426452
+          }
+        }
+      ],
+      "scattering": [
+        [
+          {
+            "real": 0.11257489389778817,
+            "imaginary": -0.0002151985436765407
+          },
+          {
+            "real": 0.1125740165851117,
+            "imaginary": 1.6899086315784207e-05
+          },
+          {
+            "real": 0.0,
+            "imaginary": 0.0
+          },
+          {
+            "real": 0.0,
+            "imaginary": 0.0
+          }
+        ],
+        [
+          {
+            "real": 0.1125740165851117,
+            "imaginary": 1.6899086315784207e-05
+          },
+          {
+            "real": 0.11257489389778817,
+            "imaginary": -0.0002151985436765407
+          },
+          {
+            "real": 0.0,
+            "imaginary": 0.0
+          },
+          {
+            "real": 0.0,
+            "imaginary": 0.0
+          }
+        ],
+        [
+          {
+            "real": 0.0,
+            "imaginary": 0.0
+          },
+          {
+            "real": 0.0,
+            "imaginary": 0.0
+          },
+          {
+            "real": 0.11257489389778817,
+            "imaginary": -0.0002151985436765407
+          },
+          {
+            "real": 0.1125740165851117,
+            "imaginary": 1.6899086315784207e-05
+          }
+        ],
+        [
+          {
+            "real": 0.0,
+            "imaginary": 0.0
+          },
+          {
+            "real": 0.0,
+            "imaginary": 0.0
+          },
+          {
+            "real": 0.1125740165851117,
+            "imaginary": 1.6899086315784207e-05
+          },
+          {
+            "real": 0.11257489389778817,
+            "imaginary": -0.0002151985436765407
+          }
+        ]
+      ]
+    },
+    {
+      "name": "matched lossy",
+      "frequencyHz": 1000000000.0,
+      "lengthM": 0.2,
+      "referenceOhm": 50,
+      "R": [
+        [
+          10
+        ]
+      ],
+      "L": [
+        [
+          2.5e-07
+        ]
+      ],
+      "G": [
+        [
+          0.004
+        ]
+      ],
+      "C": [
+        [
+          1e-10
+        ]
+      ],
+      "modes": [
+        {
+          "name": "single",
+          "resistanceOhmPerM": 10,
+          "conductanceSPerM": 0.004,
+          "alphaNpPerM": 0.2,
+          "betaRadPerM": 31.41592653589793,
+          "characteristicImpedanceOhm": {
+            "real": 49.99999999999999,
+            "imaginary": 0.0
+          }
+        }
+      ],
+      "scattering": [
+        [
+          {
+            "real": -3.3334079911362497e-18,
+            "imaginary": 2.2868838848945863e-32
+          },
+          {
+            "real": 0.9607894391523231,
+            "imaginary": 2.3532554226249457e-16
+          }
+        ],
+        [
+          {
+            "real": 0.9607894391523231,
+            "imaginary": 2.3532554226249457e-16
+          },
+          {
+            "real": -3.3334079911362497e-18,
+            "imaginary": 2.2868838848945863e-32
+          }
+        ]
+      ]
+    },
+    {
+      "name": "nearly lossless",
+      "frequencyHz": 1000000000.0,
+      "lengthM": 0.1,
+      "referenceOhm": 50,
+      "R": [
+        [
+          1e-10
+        ]
+      ],
+      "L": [
+        [
+          4e-07
+        ]
+      ],
+      "G": [
+        [
+          1e-15
+        ]
+      ],
+      "C": [
+        [
+          1e-10
+        ]
+      ],
+      "modes": [
+        {
+          "name": "single",
+          "resistanceOhmPerM": 1e-10,
+          "conductanceSPerM": 1e-15,
+          "alphaNpPerM": 8.221921916437787e-13,
+          "betaRadPerM": 39.738353063184405,
+          "characteristicImpedanceOhm": {
+            "real": 63.245553203367585,
+            "imaginary": -1.207901090507689e-12
+          }
+        }
+      ],
+      "scattering": [
+        [
+          {
+            "real": 0.12929988083196006,
+            "imaginary": 0.11454245874338034
+          },
+          {
+            "real": -0.6531313355978375,
+            "imaginary": 0.7372794751123066
+          }
+        ],
+        [
+          {
+            "real": -0.6531313355978375,
+            "imaginary": 0.7372794751123066
+          },
+          {
+            "real": 0.12929988083196006,
+            "imaginary": 0.11454245874338034
+          }
+        ]
+      ]
+    },
+    {
+      "name": "lossless",
+      "frequencyHz": 1000000000.0,
+      "lengthM": 0.1,
+      "referenceOhm": 50,
+      "R": [
+        [
+          0
+        ]
+      ],
+      "L": [
+        [
+          4e-07
+        ]
+      ],
+      "G": [
+        [
+          0
+        ]
+      ],
+      "C": [
+        [
+          1e-10
+        ]
+      ],
+      "modes": [
+        {
+          "name": "single",
+          "resistanceOhmPerM": 0,
+          "conductanceSPerM": 0,
+          "alphaNpPerM": 0.0,
+          "betaRadPerM": 39.738353063184405,
+          "characteristicImpedanceOhm": {
+            "real": 63.245553203367585,
+            "imaginary": 0.0
+          }
+        }
+      ],
+      "scattering": [
+        [
+          {
+            "real": 0.12929988083195343,
+            "imaginary": 0.11454245874340974
+          },
+          {
+            "real": -0.6531313355978889,
+            "imaginary": 0.7372794751123718
+          }
+        ],
+        [
+          {
+            "real": -0.6531313355978889,
+            "imaginary": 0.7372794751123718
+          },
+          {
+            "real": 0.12929988083195343,
+            "imaginary": 0.11454245874340974
+          }
+        ]
+      ]
+    }
+  ],
+  "layeredPlate": {
+    "widthM": 0.002,
+    "bottomHeightM": 0.0005,
+    "topHeightM": 0.0005,
+    "bottomEpsilonR": 2,
+    "topEpsilonR": 6,
+    "bottomTangent": 0.015,
+    "topTangent": 0.035,
+    "frequencyHz": 1000000000.0,
+    "exactCapacitanceFPerM": 5.3129107678594136e-11,
+    "exactConductanceSPerM": 0.006675149969226909,
+    "discardedTerms": "first-order perturbation discards O(tan delta squared) redistribution; compare exact series complex capacitance"
+  },
+  "singleEngineering": [
+    {
+      "kind": "microstrip",
+      "widthMm": 0.3,
+      "dielectricHeightMm": 0.18,
+      "copperThicknessMm": 0.005,
+      "relativePermittivity": 1,
+      "lossTangent": 0,
+      "frequencyHz": 20000000000.0,
+      "conductivitySM": 58000000.0,
+      "referenceThicknessMm": 0.035,
+      "impedanceOhm": 96.78071171680861,
+      "conductorAlphaNpPerM": 0.7994527375440784,
+      "source": "Qucs node75 eqs 11.4,11.6,11.22,11.80-11.82; air substrate removes impedance notation ambiguity; smooth surfaces Kr=1; engineering approximation, no claimed published error bound",
+      "tolerance": 0.1
+    },
+    {
+      "kind": "microstrip",
+      "widthMm": 1.0,
+      "dielectricHeightMm": 0.3,
+      "copperThicknessMm": 0.01,
+      "relativePermittivity": 1,
+      "lossTangent": 0,
+      "frequencyHz": 5000000000.0,
+      "conductivitySM": 58000000.0,
+      "referenceThicknessMm": 0.035,
+      "impedanceOhm": 64.42496530253037,
+      "conductorAlphaNpPerM": 0.20207469957682567,
+      "source": "Qucs node75 eqs 11.4,11.6,11.22,11.80-11.82; air substrate removes impedance notation ambiguity; smooth surfaces Kr=1; engineering approximation, no claimed published error bound",
+      "tolerance": 0.1
+    }
+  ],
+  "reviewDecisions": {
+    "r1": {
+      "date": "2026-10-23",
+      "approved": true,
+      "physicalReference": "boundary-panel-references.json",
+      "numericalTolerance": 0.05,
+      "engineeringQucs": "Retained approximate comparison, original inputs and 10% goal; historical errors12.34959%/11.22408% unchanged"
+    },
+    "r2Equivalent": {
+      "approved": true,
+      "date": "2026-10-23",
+      "status": "Reviewer closes equivalent criterion using full-R power, both modes, each surface at two gaps plus supplementary uncertain Johnson R; original literal published both-mode requirement replaced, not met literally"
+    }
+  }
+}

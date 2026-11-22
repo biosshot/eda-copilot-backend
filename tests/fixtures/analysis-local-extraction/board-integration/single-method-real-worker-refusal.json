@@ -1,0 +1,20 @@
+{
+  "kind": "real-via-compiled-worker-refusal-v1",
+  "wallSeconds": 0.2869661,
+  "status": "failed",
+  "error": {
+    "code": "SECTION_UNSUPPORTED",
+    "message": "Cross-section supports explicit a.line only; formula/layered/channel/differential/Resource extraction is not implemented",
+    "filename": "analysis-dsl.js",
+    "line": 22,
+    "column": 47,
+    "diagnostics": []
+  },
+  "reportCount": 1,
+  "physicalAdmission": false,
+  "sha256": {
+    "tests\\pcb-analyze\\STM32G0_CAN_RS485\\STM32G0_CAN_RS485.json": "0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3",
+    "tests\\fixtures\\analysis-local-extraction\\board-integration\\real-via-return-scenario.js": "196bc9461230e1a930a38ace2bd4a7e1d8517c61ca236db856d2f5b12407127e",
+    "dist\\run-analysis-dsl.worker.js": "8dcf5eb226fce2c603f24d7232da41a2d9a197d4014498590c8f22e6dca27c5a"
+  }
+}

@@ -1,0 +1,2356 @@
+{
+  "kind": "bounded-electric-convergence-v1",
+  "physicalAdmission": false,
+  "runs": {
+    "coarse": {
+      "methodThreads": 1,
+      "command": [
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\native\\analyze\\target\\release\\examples\\field_observable_check.exe",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\pcb-analyze\\STM32G0_CAN_RS485\\STM32G0_CAN_RS485.json",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\fixtures\\analysis-local-extraction\\board-integration\\single-method-via-request.json",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\fixtures\\analysis-local-extraction\\board-integration\\saved-real-field-basis-v1.json",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\fixtures\\analysis-local-extraction\\board-integration\\single-method-via-request.json"
+      ],
+      "wallSeconds": 2.3878964000032283,
+      "peakRssBytes": 25333760,
+      "exitCode": 0,
+      "refusal": null,
+      "capSeconds": 300,
+      "capBytes": 2147483648,
+      "hashes": {
+        "native\\analyze\\target\\release\\examples\\field_observable_check.exe": "632375f85bde90b650c50cf97ee48b8d86879e8052a15a59134670a4be72fd36",
+        "tests\\pcb-analyze\\STM32G0_CAN_RS485\\STM32G0_CAN_RS485.json": "0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3",
+        "tests\\fixtures\\analysis-local-extraction\\board-integration\\single-method-via-request.json": "a00da08408f35bdf4ca0eb7ff174e51699238010f9fd8510522c36943a97be6b",
+        "tests\\fixtures\\analysis-local-extraction\\board-integration\\saved-real-field-basis-v1.json": "fee42e15abb6b3bcacbf9310b7b0080728613378774725fddf136ad015c4c1ef"
+      }
+    },
+    "candidate": {
+      "methodThreads": 1,
+      "command": [
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\native\\analyze\\target\\release\\examples\\field_observable_check.exe",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\pcb-analyze\\STM32G0_CAN_RS485\\STM32G0_CAN_RS485.json",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\fixtures\\analysis-local-extraction\\board-integration\\single-method-via-request.json",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\fixtures\\analysis-local-extraction\\board-integration\\saved-real-field-basis-v1.json",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\fixtures\\analysis-local-extraction\\board-integration\\field-refinement-request-v1.json"
+      ],
+      "wallSeconds": 2.4880338000002666,
+      "peakRssBytes": 45199360,
+      "exitCode": 0,
+      "refusal": null,
+      "capSeconds": 300,
+      "capBytes": 2147483648,
+      "hashes": {
+        "native\\analyze\\target\\release\\examples\\field_observable_check.exe": "632375f85bde90b650c50cf97ee48b8d86879e8052a15a59134670a4be72fd36",
+        "tests\\pcb-analyze\\STM32G0_CAN_RS485\\STM32G0_CAN_RS485.json": "0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3",
+        "tests\\fixtures\\analysis-local-extraction\\board-integration\\single-method-via-request.json": "a00da08408f35bdf4ca0eb7ff174e51699238010f9fd8510522c36943a97be6b",
+        "tests\\fixtures\\analysis-local-extraction\\board-integration\\saved-real-field-basis-v1.json": "fee42e15abb6b3bcacbf9310b7b0080728613378774725fddf136ad015c4c1ef",
+        "tests\\fixtures\\analysis-local-extraction\\board-integration\\field-refinement-request-v1.json": "f9ed63e698035321955c0b79ace96fc6a8eb7d59dfadb577ee799685efff5cec"
+      }
+    },
+    "grid": {
+      "methodThreads": 1,
+      "command": [
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\native\\analyze\\target\\release\\examples\\field_observable_check.exe",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\pcb-analyze\\STM32G0_CAN_RS485\\STM32G0_CAN_RS485.json",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\fixtures\\analysis-local-extraction\\board-integration\\single-method-via-request.json",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\fixtures\\analysis-local-extraction\\board-integration\\saved-real-field-basis-v1.json",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\fixtures\\analysis-local-extraction\\board-integration\\field-grid-check-v1.json"
+      ],
+      "wallSeconds": 2.6752594000063254,
+      "peakRssBytes": 49876992,
+      "exitCode": 0,
+      "refusal": null,
+      "capSeconds": 300,
+      "capBytes": 2147483648,
+      "hashes": {
+        "native\\analyze\\target\\release\\examples\\field_observable_check.exe": "632375f85bde90b650c50cf97ee48b8d86879e8052a15a59134670a4be72fd36",
+        "tests\\pcb-analyze\\STM32G0_CAN_RS485\\STM32G0_CAN_RS485.json": "0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3",
+        "tests\\fixtures\\analysis-local-extraction\\board-integration\\single-method-via-request.json": "a00da08408f35bdf4ca0eb7ff174e51699238010f9fd8510522c36943a97be6b",
+        "tests\\fixtures\\analysis-local-extraction\\board-integration\\saved-real-field-basis-v1.json": "fee42e15abb6b3bcacbf9310b7b0080728613378774725fddf136ad015c4c1ef",
+        "tests\\fixtures\\analysis-local-extraction\\board-integration\\field-grid-check-v1.json": "ec9922c89a900ed08f03f2dde3b25bfee1f4797e6f6bc2e37b09ab78e0e06d4e"
+      }
+    },
+    "boundary": {
+      "methodThreads": 1,
+      "command": [
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\native\\analyze\\target\\release\\examples\\field_observable_check.exe",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\pcb-analyze\\STM32G0_CAN_RS485\\STM32G0_CAN_RS485.json",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\fixtures\\analysis-local-extraction\\board-integration\\single-method-via-request.json",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\fixtures\\analysis-local-extraction\\board-integration\\saved-real-field-basis-v1.json",
+        "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\fixtures\\analysis-local-extraction\\board-integration\\field-boundary-check-v1.json"
+      ],
+      "wallSeconds": 2.682167200000549,
+      "peakRssBytes": 47972352,
+      "exitCode": 0,
+      "refusal": null,
+      "capSeconds": 300,
+      "capBytes": 2147483648,
+      "hashes": {
+        "native\\analyze\\target\\release\\examples\\field_observable_check.exe": "632375f85bde90b650c50cf97ee48b8d86879e8052a15a59134670a4be72fd36",
+        "tests\\pcb-analyze\\STM32G0_CAN_RS485\\STM32G0_CAN_RS485.json": "0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3",
+        "tests\\fixtures\\analysis-local-extraction\\board-integration\\single-method-via-request.json": "a00da08408f35bdf4ca0eb7ff174e51699238010f9fd8510522c36943a97be6b",
+        "tests\\fixtures\\analysis-local-extraction\\board-integration\\saved-real-field-basis-v1.json": "fee42e15abb6b3bcacbf9310b7b0080728613378774725fddf136ad015c4c1ef",
+        "tests\\fixtures\\analysis-local-extraction\\board-integration\\field-boundary-check-v1.json": "da3a315f816ed936e984fdb09201824374d4bdfeed9b317016a46d486c8ea71a"
+      }
+    }
+  },
+  "cases": {
+    "coarse": {
+      "componentCapacitanceF": [
+        [
+          2.503689277504651e-13,
+          -7.823526202269415e-14,
+          -1.5072088120024665e-13
+        ],
+        [
+          -7.823526202269415e-14,
+          2.345356452604673e-13,
+          -1.3798209121284814e-13
+        ],
+        [
+          -1.5072088120024665e-13,
+          -1.3798209121284814e-13,
+          3.8715982734982174e-13
+        ]
+      ],
+      "componentEnergiesJ": [
+        1.2518446387523255e-13,
+        1.1726782263023364e-13,
+        1.9357991367491087e-13
+      ],
+      "commonExcitationEnergyJ": 6.909396574458811e-14,
+      "nodes": 636,
+      "tetrahedra": 2295,
+      "frequenciesHz": [
+        1000.0,
+        1333.5214321633239,
+        1778.2794100389228,
+        2371.373705661655,
+        3162.2776601683795,
+        4216.965034285822,
+        5623.413251903491,
+        7498.942093324558,
+        10000.0,
+        13335.21432163324,
+        17782.79410038923,
+        23713.737056616552,
+        31622.776601683792,
+        42169.65034285823,
+        56234.13251903491,
+        74989.42093324558,
+        100000.0
+      ],
+      "parameters": [
+        [
+          [
+            {
+              "imaginary": -727624210.0875703,
+              "real": 0.00012998675659702858
+            },
+            {
+              "imaginary": -727624210.0875703,
+              "real": 9.88230538014976e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -727624210.0875704,
+              "real": 9.882305380149733e-05
+            },
+            {
+              "imaginary": -727624210.0875664,
+              "real": 0.0011213857403827166
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -545641181.7147714,
+              "real": 0.00012998675838375067
+            },
+            {
+              "imaginary": -545641181.7147715,
+              "real": 9.882305577322865e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -545641181.7147715,
+              "real": 9.88230557732288e-05
+            },
+            {
+              "imaginary": -545641181.7147661,
+              "real": 0.0011213857536985345
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -409173162.5412253,
+              "real": 0.00012998676156102595
+            },
+            {
+              "imaginary": -409173162.54122543,
+              "real": 9.882305927950161e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -409173162.54122555,
+              "real": 9.882305927950147e-05
+            },
+            {
+              "imaginary": -409173162.5412183,
+              "real": 0.001121385777377762
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -306836585.2039126,
+              "real": 0.00012998676721106005
+            },
+            {
+              "imaginary": -306836585.20391285,
+              "real": 9.88230655145821e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -306836585.2039129,
+              "real": 9.882306551458228e-05
+            },
+            {
+              "imaginary": -306836585.2039033,
+              "real": 0.0011213858194859857
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -230094978.45575866,
+              "real": 0.00012998677725824378
+            },
+            {
+              "imaginary": -230094978.45575905,
+              "real": 9.882307660213333e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -230094978.45575908,
+              "real": 9.882307660213372e-05
+            },
+            {
+              "imaginary": -230094978.45574632,
+              "real": 0.0011213858943659913
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -172546891.94044954,
+              "real": 0.00012998679512445186
+            },
+            {
+              "imaginary": -172546891.94045013,
+              "real": 9.882309631838008e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -172546891.94045007,
+              "real": 9.882309631838022e-05
+            },
+            {
+              "imaginary": -172546891.94043314,
+              "real": 0.0011213860275229915
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -129391915.10445607,
+              "real": 0.00012998682689400684
+            },
+            {
+              "imaginary": -129391915.10445681,
+              "real": 9.882313137773698e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -129391915.10445681,
+              "real": 9.882313137773681e-05
+            },
+            {
+              "imaginary": -129391915.10443415,
+              "real": 0.0011213862643115273
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -97030247.87126827,
+              "real": 0.0001299868833842358
+            },
+            {
+              "imaginary": -97030247.87126926,
+              "real": 9.882319371788727e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -97030247.87126926,
+              "real": 9.882319371788724e-05
+            },
+            {
+              "imaginary": -97030247.87123904,
+              "real": 0.0011213866853819665
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -72762421.00875683,
+              "real": 0.00012998698382410537
+            },
+            {
+              "imaginary": -72762421.00875814,
+              "real": 9.882330455971496e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -72762421.00875814,
+              "real": 9.882330455971501e-05
+            },
+            {
+              "imaginary": -72762421.00871785,
+              "real": 0.00112138743414472
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -54564118.17147685,
+              "real": 0.00012998716238514429
+            },
+            {
+              "imaginary": -54564118.1714786,
+              "real": 9.882350161569576e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -54564118.171478584,
+              "real": 9.882350161569563e-05
+            },
+            {
+              "imaginary": -54564118.17142487,
+              "real": 0.0011213887655967796
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -40917316.25412217,
+              "real": 0.00012998747976144046
+            },
+            {
+              "imaginary": -40917316.25412449,
+              "real": 9.882385187280705e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -40917316.25412449,
+              "real": 9.882385187280697e-05
+            },
+            {
+              "imaginary": -40917316.25405285,
+              "real": 0.0011213911331094837
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -30683658.520390775,
+              "real": 0.00012998804365568013
+            },
+            {
+              "imaginary": -30683658.520393886,
+              "real": 9.882447421192782e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -30683658.520393874,
+              "real": 9.882447421192784e-05
+            },
+            {
+              "imaginary": -30683658.52029834,
+              "real": 0.0011213953426370883
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -23009497.845575236,
+              "real": 0.00012998904487514993
+            },
+            {
+              "imaginary": -23009497.84557937,
+              "real": 9.88255792794781e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -23009497.845579367,
+              "real": 9.8825579279478e-05
+            },
+            {
+              "imaginary": -23009497.845451962,
+              "real": 0.0011214028265524871
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -17254689.194044117,
+              "real": 0.00012999082047945634
+            },
+            {
+              "imaginary": -17254689.194049623,
+              "real": 9.882753929266847e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -17254689.194049627,
+              "real": 9.882753929266861e-05
+            },
+            {
+              "imaginary": -17254689.19387972,
+              "real": 0.0011214161293857192
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -12939191.510444492,
+              "real": 0.00012999396286433748
+            },
+            {
+              "imaginary": -12939191.510451835,
+              "real": 9.883100878635127e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -12939191.510451838,
+              "real": 9.883100878635136e-05
+            },
+            {
+              "imaginary": -12939191.510225266,
+              "real": 0.001121439767839706
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -9703024.787125338,
+              "real": 0.0001299995040329302
+            },
+            {
+              "imaginary": -9703024.787135135,
+              "real": 9.883712908496749e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -9703024.787135135,
+              "real": 9.883712908496741e-05
+            },
+            {
+              "imaginary": -9703024.786833001,
+              "real": 0.0011214817487177
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -7276242.100873703,
+              "real": 0.00013000921490307832
+            },
+            {
+              "imaginary": -7276242.100886765,
+              "real": 9.884786191566275e-05
+            }
+          ],
+          [
+            {
+              "imaginary": -7276242.100886766,
+              "real": 9.88478619156631e-05
+            },
+            {
+              "imaginary": -7276242.100483864,
+              "real": 0.0011215562346299332
+            }
+          ]
+        ]
+      ]
+    },
+    "candidate": {
+      "componentCapacitanceF": [
+        [
+          2.4770100132218675e-14,
+          -1.4997975172276594e-16,
+          -1.9725584332389292e-14
+        ],
+        [
+          -1.4997975172276594e-16,
+          2.4076928472710036e-14,
+          -1.9017508424444873e-14
+        ],
+        [
+          -1.9725584332389292e-14,
+          -1.9017508424444873e-14,
+          1.0863090859640663e-13
+        ]
+      ],
+      "componentEnergiesJ": [
+        1.2385050066109338e-14,
+        1.2038464236355018e-14,
+        5.431545429820331e-14
+      ],
+      "commonExcitationEnergyJ": 3.984589609211074e-14,
+      "nodes": 4218,
+      "tetrahedra": 20997,
+      "frequenciesHz": [
+        1000.0,
+        1333.5214321633239,
+        1778.2794100389228,
+        2371.373705661655,
+        3162.2776601683795,
+        4216.965034285822,
+        5623.413251903491,
+        7498.942093324558,
+        10000.0,
+        13335.21432163324,
+        17782.79410038923,
+        23713.737056616552,
+        31622.776601683792,
+        42169.65034285823,
+        56234.13251903491,
+        74989.42093324558,
+        100000.0
+      ],
+      "parameters": [
+        [
+          [
+            {
+              "imaginary": -6506501001.877008,
+              "real": 7.390582844659497e-05
+            },
+            {
+              "imaginary": -6506501001.877008,
+              "real": -0.00011767363478051157
+            }
+          ],
+          [
+            {
+              "imaginary": -6506501001.877009,
+              "real": -0.00011767363478051157
+            },
+            {
+              "imaginary": -6506501001.877006,
+              "real": 0.0007444732913691313
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -4879187424.323391,
+              "real": 7.390582895075964e-05
+            },
+            {
+              "imaginary": -4879187424.323392,
+              "real": -0.00011767363599980772
+            }
+          ],
+          [
+            {
+              "imaginary": -4879187424.323392,
+              "real": -0.0001176736359998077
+            },
+            {
+              "imaginary": -4879187424.323387,
+              "real": 0.0007444732995854508
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -3658874395.7478504,
+              "real": 7.390582984730439e-05
+            },
+            {
+              "imaginary": -3658874395.747852,
+              "real": -0.00011767363816805822
+            }
+          ],
+          [
+            {
+              "imaginary": -3658874395.747852,
+              "real": -0.00011767363816805818
+            },
+            {
+              "imaginary": -3658874395.7478456,
+              "real": 0.0007444733141963601
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -2743768722.046101,
+              "real": 7.390583144160848e-05
+            },
+            {
+              "imaginary": -2743768722.0461025,
+              "real": -0.00011767364202381735
+            }
+          ],
+          [
+            {
+              "imaginary": -2743768722.046103,
+              "real": -0.00011767364202381729
+            },
+            {
+              "imaginary": -2743768722.0460944,
+              "real": 0.0007444733401786312
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -2057536276.4098833,
+              "real": 7.39058342767171e-05
+            },
+            {
+              "imaginary": -2057536276.409886,
+              "real": -0.00011767364888044704
+            }
+          ],
+          [
+            {
+              "imaginary": -2057536276.4098856,
+              "real": -0.00011767364888044701
+            },
+            {
+              "imaginary": -2057536276.4098752,
+              "real": 0.0007444733863823444
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -1542934539.1712348,
+              "real": 7.390583931830207e-05
+            },
+            {
+              "imaginary": -1542934539.171238,
+              "real": -0.00011767366107348989
+            }
+          ],
+          [
+            {
+              "imaginary": -1542934539.171238,
+              "real": -0.00011767366107348995
+            },
+            {
+              "imaginary": -1542934539.1712234,
+              "real": 0.0007444734685453779
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -1157037676.3035498,
+              "real": 7.390584828355315e-05
+            },
+            {
+              "imaginary": -1157037676.3035536,
+              "real": -0.00011767368275625208
+            }
+          ],
+          [
+            {
+              "imaginary": -1157037676.303554,
+              "real": -0.00011767368275625207
+            },
+            {
+              "imaginary": -1157037676.3035345,
+              "real": 0.0007444736146539621
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -867655853.439512,
+              "real": 7.390586422597214e-05
+            },
+            {
+              "imaginary": -867655853.4395177,
+              "real": -0.00011767372131465741
+            }
+          ],
+          [
+            {
+              "imaginary": -867655853.4395176,
+              "real": -0.00011767372131465743
+            },
+            {
+              "imaginary": -867655853.4394921,
+              "real": 0.0007444738744750674
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -650650100.1876994,
+              "real": 7.390589257509145e-05
+            },
+            {
+              "imaginary": -650650100.1877068,
+              "real": -0.00011767378988352669
+            }
+          ],
+          [
+            {
+              "imaginary": -650650100.187707,
+              "real": -0.00011767378988352645
+            },
+            {
+              "imaginary": -650650100.1876727,
+              "real": 0.0007444743365071199
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -487918742.43233716,
+              "real": 7.390594298472459e-05
+            },
+            {
+              "imaginary": -487918742.43234724,
+              "real": -0.00011767391182208864
+            }
+          ],
+          [
+            {
+              "imaginary": -487918742.4323471,
+              "real": -0.00011767391182208863
+            },
+            {
+              "imaginary": -487918742.4323017,
+              "real": 0.0007444751581213972
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -365887439.57478243,
+              "real": 7.390603261758986e-05
+            },
+            {
+              "imaginary": -365887439.57479584,
+              "real": -0.00011767412867541604
+            }
+          ],
+          [
+            {
+              "imaginary": -365887439.5747957,
+              "real": -0.00011767412867541593
+            },
+            {
+              "imaginary": -365887439.57473516,
+              "real": 0.0007444766191564733
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -274376872.2046068,
+              "real": 7.390619197972775e-05
+            },
+            {
+              "imaginary": -274376872.2046244,
+              "real": -0.00011767451434067228
+            }
+          ],
+          [
+            {
+              "imaginary": -274376872.20462453,
+              "real": -0.00011767451434067227
+            },
+            {
+              "imaginary": -274376872.20454353,
+              "real": 0.0007444792172071009
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -205753627.64098394,
+              "real": 7.390647527510433e-05
+            },
+            {
+              "imaginary": -205753627.64100748,
+              "real": -0.00011767520028568368
+            }
+          ],
+          [
+            {
+              "imaginary": -205753627.64100757,
+              "real": -0.00011767520028568367
+            },
+            {
+              "imaginary": -205753627.64089957,
+              "real": 0.0007444838370208948
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -154293453.91711754,
+              "real": 7.390697875449647e-05
+            },
+            {
+              "imaginary": -154293453.917149,
+              "real": -0.00011767642047924917
+            }
+          ],
+          [
+            {
+              "imaginary": -154293453.91714904,
+              "real": -0.00011767642047924909
+            },
+            {
+              "imaginary": -154293453.91700512,
+              "real": 0.0007444920515645068
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -115703767.63034706,
+              "real": 7.390787314491703e-05
+            },
+            {
+              "imaginary": -115703767.63038911,
+              "real": -0.00011767859155295497
+            }
+          ],
+          [
+            {
+              "imaginary": -115703767.6303891,
+              "real": -0.00011767859155295505
+            },
+            {
+              "imaginary": -115703767.63019723,
+              "real": 0.000744506656876358
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -86765585.34394065,
+              "real": 7.390946070696859e-05
+            },
+            {
+              "imaginary": -86765585.3439967,
+              "real": -0.00011768245615908644
+            }
+          ],
+          [
+            {
+              "imaginary": -86765585.34399669,
+              "real": -0.0001176824561590864
+            },
+            {
+              "imaginary": -86765585.34374082,
+              "real": 0.0007445326215481623
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -65065010.01875586,
+              "real": 7.391227487805216e-05
+            },
+            {
+              "imaginary": -65065010.01883061,
+              "real": -0.00011768934032637605
+            }
+          ],
+          [
+            {
+              "imaginary": -65065010.01883061,
+              "real": -0.00011768934032637611
+            },
+            {
+              "imaginary": -65065010.0184894,
+              "real": 0.0007445787701577369
+            }
+          ]
+        ]
+      ]
+    },
+    "grid": {
+      "componentCapacitanceF": [
+        [
+          2.4381679635677367e-14,
+          -1.2108698903301032e-16,
+          -1.940689338289839e-14
+        ],
+        [
+          -1.2108698903301032e-16,
+          2.3818474217700382e-14,
+          -1.8828272112919518e-14
+        ],
+        [
+          -1.940689338289839e-14,
+          -1.8828272112919518e-14,
+          1.0816948423530518e-13
+        ]
+      ],
+      "componentEnergiesJ": [
+        1.2190839817838684e-14,
+        1.1909237108850191e-14,
+        5.408474211765259e-14
+      ],
+      "commonExcitationEnergyJ": 3.9828566559490546e-14,
+      "nodes": 5016,
+      "tetrahedra": 24819,
+      "frequenciesHz": [
+        1000.0,
+        1333.5214321633239,
+        1778.2794100389228,
+        2371.373705661655,
+        3162.2776601683795,
+        4216.965034285822,
+        5623.413251903491,
+        7498.942093324558,
+        10000.0,
+        13335.21432163324,
+        17782.79410038923,
+        23713.737056616552,
+        31622.776601683792,
+        42169.65034285823,
+        56234.13251903491,
+        74989.42093324558,
+        100000.0
+      ],
+      "parameters": [
+        [
+          [
+            {
+              "imaginary": -6609833072.874423,
+              "real": 7.458443813243355e-05
+            },
+            {
+              "imaginary": -6609833072.874425,
+              "real": -0.00012172278084424901
+            }
+          ],
+          [
+            {
+              "imaginary": -6609833072.874424,
+              "real": -0.00012172278084424903
+            },
+            {
+              "imaginary": -6609833072.874421,
+              "real": 0.0007356963895558176
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -4956675546.002684,
+              "real": 7.458443864382194e-05
+            },
+            {
+              "imaginary": -4956675546.002684,
+              "real": -0.00012172278211332153
+            }
+          ],
+          [
+            {
+              "imaginary": -4956675546.002685,
+              "real": -0.00012172278211332153
+            },
+            {
+              "imaginary": -4956675546.00268,
+              "real": 0.0007356963976653606
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -3716982289.4872007,
+              "real": 7.458443955321254e-05
+            },
+            {
+              "imaginary": -3716982289.487202,
+              "real": -0.00012172278437008841
+            }
+          ],
+          [
+            {
+              "imaginary": -3716982289.4872017,
+              "real": -0.00012172278437008837
+            },
+            {
+              "imaginary": -3716982289.487196,
+              "real": 0.0007356964120863914
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -2787343495.0777454,
+              "real": 7.458444117036046e-05
+            },
+            {
+              "imaginary": -2787343495.0777473,
+              "real": -0.00012172278838325391
+            }
+          ],
+          [
+            {
+              "imaginary": -2787343495.0777473,
+              "real": -0.00012172278838325383
+            },
+            {
+              "imaginary": -2787343495.0777392,
+              "real": 0.0007356964377310058
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -2090212746.3792896,
+              "real": 7.45844440460926e-05
+            },
+            {
+              "imaginary": -2090212746.379292,
+              "real": -0.00012172279551979489
+            }
+          ],
+          [
+            {
+              "imaginary": -2090212746.379292,
+              "real": -0.00012172279551979488
+            },
+            {
+              "imaginary": -2090212746.3792813,
+              "real": 0.0007356964833342728
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -1567438434.7827182,
+              "real": 7.458444915992062e-05
+            },
+            {
+              "imaginary": -1567438434.7827215,
+              "real": -0.00012172280821059513
+            }
+          ],
+          [
+            {
+              "imaginary": -1567438434.7827215,
+              "real": -0.00012172280821059515
+            },
+            {
+              "imaginary": -1567438434.7827072,
+              "real": 0.0007356965644295484
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -1175413005.7286882,
+              "real": 7.458445825364964e-05
+            },
+            {
+              "imaginary": -1175413005.7286923,
+              "real": -0.00012172283077849846
+            }
+          ],
+          [
+            {
+              "imaginary": -1175413005.7286925,
+              "real": -0.00012172283077849859
+            },
+            {
+              "imaginary": -1175413005.7286732,
+              "real": 0.0007356967086393719
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -881435406.5699996,
+              "real": 7.45844744245685e-05
+            },
+            {
+              "imaginary": -881435406.5700054,
+              "real": -0.0001217228709108989
+            }
+          ],
+          [
+            {
+              "imaginary": -881435406.5700053,
+              "real": -0.0001217228709108989
+            },
+            {
+              "imaginary": -881435406.56998,
+              "real": 0.000735696965083987
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -660983307.2874409,
+              "real": 7.458450318011986e-05
+            },
+            {
+              "imaginary": -660983307.2874484,
+              "real": -0.00012172294227866579
+            }
+          ],
+          [
+            {
+              "imaginary": -660983307.2874486,
+              "real": -0.0001217229422786658
+            },
+            {
+              "imaginary": -660983307.2874144,
+              "real": 0.000735697421111811
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -495667554.60026634,
+              "real": 7.458455431280504e-05
+            },
+            {
+              "imaginary": -495667554.60027665,
+              "real": -0.00012172306919411763
+            }
+          ],
+          [
+            {
+              "imaginary": -495667554.6002766,
+              "real": -0.00012172306919411768
+            },
+            {
+              "imaginary": -495667554.6002314,
+              "real": 0.000735698232049256
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -371698228.94871736,
+              "real": 7.458464523241244e-05
+            },
+            {
+              "imaginary": -371698228.94873095,
+              "real": -0.0001217232948966954
+            }
+          ],
+          [
+            {
+              "imaginary": -371698228.94873095,
+              "real": -0.0001217232948966954
+            },
+            {
+              "imaginary": -371698228.9486706,
+              "real": 0.000735699674099087
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -278734349.507771,
+              "real": 7.458480688574667e-05
+            },
+            {
+              "imaginary": -278734349.5077892,
+              "real": -0.00012172369629507749
+            }
+          ],
+          [
+            {
+              "imaginary": -278734349.5077892,
+              "real": -0.00012172369629507756
+            },
+            {
+              "imaginary": -278734349.5077087,
+              "real": 0.0007357022383922636
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -209021274.6379243,
+              "real": 7.4585094264989e-05
+            },
+            {
+              "imaginary": -209021274.63794845,
+              "real": -0.00012172441020754223
+            }
+          ],
+          [
+            {
+              "imaginary": -209021274.63794854,
+              "real": -0.00012172441020754236
+            },
+            {
+              "imaginary": -209021274.63784114,
+              "real": 0.0007357067981872791
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -156743843.47826558,
+              "real": 7.458560503639854e-05
+            },
+            {
+              "imaginary": -156743843.4782979,
+              "real": -0.00012172568010226074
+            }
+          ],
+          [
+            {
+              "imaginary": -156743843.4782979,
+              "real": -0.00012172568010226077
+            },
+            {
+              "imaginary": -156743843.47815478,
+              "real": 0.0007357149060365565
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -117541300.57286054,
+              "real": 7.45865124870179e-05
+            },
+            {
+              "imaginary": -117541300.5729036,
+              "real": -0.00012172793945602688
+            }
+          ],
+          [
+            {
+              "imaginary": -117541300.5729036,
+              "real": -0.00012172793945602694
+            },
+            {
+              "imaginary": -117541300.57271276,
+              "real": 0.0007357293217280685
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -88143540.6569889,
+              "real": 7.458812356132194e-05
+            },
+            {
+              "imaginary": -88143540.65704636,
+              "real": -0.00012173196073141866
+            }
+          ],
+          [
+            {
+              "imaginary": -88143540.65704633,
+              "real": -0.00012173196073141873
+            },
+            {
+              "imaginary": -88143540.65679187,
+              "real": 0.0007357549495490647
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -66098330.728729375,
+              "real": 7.459098041892769e-05
+            },
+            {
+              "imaginary": -66098330.728805974,
+              "real": -0.000121739122532862
+            }
+          ],
+          [
+            {
+              "imaginary": -66098330.72880597,
+              "real": -0.00012173912253286192
+            },
+            {
+              "imaginary": -66098330.7284666,
+              "real": 0.0007358005002037489
+            }
+          ]
+        ]
+      ]
+    },
+    "boundary": {
+      "componentCapacitanceF": [
+        [
+          2.4762458530166614e-14,
+          -1.5743727846012968e-16,
+          -1.9833425039129534e-14
+        ],
+        [
+          -1.5743727846012968e-16,
+          2.406930230624877e-14,
+          -1.9125026523351228e-14
+        ],
+        [
+          -1.9833425039129534e-14,
+          -1.9125026523351228e-14,
+          1.0709610720078364e-13
+        ]
+      ],
+      "componentEnergiesJ": [
+        1.2381229265083307e-14,
+        1.2034651153124385e-14,
+        5.354805360039182e-14
+      ],
+      "commonExcitationEnergyJ": 3.884804517765862e-14,
+      "nodes": 4602,
+      "tetrahedra": 23241,
+      "frequenciesHz": [
+        1000.0,
+        1333.5214321633239,
+        1778.2794100389228,
+        2371.373705661655,
+        3162.2776601683795,
+        4216.965034285822,
+        5623.413251903491,
+        7498.942093324558,
+        10000.0,
+        13335.21432163324,
+        17782.79410038923,
+        23713.737056616552,
+        31622.776601683792,
+        42169.65034285823,
+        56234.13251903491,
+        74989.42093324558,
+        100000.0
+      ],
+      "parameters": [
+        [
+          [
+            {
+              "imaginary": -6506518216.251097,
+              "real": 7.389657901625955e-05
+            },
+            {
+              "imaginary": -6506518216.251098,
+              "real": -0.00011765738675805534
+            }
+          ],
+          [
+            {
+              "imaginary": -6506518216.251098,
+              "real": -0.00011765738675805545
+            },
+            {
+              "imaginary": -6506518216.251094,
+              "real": 0.000744515036844379
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -4879200333.282838,
+              "real": 7.389657952033474e-05
+            },
+            {
+              "imaginary": -4879200333.282838,
+              "real": -0.0001176573879771559
+            }
+          ],
+          [
+            {
+              "imaginary": -4879200333.282839,
+              "real": -0.00011765738797715595
+            },
+            {
+              "imaginary": -4879200333.282833,
+              "real": 0.0007445150450611791
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -3658884076.101788,
+              "real": 7.389658041672019e-05
+            },
+            {
+              "imaginary": -3658884076.1017895,
+              "real": -0.00011765739014505858
+            }
+          ],
+          [
+            {
+              "imaginary": -3658884076.1017895,
+              "real": -0.00011765739014505872
+            },
+            {
+              "imaginary": -3658884076.1017833,
+              "real": 0.0007445150596729434
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -2743775981.287463,
+              "real": 7.389658201074118e-05
+            },
+            {
+              "imaginary": -2743775981.2874646,
+              "real": -0.00011765739400019934
+            }
+          ],
+          [
+            {
+              "imaginary": -2743775981.287465,
+              "real": -0.00011765739400019933
+            },
+            {
+              "imaginary": -2743775981.2874565,
+              "real": 0.0007445150856567344
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -2057541720.072945,
+              "real": 7.389658484534625e-05
+            },
+            {
+              "imaginary": -2057541720.0729475,
+              "real": -0.00011765740085572916
+            }
+          ],
+          [
+            {
+              "imaginary": -2057541720.0729475,
+              "real": -0.00011765740085572921
+            },
+            {
+              "imaginary": -2057541720.0729368,
+              "real": 0.0007445151318631507
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -1542938621.342642,
+              "real": 7.38965898860358e-05
+            },
+            {
+              "imaginary": -1542938621.3426452,
+              "real": -0.00011765741304681628
+            }
+          ],
+          [
+            {
+              "imaginary": -1542938621.3426452,
+              "real": -0.0001176574130468163
+            },
+            {
+              "imaginary": -1542938621.3426309,
+              "real": 0.0007445152140309911
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -1157040737.5002496,
+              "real": 7.389659884969447e-05
+            },
+            {
+              "imaginary": -1157040737.5002534,
+              "real": -0.00011765743472610067
+            }
+          ],
+          [
+            {
+              "imaginary": -1157040737.5002537,
+              "real": -0.00011765743472610065
+            },
+            {
+              "imaginary": -1157040737.5002344,
+              "real": 0.0007445153601481235
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -867658149.0131909,
+              "real": 7.389661478928186e-05
+            },
+            {
+              "imaginary": -867658149.0131966,
+              "real": -0.00011765747327832133
+            }
+          ],
+          [
+            {
+              "imaginary": -867658149.0131965,
+              "real": -0.00011765747327832127
+            },
+            {
+              "imaginary": -867658149.013171,
+              "real": 0.0007445156199844297
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -650651821.6251082,
+              "real": 7.389664313336568e-05
+            },
+            {
+              "imaginary": -650651821.6251156,
+              "real": -0.0001176575418361923
+            }
+          ],
+          [
+            {
+              "imaginary": -650651821.6251158,
+              "real": -0.00011765754183619228
+            },
+            {
+              "imaginary": -650651821.6250814,
+              "real": 0.000744516082043514
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -487920033.3282818,
+              "real": 7.389669353404452e-05
+            },
+            {
+              "imaginary": -487920033.3282917,
+              "real": -0.00011765766375519682
+            }
+          ],
+          [
+            {
+              "imaginary": -487920033.3282918,
+              "real": -0.0001176576637551968
+            },
+            {
+              "imaginary": -487920033.32824624,
+              "real": 0.000744516903705861
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -365888407.61017615,
+              "real": 7.38967831509868e-05
+            },
+            {
+              "imaginary": -365888407.61018956,
+              "real": -0.00011765788057374523
+            }
+          ],
+          [
+            {
+              "imaginary": -365888407.61018944,
+              "real": -0.00011765788057374518
+            },
+            {
+              "imaginary": -365888407.6101289,
+              "real": 0.0007445183648264178
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -274377598.128743,
+              "real": 7.389694248480964e-05
+            },
+            {
+              "imaginary": -274377598.12876064,
+              "real": -0.00011765826617715473
+            }
+          ],
+          [
+            {
+              "imaginary": -274377598.1287607,
+              "real": -0.00011765826617715483
+            },
+            {
+              "imaginary": -274377598.12867975,
+              "real": 0.0007445209630290541
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -205754172.00729004,
+              "real": 7.389722572983627e-05
+            },
+            {
+              "imaginary": -205754172.0073136,
+              "real": -0.00011765895201218575
+            }
+          ],
+          [
+            {
+              "imaginary": -205754172.00731367,
+              "real": -0.00011765895201218563
+            },
+            {
+              "imaginary": -205754172.0072057,
+              "real": 0.0007445255831131587
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -154293862.13425827,
+              "real": 7.38977291196986e-05
+            },
+            {
+              "imaginary": -154293862.13428977,
+              "real": -0.00011766017201017559
+            }
+          ],
+          [
+            {
+              "imaginary": -154293862.13428977,
+              "real": -0.00011766017201017559
+            },
+            {
+              "imaginary": -154293862.13414586,
+              "real": 0.0007445337981374512
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -115704073.75001703,
+              "real": 7.389862335093001e-05
+            },
+            {
+              "imaginary": -115704073.75005907,
+              "real": -0.00011766234273609578
+            }
+          ],
+          [
+            {
+              "imaginary": -115704073.75005907,
+              "real": -0.00011766234273609573
+            },
+            {
+              "imaginary": -115704073.74986719,
+              "real": 0.0007445484043040627
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -86765814.90130854,
+              "real": 7.390021062995942e-05
+            },
+            {
+              "imaginary": -86765814.9013646,
+              "real": -0.00011766620672377622
+            }
+          ],
+          [
+            {
+              "imaginary": -86765814.90136458,
+              "real": -0.00011766620672377622
+            },
+            {
+              "imaginary": -86765814.90110871,
+              "real": 0.0007445743704957905
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "imaginary": -65065182.162496746,
+              "real": 7.390302429793083e-05
+            },
+            {
+              "imaginary": -65065182.16257149,
+              "real": -0.0001176730897913285
+            }
+          ],
+          [
+            {
+              "imaginary": -65065182.16257149,
+              "real": -0.00011767308979132842
+            },
+            {
+              "imaginary": -65065182.16223027,
+              "real": 0.0007446205218079515
+            }
+          ]
+        ]
+      ]
+    }
+  },
+  "comparisons": {
+    "coarse": {
+      "maxZChange": 0.8881696614137738,
+      "all68ZChanges": [
+        [
+          [
+            0.8881696614082341,
+            0.8881696614082341
+          ],
+          [
+            0.8881696614082341,
+            0.8881696614082346
+          ]
+        ],
+        [
+          [
+            0.8881696614082341,
+            0.8881696614082341
+          ],
+          [
+            0.8881696614082341,
+            0.888169661408235
+          ]
+        ],
+        [
+          [
+            0.888169661408234,
+            0.8881696614082341
+          ],
+          [
+            0.8881696614082341,
+            0.8881696614082358
+          ]
+        ],
+        [
+          [
+            0.888169661408234,
+            0.888169661408234
+          ],
+          [
+            0.8881696614082341,
+            0.8881696614082372
+          ]
+        ],
+        [
+          [
+            0.8881696614082341,
+            0.888169661408234
+          ],
+          [
+            0.888169661408234,
+            0.8881696614082395
+          ]
+        ],
+        [
+          [
+            0.8881696614082341,
+            0.8881696614082338
+          ],
+          [
+            0.8881696614082338,
+            0.8881696614082438
+          ]
+        ],
+        [
+          [
+            0.8881696614082341,
+            0.8881696614082338
+          ],
+          [
+            0.8881696614082338,
+            0.8881696614082515
+          ]
+        ],
+        [
+          [
+            0.8881696614082341,
+            0.8881696614082337
+          ],
+          [
+            0.8881696614082337,
+            0.8881696614082651
+          ]
+        ],
+        [
+          [
+            0.8881696614082341,
+            0.8881696614082333
+          ],
+          [
+            0.8881696614082333,
+            0.8881696614082893
+          ]
+        ],
+        [
+          [
+            0.8881696614082342,
+            0.888169661408233
+          ],
+          [
+            0.888169661408233,
+            0.8881696614083325
+          ]
+        ],
+        [
+          [
+            0.8881696614082342,
+            0.8881696614082318
+          ],
+          [
+            0.8881696614082318,
+            0.8881696614084091
+          ]
+        ],
+        [
+          [
+            0.8881696614082344,
+            0.8881696614082303
+          ],
+          [
+            0.8881696614082303,
+            0.8881696614085456
+          ]
+        ],
+        [
+          [
+            0.8881696614082346,
+            0.8881696614082273
+          ],
+          [
+            0.8881696614082275,
+            0.8881696614087881
+          ]
+        ],
+        [
+          [
+            0.8881696614082352,
+            0.8881696614082223
+          ],
+          [
+            0.8881696614082223,
+            0.8881696614092192
+          ]
+        ],
+        [
+          [
+            0.888169661408236,
+            0.8881696614082132
+          ],
+          [
+            0.8881696614082132,
+            0.8881696614099859
+          ]
+        ],
+        [
+          [
+            0.8881696614082376,
+            0.8881696614081969
+          ],
+          [
+            0.8881696614081969,
+            0.8881696614113493
+          ]
+        ],
+        [
+          [
+            0.8881696614082404,
+            0.8881696614081681
+          ],
+          [
+            0.8881696614081681,
+            0.8881696614137738
+          ]
+        ]
+      ],
+      "componentMatrixMaxNormChange": 2.563993271824926,
+      "commonExcitationEnergyRelativeChange": 0.7340296622986056,
+      "independentEnergyRelativeChanges": [
+        9.107707535053851,
+        8.741094904455998,
+        2.563993271824926
+      ]
+    },
+    "grid": {
+      "maxZChange": 0.01588135788626737,
+      "all68ZChanges": [
+        [
+          [
+            0.015881357886151887,
+            0.01588135788615218
+          ],
+          [
+            0.015881357886151887,
+            0.015881357886152043
+          ]
+        ],
+        [
+          [
+            0.01588135788615215,
+            0.01588135788615195
+          ],
+          [
+            0.015881357886152147,
+            0.01588135788615216
+          ]
+        ],
+        [
+          [
+            0.015881357886152154,
+            0.015881357886152147
+          ],
+          [
+            0.015881357886152015,
+            0.015881357886152175
+          ]
+        ],
+        [
+          [
+            0.01588135788615211,
+            0.015881357886152275
+          ],
+          [
+            0.0158813578861521,
+            0.015881357886152324
+          ]
+        ],
+        [
+          [
+            0.015881357886152216,
+            0.01588135788615208
+          ],
+          [
+            0.0158813578861522,
+            0.015881357886152164
+          ]
+        ],
+        [
+          [
+            0.015881357886151963,
+            0.015881357886152084
+          ],
+          [
+            0.015881357886152084,
+            0.01588135788615239
+          ]
+        ],
+        [
+          [
+            0.015881357886152095,
+            0.015881357886152248
+          ],
+          [
+            0.015881357886152036,
+            0.015881357886152508
+          ]
+        ],
+        [
+          [
+            0.015881357886152025,
+            0.01588135788615206
+          ],
+          [
+            0.01588135788615206,
+            0.015881357886152803
+          ]
+        ],
+        [
+          [
+            0.01588135788615192,
+            0.015881357886151925
+          ],
+          [
+            0.015881357886152105,
+            0.01588135788615294
+          ]
+        ],
+        [
+          [
+            0.01588135788615202,
+            0.015881357886152178
+          ],
+          [
+            0.015881357886152303,
+            0.01588135788615427
+          ]
+        ],
+        [
+          [
+            0.015881357886151973,
+            0.01588135788615188
+          ],
+          [
+            0.01588135788615221,
+            0.01588135788615549
+          ]
+        ],
+        [
+          [
+            0.01588135788615161,
+            0.015881357886152542
+          ],
+          [
+            0.015881357886152102,
+            0.015881357886158746
+          ]
+        ],
+        [
+          [
+            0.01588135788615128,
+            0.01588135788615236
+          ],
+          [
+            0.01588135788615235,
+            0.015881357886163586
+          ]
+        ],
+        [
+          [
+            0.01588135788615072,
+            0.01588135788615289
+          ],
+          [
+            0.015881357886152695,
+            0.01588135788617272
+          ]
+        ],
+        [
+          [
+            0.015881357886150013,
+            0.015881357886152997
+          ],
+          [
+            0.01588135788615313,
+            0.01588135788618835
+          ]
+        ],
+        [
+          [
+            0.015881357886148223,
+            0.015881357886154107
+          ],
+          [
+            0.015881357886153937,
+            0.015881357886216915
+          ]
+        ],
+        [
+          [
+            0.01588135788614565,
+            0.015881357886155804
+          ],
+          [
+            0.01588135788615569,
+            0.01588135788626737
+          ]
+        ]
+      ],
+      "componentMatrixMaxNormChange": 0.004247634186838697,
+      "commonExcitationEnergyRelativeChange": 0.0004349138636544625,
+      "independentEnergyRelativeChanges": [
+        0.015681022461273227,
+        0.010734519367891915,
+        0.004247634186838697
+      ]
+    },
+    "boundary": {
+      "maxZChange": 2.645719117699185e-06,
+      "all68ZChanges": [
+        [
+          [
+            2.6457191174367477e-06,
+            2.6457191175833204e-06
+          ],
+          [
+            2.6457191174367473e-06,
+            2.645719117436749e-06
+          ]
+        ],
+        [
+          [
+            2.6457191176043336e-06,
+            2.6457191174088756e-06
+          ],
+          [
+            2.645719117604333e-06,
+            2.645719117408878e-06
+          ]
+        ],
+        [
+          [
+            2.6457191175723e-06,
+            2.645719117572299e-06
+          ],
+          [
+            2.645719117572299e-06,
+            2.6457191175723035e-06
+          ]
+        ],
+        [
+          [
+            2.645719117565226e-06,
+            2.645719117565225e-06
+          ],
+          [
+            2.6457191175652244e-06,
+            2.645719117565233e-06
+          ]
+        ],
+        [
+          [
+            2.645719117699185e-06,
+            2.6457191175833064e-06
+          ],
+          [
+            2.645719117699182e-06,
+            2.64571911758332e-06
+          ]
+        ],
+        [
+          [
+            2.6457191174263474e-06,
+            2.6457191174263423e-06
+          ],
+          [
+            2.6457191174263423e-06,
+            2.64571911758089e-06
+          ]
+        ],
+        [
+          [
+            2.6457191174944975e-06,
+            2.6457191174944887e-06
+          ],
+          [
+            2.6457191172884284e-06,
+            2.6457191174945323e-06
+          ]
+        ],
+        [
+          [
+            2.645719117494736e-06,
+            2.6457191174947186e-06
+          ],
+          [
+            2.6457191174947186e-06,
+            2.6457191174947965e-06
+          ]
+        ],
+        [
+          [
+            2.64571911740011e-06,
+            2.64571911740008e-06
+          ],
+          [
+            2.6457191174000796e-06,
+            2.645719117217003e-06
+          ]
+        ],
+        [
+          [
+            2.6457191175310474e-06,
+            2.64571911716451e-06
+          ],
+          [
+            2.6457191175309937e-06,
+            2.6457191172869177e-06
+          ]
+        ],
+        [
+          [
+            2.6457191174419955e-06,
+            2.6457191174418985e-06
+          ],
+          [
+            2.6457191174418993e-06,
+            2.6457191174423373e-06
+          ]
+        ],
+        [
+          [
+            2.6457191176087055e-06,
+            2.6457191176085357e-06
+          ],
+          [
+            2.645719117391298e-06,
+            2.6457191176093154e-06
+          ]
+        ],
+        [
+          [
+            2.6457191172647077e-06,
+            2.6457191174092496e-06
+          ],
+          [
+            2.6457191172644036e-06,
+            2.645719117410637e-06
+          ]
+        ],
+        [
+          [
+            2.645719117503711e-06,
+            2.6457191176963247e-06
+          ],
+          [
+            2.6457191175031707e-06,
+            2.6457191175056386e-06
+          ]
+        ],
+        [
+          [
+            2.6457191173916487e-06,
+            2.6457191172619e-06
+          ],
+          [
+            2.6457191173906877e-06,
+            2.645719117266288e-06
+          ]
+        ],
+        [
+          [
+            2.645719117563754e-06,
+            2.6457191175620446e-06
+          ],
+          [
+            2.645719117562045e-06,
+            2.645719117569847e-06
+          ]
+        ],
+        [
+          [
+            2.645719117469389e-06,
+            2.6457191173518394e-06
+          ],
+          [
+            2.6457191173518394e-06,
+            2.6457191172512043e-06
+          ]
+        ]
+      ],
+      "componentMatrixMaxNormChange": 0.014128588405029318,
+      "commonExcitationEnergyRelativeChange": 0.025042752511962973,
+      "independentEnergyRelativeChanges": [
+        0.00030850105616332137,
+        0.00031674166702408413,
+        0.014128588405029318
+      ]
+    }
+  },
+  "nearRegionAudit": {
+    "boundsM": [
+      [
+        -0.001,
+        -0.001,
+        -0.001
+      ],
+      [
+        0.001726,
+        0.001352,
+        0.0026
+      ]
+    ],
+    "candidateVertices": 2842,
+    "candidateTetrahedra": 12981,
+    "removedVertices": 0,
+    "addedVertices": 0,
+    "removedTetrahedra": 0,
+    "addedTetrahedra": 0,
+    "mixed": false
+  }
+}

@@ -1,0 +1,78 @@
+{
+ "schema": 1,
+ "purpose": "P7 v1 stage 5 request fixtures on the smallest real board. Physical accuracy is unverified.",
+ "plan": "docs/analyze/plans/p7-v1-closure-plan.md",
+ "board": {
+  "path": "tests/pcb-analyze/TPS63060DSCR/TPS63060DSCR.json",
+  "sha256": "70be39ae0c55885fd72d283b53c8a605e098c347641c032bbd651d07943dfd39",
+  "note": "hash of the LF-normalized file"
+ },
+ "stepsHz": [
+  10000,
+  1000000,
+  100000000,
+  1000000000
+ ],
+ "scenarios": [
+  {
+   "id": "pdn-multiport",
+   "dsl": "tests/fixtures/analysis-p7-stage5/pdn-multiport.js",
+   "route": "si group (a.si().channels)",
+   "bandToken": "BAND_HZ",
+   "bandsHz": [
+    10000,
+    1000000
+   ],
+   "expectedPorts": 3,
+   "matrixRows": [
+    "supplemental-21"
+   ],
+   "intent": "three ports on the VOUT rail against GND, one joint passive extraction"
+  },
+  {
+   "id": "coupled-pair",
+   "dsl": "tests/fixtures/analysis-p7-stage5/coupled-pair.js",
+   "route": "layered differential target",
+   "bandToken": "BAND_HZ",
+   "bandsHz": [
+    10000,
+    1000000
+   ],
+   "expectedPorts": 4,
+   "matrixRows": [
+    "primary-04",
+    "primary-continuation-100"
+   ],
+   "intent": "two adjacent signal nets SW1 and SW2, four oriented ports, mutual terms"
+  },
+  {
+   "id": "band-step",
+   "dsl": "tests/fixtures/analysis-p7-stage5/band-step.js",
+   "route": "layered channel",
+   "bandToken": "BAND_HZ",
+   "bandsHz": [
+    10000,
+    1000000,
+    100000000,
+    1000000000
+   ],
+   "expectedPorts": 2,
+   "matrixRows": [
+    "supplemental-24"
+   ],
+   "intent": "the same channel at each band step; internal checks decide the passing band"
+  },
+  {
+   "id": "control-vin-channel",
+   "dsl": "tests/fixtures/analysis-p7-closure/TPS63060DSCR.js",
+   "route": "layered channel (existing closure DSL, J1 to U1 VIN, 1-10 kHz)",
+   "bandToken": "",
+   "bandsHz": [
+    10000
+   ],
+   "expectedPorts": 2,
+   "matrixRows": [],
+   "intent": "control: the existing 5-board TPS channel, to separate scenario-specific refusals from planner-wide ones"
+  }
+ ]
+}

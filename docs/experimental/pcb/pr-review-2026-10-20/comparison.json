@@ -1,0 +1,2127 @@
+[
+  {
+    "name": "historical",
+    "path": "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\debugging\\pcb-layout\\runs\\STM32G0_CAN_RS485\\2026-10-08T13-59-53-172Z",
+    "revision": "2e2f96394f9521c609ed02d0368f57a2b2745da0",
+    "nativeSha256": "95c34921795aaec41c5a66d9e591a9657b456a4778c5f5cfc6e66963a88a81e3",
+    "sourceFiles": {
+      "STM32G0_CAN_RS485.js": "fcd0696d2f37a9d0cdf3a2175aef6616a51edaab6395fc579e429cd192569f9c",
+      "STM32G0_CAN_RS485.json": "b9ebd8d7b9d976754edeffa2a96b4899f93f42e8c4417eb21bcd5599e9ef31cd",
+      "STM32G0_CAN_RS485.ts": "b011ff4b900569f6379dc554d242515fbaf744f689c5b3414319d9b3a7ee24f8"
+    },
+    "wallSeconds": 109.0395144,
+    "pipelineSeconds": 106.05845810000001,
+    "stagesMs": {
+      "parse_dsl": 19.9699999999998,
+      "validate_dsl": 0.8299000000001797,
+      "resolve_footprints": 1464.4117999999994,
+      "build_graph": 9374.271700000001,
+      "auto_place": 95052.9562,
+      "render_and_artifacts": 86.66760000000068,
+      "assemble_and_report": 55.39639999999781
+    },
+    "placementOk": true,
+    "graphOk": true,
+    "components": 68,
+    "violations": {
+      "unplaced": 0,
+      "outsideBoard": 0,
+      "overlaps": 0,
+      "boardHoleViolations": 0,
+      "constraintRegionViolations": 0,
+      "layerViolations": 0,
+      "hintViolations": 13
+    },
+    "hardHints": 0,
+    "alignment": {
+      "evaluated": 797,
+      "moves": [
+        {
+          "blocks": [
+            "led_a",
+            "led_b"
+          ],
+          "axis": "y",
+          "shifts": [
+            0,
+            0.9935002326965332
+          ],
+          "perpendicularShifts": [
+            0,
+            -1
+          ],
+          "scoreBefore": 21384.81640625,
+          "scoreAfter": 21343.82421875
+        },
+        {
+          "blocks": [
+            "rs485",
+            "can"
+          ],
+          "axis": "x",
+          "shifts": [
+            0,
+            0.28950023651123047
+          ],
+          "perpendicularShifts": [
+            0,
+            0.5
+          ],
+          "scoreBefore": 21343.82421875,
+          "scoreAfter": 21249.416015625
+        },
+        {
+          "blocks": [
+            "led_a",
+            "led_b"
+          ],
+          "axis": "y",
+          "shifts": [
+            -0.24850010871887207,
+            0
+          ],
+          "perpendicularShifts": [
+            0,
+            0
+          ],
+          "scoreBefore": 21249.416015625,
+          "scoreAfter": 21245.58203125
+        }
+      ],
+      "rejected": {
+        "objective": 690,
+        "electrical": 15,
+        "netLength": 0,
+        "geometry": 83,
+        "hardHint": 0,
+        "native": 0
+      }
+    },
+    "poseHash": "43d8551b4c16249b5d16d82a58893b10ea65f92fcaa84357d87c0fb12bad30b0",
+    "inputHash": "9fc531b67ae032ecf7077bcec9cef90be686b4876ef39931122199e9b052ca47",
+    "paths": [
+      {
+        "id": "hse_clock",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 5.4770002365112305,
+        "pathDistance": 5.514999866485596,
+        "detour": 0.03799999877810478,
+        "backtrack": 0,
+        "turns": 0.029999999329447746,
+        "facing": 0.40799999237060547,
+        "segments": [
+          {
+            "index": 0,
+            "source": "X1.3",
+            "target": "R8.1",
+            "resolved": true,
+            "distance": 1.940000057220459,
+            "maxDistance": 3,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "R8.2",
+            "target": "U3.8",
+            "resolved": true,
+            "distance": 2.069999933242798,
+            "maxDistance": 6,
+            "withinConstraints": true
+          }
+        ]
+      },
+      {
+        "id": "can_h",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 9.501999855041504,
+        "pathDistance": 9.503999710083008,
+        "detour": 0.0020000000949949026,
+        "backtrack": 0,
+        "turns": 0.0010000000474974513,
+        "facing": 3.26200008392334,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U4.7",
+            "target": "D4.1",
+            "resolved": true,
+            "distance": 2.3399999141693115,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D4.1",
+            "target": "J4.1",
+            "resolved": true,
+            "distance": 7.159999847412109,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "can_l",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 9.074000358581543,
+        "pathDistance": 9.081999778747559,
+        "detour": 0.00800000037997961,
+        "backtrack": 0,
+        "turns": 0.004999999888241291,
+        "facing": 2.240000009536743,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U4.6",
+            "target": "D4.2",
+            "resolved": true,
+            "distance": 2.259999990463257,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D4.2",
+            "target": "J4.2",
+            "resolved": true,
+            "distance": 6.820000171661377,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "rs485_a",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 10.73799991607666,
+        "pathDistance": 11.609000205993652,
+        "detour": 0.8700000047683716,
+        "backtrack": 0,
+        "turns": 0.31700000166893005,
+        "facing": 3.5179998874664307,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U5.6",
+            "target": "D5.1",
+            "resolved": true,
+            "distance": 4.070000171661377,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D5.1",
+            "target": "J5.1",
+            "resolved": true,
+            "distance": 7.539999961853027,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "rs485_b",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 8.878000259399414,
+        "pathDistance": 9.380999565124512,
+        "detour": 0.503000020980835,
+        "backtrack": 0,
+        "turns": 0.2770000100135803,
+        "facing": 1.9609999656677246,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U5.7",
+            "target": "D5.2",
+            "resolved": true,
+            "distance": 2.359999895095825,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D5.2",
+            "target": "J5.2",
+            "resolved": true,
+            "distance": 7.019999980926514,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      }
+    ],
+    "backends": {
+      "block-backend:cubecl:": 43,
+      "post-place-backend:cpu:outside measured workload/readiness threshold": 28,
+      "block-backend:cpu:": 2,
+      "block-gpu-fallback::GPU admission pending in this process": 2,
+      "board-backend:cubecl:": 1,
+      "post-place-backend:cubecl:": 1
+    },
+    "geometricMetrics": {
+      "pairCount": 19,
+      "pairSum": 197.03,
+      "pairMax": 24.04,
+      "crossings": 60,
+      "foreignPadHits": 103,
+      "internalIcPadHits": 1,
+      "wireLength": 653.62,
+      "hpwl": 679.14,
+      "area": 2305.86,
+      "aspect": 1.51
+    },
+    "compareToMainCpu": {
+      "changed": 14,
+      "maxDisplacement": 0.20400047302246094,
+      "changes": [
+        {
+          "designator": "C1",
+          "dx": -0.0039997100830078125,
+          "dy": 0,
+          "distance": 0.0039997100830078125,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C2",
+          "dx": -0.0039997100830078125,
+          "dy": 0,
+          "distance": 0.0039997100830078125,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C3",
+          "dx": -0.00099945068359375,
+          "dy": 0,
+          "distance": 0.00099945068359375,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C4",
+          "dx": -0.0039997100830078125,
+          "dy": 0,
+          "distance": 0.0039997100830078125,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C5",
+          "dx": -0.0039997100830078125,
+          "dy": 0,
+          "distance": 0.0039997100830078125,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "C6",
+          "dx": -0.004000186920166016,
+          "dy": 0,
+          "distance": 0.004000186920166016,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "D1",
+          "dx": -0.00099945068359375,
+          "dy": 0,
+          "distance": 0.00099945068359375,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "D2",
+          "dx": -0.00099945068359375,
+          "dy": 0,
+          "distance": 0.00099945068359375,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "D3",
+          "dx": -0.20400047302246094,
+          "dy": 0,
+          "distance": 0.20400047302246094,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "L1",
+          "dx": -0.004000663757324219,
+          "dy": 0,
+          "distance": 0.004000663757324219,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "R1",
+          "dx": 0,
+          "dy": -0.0009999275207519531,
+          "distance": 0.0009999275207519531,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "R3",
+          "dx": -0.00099945068359375,
+          "dy": 0,
+          "distance": 0.00099945068359375,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "TP2",
+          "dx": -0.004000186920166016,
+          "dy": 0,
+          "distance": 0.004000186920166016,
+          "rotationChanged": false,
+          "layerChanged": false
+        },
+        {
+          "designator": "U1",
+          "dx": -0.0039997100830078125,
+          "dy": 0,
+          "distance": 0.0039997100830078125,
+          "rotationChanged": false,
+          "layerChanged": false
+        }
+      ],
+      "alignmentIdentical": false,
+      "treeStagePosesIdentical": false,
+      "nativeSharedInputs": 61,
+      "nativeTotalInputs": 75,
+      "nativeDifferentSolutions": [
+        {
+          "key": "block:1cc01aa7dc34fe9176eea543299c7f2542f0b4ee216d56eaf093e7cd0eb201a6",
+          "kind": "block",
+          "label": "input_protection"
+        },
+        {
+          "key": "block:10c063859e2e5a7c4cdd79a8579e5a78fb2678aab12b8a4128a1a1076729bf44",
+          "kind": "block",
+          "label": "buck_input"
+        }
+      ],
+      "mainGeometryValid": true,
+      "mainNativeScore": 20731.833984375,
+      "mainNativeElectrical": {
+        "score": 8435.74609375,
+        "lengths": [
+          2.8000001907348633,
+          13.571884155273438,
+          2.799999237060547,
+          15.038480758666992,
+          14.949332237243652,
+          17.915206909179688,
+          19.878461837768555,
+          74.62541198730469,
+          17.516904830932617,
+          124.57970428466797,
+          17.61543846130371,
+          17.789670944213867,
+          15.948720932006836,
+          22.812885284423828,
+          36.38597869873047,
+          2.071911096572876,
+          23.760883331298828,
+          23.571273803710938,
+          23.66541862487793,
+          24.039222717285156,
+          13.688676834106445,
+          13.275424003601074,
+          21.539981842041016,
+          24.147878646850586,
+          1.9365997314453125,
+          1.7717304229736328,
+          1.7717304229736328,
+          23.936506271362305,
+          2.6020495891571045,
+          13.551334381103516,
+          7.209427833557129,
+          2.050955295562744,
+          10.18524169921875,
+          2.842694044113159,
+          1.7717305421829224
+        ]
+      }
+    }
+  },
+  {
+    "name": "main-cpu",
+    "path": "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\debugging\\pcb-layout\\runs\\STM32G0_CAN_RS485\\2026-10-20T07-15-13-274Z",
+    "revision": "3bc1a081e31dcc083203e577ce7480862de33062",
+    "nativeSha256": "69a977d927f02dee218309a2990fe11e9c1dbaa881cce16b9985ca11983bbb40",
+    "sourceFiles": {
+      "STM32G0_CAN_RS485.js": "fcd0696d2f37a9d0cdf3a2175aef6616a51edaab6395fc579e429cd192569f9c",
+      "STM32G0_CAN_RS485.json": "b9ebd8d7b9d976754edeffa2a96b4899f93f42e8c4417eb21bcd5599e9ef31cd",
+      "STM32G0_CAN_RS485.ts": "b011ff4b900569f6379dc554d242515fbaf744f689c5b3414319d9b3a7ee24f8"
+    },
+    "wallSeconds": 106.8397381,
+    "pipelineSeconds": 105.3714493,
+    "stagesMs": {
+      "parse_dsl": 25.417699999999968,
+      "validate_dsl": 1.4170999999998912,
+      "resolve_footprints": 2738.3763,
+      "build_graph": 9334.6734,
+      "auto_place": 93172.97469999999,
+      "render_and_artifacts": 71.69860000000335,
+      "assemble_and_report": 21.752999999996973
+    },
+    "placementOk": true,
+    "graphOk": true,
+    "components": 68,
+    "violations": {
+      "unplaced": 0,
+      "outsideBoard": 0,
+      "overlaps": 0,
+      "boardHoleViolations": 0,
+      "constraintRegionViolations": 0,
+      "layerViolations": 0,
+      "hintViolations": 13
+    },
+    "hardHints": 0,
+    "alignment": {
+      "evaluated": 797,
+      "moves": [
+        {
+          "blocks": [
+            "led_a",
+            "led_b"
+          ],
+          "axis": "y",
+          "shifts": [
+            0,
+            0.9935002326965332
+          ],
+          "perpendicularShifts": [
+            0,
+            -1
+          ],
+          "scoreBefore": 21384.58984375,
+          "scoreAfter": 21343.59765625
+        },
+        {
+          "blocks": [
+            "rs485",
+            "can"
+          ],
+          "axis": "x",
+          "shifts": [
+            0,
+            0.28950023651123047
+          ],
+          "perpendicularShifts": [
+            0,
+            0.5
+          ],
+          "scoreBefore": 21343.59765625,
+          "scoreAfter": 21249.1875
+        },
+        {
+          "blocks": [
+            "led_a",
+            "led_b"
+          ],
+          "axis": "y",
+          "shifts": [
+            -0.24850010871887207,
+            0
+          ],
+          "perpendicularShifts": [
+            0,
+            0
+          ],
+          "scoreBefore": 21249.1875,
+          "scoreAfter": 21245.35546875
+        }
+      ],
+      "rejected": {
+        "objective": 690,
+        "electrical": 15,
+        "netLength": 0,
+        "geometry": 83,
+        "hardHint": 0,
+        "native": 0
+      }
+    },
+    "poseHash": "429733b11a89b044d72cfffa9796c74ab2535ef902d409a4a1108e519b0c63e2",
+    "inputHash": "9fc531b67ae032ecf7077bcec9cef90be686b4876ef39931122199e9b052ca47",
+    "paths": [
+      {
+        "id": "hse_clock",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 5.4770002365112305,
+        "pathDistance": 5.514999866485596,
+        "detour": 0.03799999877810478,
+        "backtrack": 0,
+        "turns": 0.029999999329447746,
+        "facing": 0.40799999237060547,
+        "segments": [
+          {
+            "index": 0,
+            "source": "X1.3",
+            "target": "R8.1",
+            "resolved": true,
+            "distance": 1.940000057220459,
+            "maxDistance": 3,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "R8.2",
+            "target": "U3.8",
+            "resolved": true,
+            "distance": 2.069999933242798,
+            "maxDistance": 6,
+            "withinConstraints": true
+          }
+        ]
+      },
+      {
+        "id": "can_h",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 9.501999855041504,
+        "pathDistance": 9.503999710083008,
+        "detour": 0.0020000000949949026,
+        "backtrack": 0,
+        "turns": 0.0010000000474974513,
+        "facing": 3.26200008392334,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U4.7",
+            "target": "D4.1",
+            "resolved": true,
+            "distance": 2.3399999141693115,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D4.1",
+            "target": "J4.1",
+            "resolved": true,
+            "distance": 7.159999847412109,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "can_l",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 9.074000358581543,
+        "pathDistance": 9.081999778747559,
+        "detour": 0.00800000037997961,
+        "backtrack": 0,
+        "turns": 0.004999999888241291,
+        "facing": 2.240000009536743,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U4.6",
+            "target": "D4.2",
+            "resolved": true,
+            "distance": 2.259999990463257,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D4.2",
+            "target": "J4.2",
+            "resolved": true,
+            "distance": 6.820000171661377,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "rs485_a",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 10.73799991607666,
+        "pathDistance": 11.609000205993652,
+        "detour": 0.8700000047683716,
+        "backtrack": 0,
+        "turns": 0.31700000166893005,
+        "facing": 3.5179998874664307,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U5.6",
+            "target": "D5.1",
+            "resolved": true,
+            "distance": 4.070000171661377,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D5.1",
+            "target": "J5.1",
+            "resolved": true,
+            "distance": 7.539999961853027,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "rs485_b",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 8.878000259399414,
+        "pathDistance": 9.380999565124512,
+        "detour": 0.503000020980835,
+        "backtrack": 0,
+        "turns": 0.2770000100135803,
+        "facing": 1.9609999656677246,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U5.7",
+            "target": "D5.2",
+            "resolved": true,
+            "distance": 2.359999895095825,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D5.2",
+            "target": "J5.2",
+            "resolved": true,
+            "distance": 7.019999980926514,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      }
+    ],
+    "backends": {
+      "block-backend:cpu:": 45,
+      "post-place-backend:cpu:explicit CPU": 28,
+      "board-backend:cpu:explicit CPU": 1
+    },
+    "geometricMetrics": {
+      "pairCount": 19,
+      "pairSum": 197.03,
+      "pairMax": 24.04,
+      "crossings": 60,
+      "foreignPadHits": 103,
+      "internalIcPadHits": 1,
+      "wireLength": 653.65,
+      "hpwl": 679.14,
+      "area": 2305.86,
+      "aspect": 1.51
+    },
+    "compareToMainCpu": {
+      "changed": 0,
+      "maxDisplacement": 0,
+      "changes": [],
+      "alignmentIdentical": true,
+      "treeStagePosesIdentical": true,
+      "nativeSharedInputs": 74,
+      "nativeTotalInputs": 74,
+      "nativeDifferentSolutions": [],
+      "mainGeometryValid": true,
+      "mainNativeScore": 20731.583984375,
+      "mainNativeElectrical": {
+        "score": 8436.16796875,
+        "lengths": [
+          2.8000001907348633,
+          13.571884155273438,
+          2.799999237060547,
+          15.038480758666992,
+          14.949332237243652,
+          17.915206909179688,
+          19.878461837768555,
+          74.62527465820312,
+          17.516904830932617,
+          124.57970428466797,
+          17.61543846130371,
+          17.789670944213867,
+          15.948720932006836,
+          22.812885284423828,
+          36.38597869873047,
+          2.071911096572876,
+          23.760883331298828,
+          23.571273803710938,
+          23.66541862487793,
+          24.039222717285156,
+          13.688676834106445,
+          13.275424003601074,
+          21.539981842041016,
+          24.147878646850586,
+          1.9365997314453125,
+          1.7717304229736328,
+          1.7717304229736328,
+          23.93364906311035,
+          2.6010842323303223,
+          13.551334381103516,
+          7.240506172180176,
+          2.050955295562744,
+          10.190237998962402,
+          2.8419811725616455,
+          1.7717305421829224
+        ]
+      }
+    }
+  },
+  {
+    "name": "main-gpu",
+    "path": "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\debugging\\pcb-layout\\runs\\STM32G0_CAN_RS485\\2026-10-20T07-17-01-263Z",
+    "revision": "3bc1a081e31dcc083203e577ce7480862de33062",
+    "nativeSha256": "69a977d927f02dee218309a2990fe11e9c1dbaa881cce16b9985ca11983bbb40",
+    "sourceFiles": {
+      "STM32G0_CAN_RS485.js": "fcd0696d2f37a9d0cdf3a2175aef6616a51edaab6395fc579e429cd192569f9c",
+      "STM32G0_CAN_RS485.json": "b9ebd8d7b9d976754edeffa2a96b4899f93f42e8c4417eb21bcd5599e9ef31cd",
+      "STM32G0_CAN_RS485.ts": "b011ff4b900569f6379dc554d242515fbaf744f689c5b3414319d9b3a7ee24f8"
+    },
+    "wallSeconds": 134.5202518,
+    "pipelineSeconds": 133.34458219999996,
+    "stagesMs": {
+      "parse_dsl": 19.884799999999927,
+      "validate_dsl": 0.8070000000000164,
+      "resolve_footprints": 2420.5627999999997,
+      "build_graph": 4688.328600000001,
+      "auto_place": 126092.79060000001,
+      "render_and_artifacts": 90.67499999998836,
+      "assemble_and_report": 24.924299999984214
+    },
+    "placementOk": true,
+    "graphOk": true,
+    "components": 68,
+    "violations": {
+      "unplaced": 0,
+      "outsideBoard": 0,
+      "overlaps": 0,
+      "boardHoleViolations": 0,
+      "constraintRegionViolations": 0,
+      "layerViolations": 0,
+      "hintViolations": 13
+    },
+    "hardHints": 0,
+    "alignment": {
+      "evaluated": 797,
+      "moves": [
+        {
+          "blocks": [
+            "led_a",
+            "led_b"
+          ],
+          "axis": "y",
+          "shifts": [
+            0,
+            0.9935002326965332
+          ],
+          "perpendicularShifts": [
+            0,
+            -1
+          ],
+          "scoreBefore": 21384.58984375,
+          "scoreAfter": 21343.59765625
+        },
+        {
+          "blocks": [
+            "rs485",
+            "can"
+          ],
+          "axis": "x",
+          "shifts": [
+            0,
+            0.28950023651123047
+          ],
+          "perpendicularShifts": [
+            0,
+            0.5
+          ],
+          "scoreBefore": 21343.59765625,
+          "scoreAfter": 21249.1875
+        },
+        {
+          "blocks": [
+            "led_a",
+            "led_b"
+          ],
+          "axis": "y",
+          "shifts": [
+            -0.24850010871887207,
+            0
+          ],
+          "perpendicularShifts": [
+            0,
+            0
+          ],
+          "scoreBefore": 21249.1875,
+          "scoreAfter": 21245.35546875
+        }
+      ],
+      "rejected": {
+        "objective": 690,
+        "electrical": 15,
+        "netLength": 0,
+        "geometry": 83,
+        "hardHint": 0,
+        "native": 0
+      }
+    },
+    "poseHash": "429733b11a89b044d72cfffa9796c74ab2535ef902d409a4a1108e519b0c63e2",
+    "inputHash": "9fc531b67ae032ecf7077bcec9cef90be686b4876ef39931122199e9b052ca47",
+    "paths": [
+      {
+        "id": "hse_clock",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 5.4770002365112305,
+        "pathDistance": 5.514999866485596,
+        "detour": 0.03799999877810478,
+        "backtrack": 0,
+        "turns": 0.029999999329447746,
+        "facing": 0.40799999237060547,
+        "segments": [
+          {
+            "index": 0,
+            "source": "X1.3",
+            "target": "R8.1",
+            "resolved": true,
+            "distance": 1.940000057220459,
+            "maxDistance": 3,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "R8.2",
+            "target": "U3.8",
+            "resolved": true,
+            "distance": 2.069999933242798,
+            "maxDistance": 6,
+            "withinConstraints": true
+          }
+        ]
+      },
+      {
+        "id": "can_h",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 9.501999855041504,
+        "pathDistance": 9.503999710083008,
+        "detour": 0.0020000000949949026,
+        "backtrack": 0,
+        "turns": 0.0010000000474974513,
+        "facing": 3.26200008392334,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U4.7",
+            "target": "D4.1",
+            "resolved": true,
+            "distance": 2.3399999141693115,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D4.1",
+            "target": "J4.1",
+            "resolved": true,
+            "distance": 7.159999847412109,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "can_l",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 9.074000358581543,
+        "pathDistance": 9.081999778747559,
+        "detour": 0.00800000037997961,
+        "backtrack": 0,
+        "turns": 0.004999999888241291,
+        "facing": 2.240000009536743,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U4.6",
+            "target": "D4.2",
+            "resolved": true,
+            "distance": 2.259999990463257,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D4.2",
+            "target": "J4.2",
+            "resolved": true,
+            "distance": 6.820000171661377,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "rs485_a",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 10.73799991607666,
+        "pathDistance": 11.609000205993652,
+        "detour": 0.8700000047683716,
+        "backtrack": 0,
+        "turns": 0.31700000166893005,
+        "facing": 3.5179998874664307,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U5.6",
+            "target": "D5.1",
+            "resolved": true,
+            "distance": 4.070000171661377,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D5.1",
+            "target": "J5.1",
+            "resolved": true,
+            "distance": 7.539999961853027,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "rs485_b",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 8.878000259399414,
+        "pathDistance": 9.380999565124512,
+        "detour": 0.503000020980835,
+        "backtrack": 0,
+        "turns": 0.2770000100135803,
+        "facing": 1.9609999656677246,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U5.7",
+            "target": "D5.2",
+            "resolved": true,
+            "distance": 2.359999895095825,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D5.2",
+            "target": "J5.2",
+            "resolved": true,
+            "distance": 7.019999980926514,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      }
+    ],
+    "backends": {
+      "block-backend:cubecl:": 45,
+      "post-place-backend:cubecl:": 28,
+      "board-backend:cubecl:": 1
+    },
+    "geometricMetrics": {
+      "pairCount": 19,
+      "pairSum": 197.03,
+      "pairMax": 24.04,
+      "crossings": 60,
+      "foreignPadHits": 103,
+      "internalIcPadHits": 1,
+      "wireLength": 653.65,
+      "hpwl": 679.14,
+      "area": 2305.86,
+      "aspect": 1.51
+    },
+    "compareToMainCpu": {
+      "changed": 0,
+      "maxDisplacement": 0,
+      "changes": [],
+      "alignmentIdentical": true,
+      "treeStagePosesIdentical": true,
+      "nativeSharedInputs": 74,
+      "nativeTotalInputs": 74,
+      "nativeDifferentSolutions": [],
+      "mainGeometryValid": true,
+      "mainNativeScore": 20731.583984375,
+      "mainNativeElectrical": {
+        "score": 8436.16796875,
+        "lengths": [
+          2.8000001907348633,
+          13.571884155273438,
+          2.799999237060547,
+          15.038480758666992,
+          14.949332237243652,
+          17.915206909179688,
+          19.878461837768555,
+          74.62527465820312,
+          17.516904830932617,
+          124.57970428466797,
+          17.61543846130371,
+          17.789670944213867,
+          15.948720932006836,
+          22.812885284423828,
+          36.38597869873047,
+          2.071911096572876,
+          23.760883331298828,
+          23.571273803710938,
+          23.66541862487793,
+          24.039222717285156,
+          13.688676834106445,
+          13.275424003601074,
+          21.539981842041016,
+          24.147878646850586,
+          1.9365997314453125,
+          1.7717304229736328,
+          1.7717304229736328,
+          23.93364906311035,
+          2.6010842323303223,
+          13.551334381103516,
+          7.240506172180176,
+          2.050955295562744,
+          10.190237998962402,
+          2.8419811725616455,
+          1.7717305421829224
+        ]
+      }
+    }
+  },
+  {
+    "name": "pr25-cpu",
+    "path": "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend-pr-review\\debugging\\pcb-layout\\runs\\STM32G0_CAN_RS485\\2026-10-20T07-33-29-659Z",
+    "revision": "5fe6f79fb33954c152b4e8af7f0c693ba58c42d7",
+    "nativeSha256": "87ccccb7a8094ae6a223db189f8e885ef5e9127d24df4f66ae2e712c8ca74f4c",
+    "sourceFiles": {
+      "STM32G0_CAN_RS485.js": "fcd0696d2f37a9d0cdf3a2175aef6616a51edaab6395fc579e429cd192569f9c",
+      "STM32G0_CAN_RS485.json": "b9ebd8d7b9d976754edeffa2a96b4899f93f42e8c4417eb21bcd5599e9ef31cd",
+      "STM32G0_CAN_RS485.ts": "b011ff4b900569f6379dc554d242515fbaf744f689c5b3414319d9b3a7ee24f8"
+    },
+    "wallSeconds": 102.93979490000001,
+    "pipelineSeconds": 101.8368687,
+    "stagesMs": {
+      "parse_dsl": 17.853399999999965,
+      "validate_dsl": 1.1847999999999956,
+      "resolve_footprints": 947.4891,
+      "build_graph": 5153.1404,
+      "auto_place": 95597.7021,
+      "render_and_artifacts": 85.99769999999262,
+      "assemble_and_report": 28.831400000010035
+    },
+    "placementOk": true,
+    "graphOk": true,
+    "components": 68,
+    "violations": {
+      "unplaced": 0,
+      "outsideBoard": 0,
+      "overlaps": 0,
+      "boardHoleViolations": 0,
+      "constraintRegionViolations": 0,
+      "layerViolations": 0,
+      "hintViolations": 13
+    },
+    "hardHints": 0,
+    "alignment": {
+      "evaluated": 797,
+      "moves": [
+        {
+          "axis": "y",
+          "blocks": [
+            "led_a",
+            "led_b"
+          ],
+          "perpendicularShifts": [
+            0,
+            -1
+          ],
+          "scoreAfter": 21343.59765625,
+          "scoreBefore": 21384.58984375,
+          "shifts": [
+            0,
+            0.9935002326965332
+          ]
+        },
+        {
+          "axis": "x",
+          "blocks": [
+            "rs485",
+            "can"
+          ],
+          "perpendicularShifts": [
+            0,
+            0.5
+          ],
+          "scoreAfter": 21249.1875,
+          "scoreBefore": 21343.59765625,
+          "shifts": [
+            0,
+            0.28950023651123047
+          ]
+        },
+        {
+          "axis": "y",
+          "blocks": [
+            "led_a",
+            "led_b"
+          ],
+          "perpendicularShifts": [
+            0,
+            0
+          ],
+          "scoreAfter": 21245.35546875,
+          "scoreBefore": 21249.1875,
+          "shifts": [
+            -0.24850010871887207,
+            0
+          ]
+        }
+      ],
+      "rejected": {
+        "electrical": 15,
+        "geometry": 83,
+        "hardHint": 0,
+        "native": 0,
+        "netLength": 0,
+        "objective": 690
+      }
+    },
+    "poseHash": "429733b11a89b044d72cfffa9796c74ab2535ef902d409a4a1108e519b0c63e2",
+    "inputHash": "9fc531b67ae032ecf7077bcec9cef90be686b4876ef39931122199e9b052ca47",
+    "paths": [
+      {
+        "id": "hse_clock",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 5.4770002365112305,
+        "pathDistance": 5.514999866485596,
+        "detour": 0.03799999877810478,
+        "backtrack": 0,
+        "turns": 0.029999999329447746,
+        "facing": 0.40799999237060547,
+        "segments": [
+          {
+            "index": 0,
+            "source": "X1.3",
+            "target": "R8.1",
+            "resolved": true,
+            "distance": 1.940000057220459,
+            "maxDistance": 3,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "R8.2",
+            "target": "U3.8",
+            "resolved": true,
+            "distance": 2.069999933242798,
+            "maxDistance": 6,
+            "withinConstraints": true
+          }
+        ]
+      },
+      {
+        "id": "can_h",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 9.501999855041504,
+        "pathDistance": 9.503999710083008,
+        "detour": 0.0020000000949949026,
+        "backtrack": 0,
+        "turns": 0.0010000000474974513,
+        "facing": 3.26200008392334,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U4.7",
+            "target": "D4.1",
+            "resolved": true,
+            "distance": 2.3399999141693115,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D4.1",
+            "target": "J4.1",
+            "resolved": true,
+            "distance": 7.159999847412109,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "can_l",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 9.074000358581543,
+        "pathDistance": 9.081999778747559,
+        "detour": 0.00800000037997961,
+        "backtrack": 0,
+        "turns": 0.004999999888241291,
+        "facing": 2.240000009536743,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U4.6",
+            "target": "D4.2",
+            "resolved": true,
+            "distance": 2.259999990463257,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D4.2",
+            "target": "J4.2",
+            "resolved": true,
+            "distance": 6.820000171661377,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "rs485_a",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 10.73799991607666,
+        "pathDistance": 11.609000205993652,
+        "detour": 0.8700000047683716,
+        "backtrack": 0,
+        "turns": 0.31700000166893005,
+        "facing": 3.5179998874664307,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U5.6",
+            "target": "D5.1",
+            "resolved": true,
+            "distance": 4.070000171661377,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D5.1",
+            "target": "J5.1",
+            "resolved": true,
+            "distance": 7.539999961853027,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "rs485_b",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 8.878000259399414,
+        "pathDistance": 9.380999565124512,
+        "detour": 0.503000020980835,
+        "backtrack": 0,
+        "turns": 0.2770000100135803,
+        "facing": 1.9609999656677246,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U5.7",
+            "target": "D5.2",
+            "resolved": true,
+            "distance": 2.359999895095825,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D5.2",
+            "target": "J5.2",
+            "resolved": true,
+            "distance": 7.019999980926514,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      }
+    ],
+    "backends": {
+      "block-backend:cpu:": 45,
+      "post-place-backend:cpu:explicit CPU": 28,
+      "board-backend:cpu:explicit CPU": 1
+    },
+    "geometricMetrics": {
+      "pairCount": 19,
+      "pairSum": 197.03,
+      "pairMax": 24.04,
+      "crossings": 60,
+      "foreignPadHits": 103,
+      "internalIcPadHits": 1,
+      "wireLength": 653.65,
+      "hpwl": 679.14,
+      "area": 2305.86,
+      "aspect": 1.51
+    },
+    "compareToMainCpu": {
+      "changed": 0,
+      "maxDisplacement": 0,
+      "changes": [],
+      "alignmentIdentical": true,
+      "treeStagePosesIdentical": true,
+      "nativeSharedInputs": 74,
+      "nativeTotalInputs": 74,
+      "nativeDifferentSolutions": [],
+      "mainGeometryValid": true,
+      "mainNativeScore": 20731.583984375,
+      "mainNativeElectrical": {
+        "score": 8436.16796875,
+        "lengths": [
+          2.8000001907348633,
+          13.571884155273438,
+          2.799999237060547,
+          15.038480758666992,
+          14.949332237243652,
+          17.915206909179688,
+          19.878461837768555,
+          74.62527465820312,
+          17.516904830932617,
+          124.57970428466797,
+          17.61543846130371,
+          17.789670944213867,
+          15.948720932006836,
+          22.812885284423828,
+          36.38597869873047,
+          2.071911096572876,
+          23.760883331298828,
+          23.571273803710938,
+          23.66541862487793,
+          24.039222717285156,
+          13.688676834106445,
+          13.275424003601074,
+          21.539981842041016,
+          24.147878646850586,
+          1.9365997314453125,
+          1.7717304229736328,
+          1.7717304229736328,
+          23.93364906311035,
+          2.6010842323303223,
+          13.551334381103516,
+          7.240506172180176,
+          2.050955295562744,
+          10.190237998962402,
+          2.8419811725616455,
+          1.7717305421829224
+        ]
+      }
+    }
+  },
+  {
+    "name": "all-cpu",
+    "path": "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend-pr-review\\debugging\\pcb-layout\\runs\\STM32G0_CAN_RS485\\2026-10-20T07-43-19-666Z",
+    "revision": "70d090740582e2b2f3d08a30ae8b713ed7e5835d",
+    "nativeSha256": "75c36e8f2fac5571dbb8fb469e13069bb74a4a4e11d6948f797c9f71ac84fed4",
+    "sourceFiles": {
+      "STM32G0_CAN_RS485.js": "fcd0696d2f37a9d0cdf3a2175aef6616a51edaab6395fc579e429cd192569f9c",
+      "STM32G0_CAN_RS485.json": "b9ebd8d7b9d976754edeffa2a96b4899f93f42e8c4417eb21bcd5599e9ef31cd",
+      "STM32G0_CAN_RS485.ts": "b011ff4b900569f6379dc554d242515fbaf744f689c5b3414319d9b3a7ee24f8"
+    },
+    "wallSeconds": 101.95184239999999,
+    "pipelineSeconds": 100.8148025,
+    "stagesMs": {
+      "parse_dsl": 22.748100000000022,
+      "validate_dsl": 0.9012000000000171,
+      "resolve_footprints": 1451.0686999999998,
+      "build_graph": 9361.689699999999,
+      "auto_place": 89866.78050000001,
+      "render_and_artifacts": 76.50680000000284,
+      "assemble_and_report": 28.138999999995576
+    },
+    "placementOk": true,
+    "graphOk": true,
+    "components": 68,
+    "violations": {
+      "unplaced": 0,
+      "outsideBoard": 0,
+      "overlaps": 0,
+      "boardHoleViolations": 0,
+      "constraintRegionViolations": 0,
+      "layerViolations": 0,
+      "hintViolations": 13
+    },
+    "hardHints": 0,
+    "alignment": {
+      "evaluated": 797,
+      "moves": [
+        {
+          "axis": "y",
+          "blocks": [
+            "led_a",
+            "led_b"
+          ],
+          "perpendicularShifts": [
+            0,
+            -1
+          ],
+          "scoreAfter": 21343.59765625,
+          "scoreBefore": 21384.58984375,
+          "shifts": [
+            0,
+            0.9935002326965332
+          ]
+        },
+        {
+          "axis": "x",
+          "blocks": [
+            "rs485",
+            "can"
+          ],
+          "perpendicularShifts": [
+            0,
+            0.5
+          ],
+          "scoreAfter": 21249.1875,
+          "scoreBefore": 21343.59765625,
+          "shifts": [
+            0,
+            0.28950023651123047
+          ]
+        },
+        {
+          "axis": "y",
+          "blocks": [
+            "led_a",
+            "led_b"
+          ],
+          "perpendicularShifts": [
+            0,
+            0
+          ],
+          "scoreAfter": 21245.35546875,
+          "scoreBefore": 21249.1875,
+          "shifts": [
+            -0.24850010871887207,
+            0
+          ]
+        }
+      ],
+      "rejected": {
+        "electrical": 15,
+        "geometry": 83,
+        "hardHint": 0,
+        "native": 0,
+        "netLength": 0,
+        "objective": 690
+      }
+    },
+    "poseHash": "429733b11a89b044d72cfffa9796c74ab2535ef902d409a4a1108e519b0c63e2",
+    "inputHash": "9fc531b67ae032ecf7077bcec9cef90be686b4876ef39931122199e9b052ca47",
+    "paths": [
+      {
+        "id": "hse_clock",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 5.4770002365112305,
+        "pathDistance": 5.514999866485596,
+        "detour": 0.03799999877810478,
+        "backtrack": 0,
+        "turns": 0.029999999329447746,
+        "facing": 0.40799999237060547,
+        "segments": [
+          {
+            "index": 0,
+            "source": "X1.3",
+            "target": "R8.1",
+            "resolved": true,
+            "distance": 1.940000057220459,
+            "maxDistance": 3,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "R8.2",
+            "target": "U3.8",
+            "resolved": true,
+            "distance": 2.069999933242798,
+            "maxDistance": 6,
+            "withinConstraints": true
+          }
+        ]
+      },
+      {
+        "id": "can_h",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 9.501999855041504,
+        "pathDistance": 9.503999710083008,
+        "detour": 0.0020000000949949026,
+        "backtrack": 0,
+        "turns": 0.0010000000474974513,
+        "facing": 3.26200008392334,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U4.7",
+            "target": "D4.1",
+            "resolved": true,
+            "distance": 2.3399999141693115,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D4.1",
+            "target": "J4.1",
+            "resolved": true,
+            "distance": 7.159999847412109,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "can_l",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 9.074000358581543,
+        "pathDistance": 9.081999778747559,
+        "detour": 0.00800000037997961,
+        "backtrack": 0,
+        "turns": 0.004999999888241291,
+        "facing": 2.240000009536743,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U4.6",
+            "target": "D4.2",
+            "resolved": true,
+            "distance": 2.259999990463257,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D4.2",
+            "target": "J4.2",
+            "resolved": true,
+            "distance": 6.820000171661377,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "rs485_a",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 10.73799991607666,
+        "pathDistance": 11.609000205993652,
+        "detour": 0.8700000047683716,
+        "backtrack": 0,
+        "turns": 0.31700000166893005,
+        "facing": 3.5179998874664307,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U5.6",
+            "target": "D5.1",
+            "resolved": true,
+            "distance": 4.070000171661377,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D5.1",
+            "target": "J5.1",
+            "resolved": true,
+            "distance": 7.539999961853027,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "rs485_b",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 8.878000259399414,
+        "pathDistance": 9.380999565124512,
+        "detour": 0.503000020980835,
+        "backtrack": 0,
+        "turns": 0.2770000100135803,
+        "facing": 1.9609999656677246,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U5.7",
+            "target": "D5.2",
+            "resolved": true,
+            "distance": 2.359999895095825,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D5.2",
+            "target": "J5.2",
+            "resolved": true,
+            "distance": 7.019999980926514,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      }
+    ],
+    "backends": {
+      "block-backend:cpu:": 45,
+      "post-place-backend:cpu:explicit CPU": 28,
+      "board-backend:cpu:explicit CPU": 1
+    },
+    "geometricMetrics": {
+      "pairCount": 19,
+      "pairSum": 197.03,
+      "pairMax": 24.04,
+      "crossings": 60,
+      "foreignPadHits": 103,
+      "internalIcPadHits": 1,
+      "wireLength": 653.65,
+      "hpwl": 679.14,
+      "area": 2305.86,
+      "aspect": 1.51
+    },
+    "compareToMainCpu": {
+      "changed": 0,
+      "maxDisplacement": 0,
+      "changes": [],
+      "alignmentIdentical": true,
+      "treeStagePosesIdentical": true,
+      "nativeSharedInputs": 74,
+      "nativeTotalInputs": 74,
+      "nativeDifferentSolutions": [],
+      "mainGeometryValid": true,
+      "mainNativeScore": 20731.583984375,
+      "mainNativeElectrical": {
+        "score": 8436.16796875,
+        "lengths": [
+          2.8000001907348633,
+          13.571884155273438,
+          2.799999237060547,
+          15.038480758666992,
+          14.949332237243652,
+          17.915206909179688,
+          19.878461837768555,
+          74.62527465820312,
+          17.516904830932617,
+          124.57970428466797,
+          17.61543846130371,
+          17.789670944213867,
+          15.948720932006836,
+          22.812885284423828,
+          36.38597869873047,
+          2.071911096572876,
+          23.760883331298828,
+          23.571273803710938,
+          23.66541862487793,
+          24.039222717285156,
+          13.688676834106445,
+          13.275424003601074,
+          21.539981842041016,
+          24.147878646850586,
+          1.9365997314453125,
+          1.7717304229736328,
+          1.7717304229736328,
+          23.93364906311035,
+          2.6010842323303223,
+          13.551334381103516,
+          7.240506172180176,
+          2.050955295562744,
+          10.190237998962402,
+          2.8419811725616455,
+          1.7717305421829224
+        ]
+      }
+    }
+  },
+  {
+    "name": "all-gpu",
+    "path": "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend-pr-review\\debugging\\pcb-layout\\runs\\STM32G0_CAN_RS485\\2026-10-20T07-45-02-770Z",
+    "revision": "70d090740582e2b2f3d08a30ae8b713ed7e5835d",
+    "nativeSha256": "75c36e8f2fac5571dbb8fb469e13069bb74a4a4e11d6948f797c9f71ac84fed4",
+    "sourceFiles": {
+      "STM32G0_CAN_RS485.js": "fcd0696d2f37a9d0cdf3a2175aef6616a51edaab6395fc579e429cd192569f9c",
+      "STM32G0_CAN_RS485.json": "b9ebd8d7b9d976754edeffa2a96b4899f93f42e8c4417eb21bcd5599e9ef31cd",
+      "STM32G0_CAN_RS485.ts": "b011ff4b900569f6379dc554d242515fbaf744f689c5b3414319d9b3a7ee24f8"
+    },
+    "wallSeconds": 81.6245223,
+    "pipelineSeconds": 80.6187554,
+    "stagesMs": {
+      "parse_dsl": 17.19659999999999,
+      "validate_dsl": 0.9162000000000035,
+      "resolve_footprints": 1084.3915000000002,
+      "build_graph": 9340.2971,
+      "auto_place": 70060.9544,
+      "render_and_artifacts": 81.44160000000556,
+      "assemble_and_report": 30.399299999990035
+    },
+    "placementOk": true,
+    "graphOk": true,
+    "components": 68,
+    "violations": {
+      "unplaced": 0,
+      "outsideBoard": 0,
+      "overlaps": 0,
+      "boardHoleViolations": 0,
+      "constraintRegionViolations": 0,
+      "layerViolations": 0,
+      "hintViolations": 13
+    },
+    "hardHints": 0,
+    "alignment": {
+      "evaluated": 797,
+      "moves": [
+        {
+          "axis": "y",
+          "blocks": [
+            "led_a",
+            "led_b"
+          ],
+          "perpendicularShifts": [
+            0,
+            -1
+          ],
+          "scoreAfter": 21343.59765625,
+          "scoreBefore": 21384.58984375,
+          "shifts": [
+            0,
+            0.9935002326965332
+          ]
+        },
+        {
+          "axis": "x",
+          "blocks": [
+            "rs485",
+            "can"
+          ],
+          "perpendicularShifts": [
+            0,
+            0.5
+          ],
+          "scoreAfter": 21249.1875,
+          "scoreBefore": 21343.59765625,
+          "shifts": [
+            0,
+            0.28950023651123047
+          ]
+        },
+        {
+          "axis": "y",
+          "blocks": [
+            "led_a",
+            "led_b"
+          ],
+          "perpendicularShifts": [
+            0,
+            0
+          ],
+          "scoreAfter": 21245.35546875,
+          "scoreBefore": 21249.1875,
+          "shifts": [
+            -0.24850010871887207,
+            0
+          ]
+        }
+      ],
+      "rejected": {
+        "electrical": 15,
+        "geometry": 83,
+        "hardHint": 0,
+        "native": 0,
+        "netLength": 0,
+        "objective": 690
+      }
+    },
+    "poseHash": "429733b11a89b044d72cfffa9796c74ab2535ef902d409a4a1108e519b0c63e2",
+    "inputHash": "9fc531b67ae032ecf7077bcec9cef90be686b4876ef39931122199e9b052ca47",
+    "paths": [
+      {
+        "id": "hse_clock",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": true,
+        "directDistance": 5.4770002365112305,
+        "pathDistance": 5.514999866485596,
+        "detour": 0.03799999877810478,
+        "backtrack": 0,
+        "turns": 0.029999999329447746,
+        "facing": 0.40799999237060547,
+        "segments": [
+          {
+            "index": 0,
+            "source": "X1.3",
+            "target": "R8.1",
+            "resolved": true,
+            "distance": 1.940000057220459,
+            "maxDistance": 3,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "R8.2",
+            "target": "U3.8",
+            "resolved": true,
+            "distance": 2.069999933242798,
+            "maxDistance": 6,
+            "withinConstraints": true
+          }
+        ]
+      },
+      {
+        "id": "can_h",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 9.501999855041504,
+        "pathDistance": 9.503999710083008,
+        "detour": 0.0020000000949949026,
+        "backtrack": 0,
+        "turns": 0.0010000000474974513,
+        "facing": 3.26200008392334,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U4.7",
+            "target": "D4.1",
+            "resolved": true,
+            "distance": 2.3399999141693115,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D4.1",
+            "target": "J4.1",
+            "resolved": true,
+            "distance": 7.159999847412109,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "can_l",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 9.074000358581543,
+        "pathDistance": 9.081999778747559,
+        "detour": 0.00800000037997961,
+        "backtrack": 0,
+        "turns": 0.004999999888241291,
+        "facing": 2.240000009536743,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U4.6",
+            "target": "D4.2",
+            "resolved": true,
+            "distance": 2.259999990463257,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D4.2",
+            "target": "J4.2",
+            "resolved": true,
+            "distance": 6.820000171661377,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "rs485_a",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 10.73799991607666,
+        "pathDistance": 11.609000205993652,
+        "detour": 0.8700000047683716,
+        "backtrack": 0,
+        "turns": 0.31700000166893005,
+        "facing": 3.5179998874664307,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U5.6",
+            "target": "D5.1",
+            "resolved": true,
+            "distance": 4.070000171661377,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D5.1",
+            "target": "J5.1",
+            "resolved": true,
+            "distance": 7.539999961853027,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      },
+      {
+        "id": "rs485_b",
+        "shape": "flexible",
+        "priority": "high",
+        "resolved": true,
+        "withinConstraints": false,
+        "directDistance": 8.878000259399414,
+        "pathDistance": 9.380999565124512,
+        "detour": 0.503000020980835,
+        "backtrack": 0,
+        "turns": 0.2770000100135803,
+        "facing": 1.9609999656677246,
+        "segments": [
+          {
+            "index": 0,
+            "source": "U5.7",
+            "target": "D5.2",
+            "resolved": true,
+            "distance": 2.359999895095825,
+            "withinConstraints": true
+          },
+          {
+            "index": 1,
+            "source": "D5.2",
+            "target": "J5.2",
+            "resolved": true,
+            "distance": 7.019999980926514,
+            "maxDistance": 5,
+            "withinConstraints": false
+          }
+        ]
+      }
+    ],
+    "backends": {
+      "block-backend:cubecl:": 45,
+      "post-place-backend:cubecl:": 28,
+      "board-backend:cubecl:": 1
+    },
+    "geometricMetrics": {
+      "pairCount": 19,
+      "pairSum": 197.03,
+      "pairMax": 24.04,
+      "crossings": 60,
+      "foreignPadHits": 103,
+      "internalIcPadHits": 1,
+      "wireLength": 653.65,
+      "hpwl": 679.14,
+      "area": 2305.86,
+      "aspect": 1.51
+    },
+    "compareToMainCpu": {
+      "changed": 0,
+      "maxDisplacement": 0,
+      "changes": [],
+      "alignmentIdentical": true,
+      "treeStagePosesIdentical": true,
+      "nativeSharedInputs": 74,
+      "nativeTotalInputs": 74,
+      "nativeDifferentSolutions": [],
+      "mainGeometryValid": true,
+      "mainNativeScore": 20731.583984375,
+      "mainNativeElectrical": {
+        "score": 8436.16796875,
+        "lengths": [
+          2.8000001907348633,
+          13.571884155273438,
+          2.799999237060547,
+          15.038480758666992,
+          14.949332237243652,
+          17.915206909179688,
+          19.878461837768555,
+          74.62527465820312,
+          17.516904830932617,
+          124.57970428466797,
+          17.61543846130371,
+          17.789670944213867,
+          15.948720932006836,
+          22.812885284423828,
+          36.38597869873047,
+          2.071911096572876,
+          23.760883331298828,
+          23.571273803710938,
+          23.66541862487793,
+          24.039222717285156,
+          13.688676834106445,
+          13.275424003601074,
+          21.539981842041016,
+          24.147878646850586,
+          1.9365997314453125,
+          1.7717304229736328,
+          1.7717304229736328,
+          23.93364906311035,
+          2.6010842323303223,
+          13.551334381103516,
+          7.240506172180176,
+          2.050955295562744,
+          10.190237998962402,
+          2.8419811725616455,
+          1.7717305421829224
+        ]
+      }
+    }
+  }
+]

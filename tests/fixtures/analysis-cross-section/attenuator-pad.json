@@ -1,0 +1,70 @@
+{
+  "electrical": {
+    "attenuatorPad": {
+      "id": "attenuator-pad-p7a",
+      "kind": "network",
+      "ports": [
+        "p1",
+        "p2"
+      ],
+      "source": "Explicit synthetic matched 6.0206 dB Attenuator Pad, no PCB component extraction",
+      "data": {
+        "format": "network-parameters",
+        "representation": "S",
+        "referenceTopology": "common",
+        "nature": "passive",
+        "referenceOhm": 50,
+        "frequenciesHz": [
+          1000000.0,
+          1000000000.0
+        ],
+        "parameters": [
+          [
+            [
+              {
+                "real": 0,
+                "imaginary": 0
+              },
+              {
+                "real": 0.5,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 0.5,
+                "imaginary": 0
+              },
+              {
+                "real": 0,
+                "imaginary": 0
+              }
+            ]
+          ],
+          [
+            [
+              {
+                "real": 0,
+                "imaginary": 0
+              },
+              {
+                "real": 0.5,
+                "imaginary": 0
+              }
+            ],
+            [
+              {
+                "real": 0.5,
+                "imaginary": 0
+              },
+              {
+                "real": 0,
+                "imaginary": 0
+              }
+            ]
+          ]
+        ]
+      }
+    }
+  }
+}

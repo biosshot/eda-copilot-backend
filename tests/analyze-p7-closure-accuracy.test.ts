@@ -1,0 +1,19 @@
+import test from 'node:test';import assert from 'node:assert/strict';import{readFileSync}from'node:fs';import{validatePhysicalReference}from'../scripts/verify-p7-closure-baseline.ts';
+const m=JSON.parse(readFileSync('tests/fixtures/analysis-p7-closure/manifest.json','utf8')),c=m.supplementalControls[0],r=JSON.parse(readFileSync(c.reference.path,'utf8'));
+test('finite copper reference independently resolves geometry and sensitivity',()=>assert.equal(validatePhysicalReference(c,r),'validated'));
+test('thin reference cannot certify finite copper',()=>{const q=structuredClone(r);q.geometry.copperThicknessMm=0;assert.throws(()=>validatePhysicalReference(c,q),/PHYSICAL_REFERENCE_MISMATCH/);});
+test('unknown or excessive uncertainty cannot pass',()=>{for(const v of [undefined,NaN,.081]){const q=structuredClone(r);q.uncertainty.relativeBound=v;assert.throws(()=>validatePhysicalReference(c,q),/UNKNOWN_REFERENCE_UNCERTAINTY/);}});
+test('unresolved grid sensitivity cannot pass',()=>{const q=structuredClone(r);q.uncertainty.meshDifference=.03;assert.throws(()=>validatePhysicalReference(c,q),/REFERENCE_SENSITIVITY_UNVALIDATED/);});
+import{createHash}from'node:crypto';
+test('physical future coupons keep hash-bound geometry and explicit unsupported states',()=>{for(const c of m.coupons){for(const [path,sha]of [[c.board,c.boardSha256],[c.dsl,c.dslSha256]])assert.equal(createHash('sha256').update(readFileSync(path)).digest('hex'),sha);assert.equal(c.status,'unsupported');assert.equal(c.physicalConnectivity.status,'complete');}assert.equal(m.coupons.find((c:any)=>c.id==='split-reference').physicalConnectivity.returnConnected,false);assert.equal(m.coupons.find((c:any)=>c.id==='agnd-dgnd-bridge').physicalConnectivity.returnConnected,false);});
+test('asymmetric dielectric clearances cannot reuse symmetric reference',()=>{const q=structuredClone(c);q.line.topDielectricHeightMm=.1;q.line.bottomDielectricHeightMm=.5;assert.throws(()=>validatePhysicalReference(q,r),/PHYSICAL_REFERENCE_MISMATCH lower conductor face/);});
+test('conductor and both ground coordinates define applicability',()=>{
+ for(const [field,value]of [['conductorYMm',[.31,.345]],['conductorYMm',[.3,.34]],['groundPlanesYMm',[.01,.645]],['groundPlanesYMm',[0,.7]],['groundPlanesYMm',[.635,0]]]){const q=structuredClone(r);q.geometry[field as string]=value;assert.throws(()=>validatePhysicalReference(c,q),/PHYSICAL_REFERENCE_MISMATCH/);}
+});
+test('required physical fields reject missing nonfinite and nonpositive data',()=>{
+ for(const key of ['widthMm','gapMm','copperThicknessMm','relativePermittivity'])for(const value of [undefined,NaN,Infinity,0,-1]){const q=structuredClone(r);q.geometry[key]=value;assert.throws(()=>validatePhysicalReference(c,q),/PHYSICAL_REFERENCE_MISMATCH/);}
+ for(const key of ['widthMm','gapMm','copperThicknessMm','topDielectricHeightMm','bottomDielectricHeightMm'])for(const value of [undefined,NaN,Infinity,0,-1]){const q=structuredClone(c);q.line[key]=value;assert.throws(()=>validatePhysicalReference(q,r),/PHYSICAL_REFERENCE_MISMATCH/);}
+ for(const key of ['groundPlanesYMm','conductorYMm'])for(const value of [undefined,[],[0,NaN],[0,Infinity]]){const q=structuredClone(r);q.geometry[key]=value;assert.throws(()=>validatePhysicalReference(c,q),/PHYSICAL_REFERENCE_MISMATCH/);}
+ for(const key of ['topMaterial','bottomMaterial'])for(const value of [undefined,{relativePermittivity:NaN,lossTangent:0},{relativePermittivity:4,lossTangent:.01},{relativePermittivity:4}]){const q=structuredClone(c);q.line[key]=value;assert.throws(()=>validatePhysicalReference(q,r),/PHYSICAL_REFERENCE_MISMATCH/);}
+});
+test('only floating representation differences are tolerated',()=>{const q=structuredClone(r);q.geometry.conductorYMm[1]+=(Number.EPSILON*2);assert.equal(validatePhysicalReference(c,q),'validated');q.geometry.conductorYMm[1]+=.000001;assert.throws(()=>validatePhysicalReference(c,q),/PHYSICAL_REFERENCE_MISMATCH/);});

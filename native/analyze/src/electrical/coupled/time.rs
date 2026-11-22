@@ -1,0 +1,957 @@
+//! Finite-front index-one descriptor transient; all source/load assembly precedes
+//! initialization and charge accounting. Output cadence does not choose the step.
+use super::*;
+use crate::extraction::local::accurate::Sum;
+
+fn state_energy(system: &System, x: &[f64], low: &[f64]) -> Sum {
+    let mut total = Sum::from(0.);
+    for (&(i,j), &v) in &system.linear.e {
+        let a = Sum::from(x[i]).add(Sum::from(low[i]));
+        let b = Sum::from(x[j]).add(Sum::from(low[j]));
+        total = total.add(a.mul(b.hi).add(a.mul(b.lo)).mul(v * 0.5));
+    }
+    total
+}
+fn state_ports(system: &System, x: &[f64], low: &[f64], ports: usize) -> Vec<f64> {
+    let mut out = vec![Sum::from(0.); ports];
+    for (&(i,j), &v) in &system.b { out[j] = out[j].add(Sum::from(x[i]).add(Sum::from(low[i])).mul(v)); }
+    out.into_iter().map(Sum::value).collect()
+}
+fn state_loss(system: &System, x: &[f64], low: &[f64]) -> f64 {
+    let mut out = Sum::from(0.);
+    for (&(i,j), &v) in &system.r {
+        let a = Sum::from(x[system.nv+i]).add(Sum::from(low[system.nv+i]));
+        let b = Sum::from(x[system.nv+j]).add(Sum::from(low[system.nv+j]));
+        out = out.add(a.mul(b.hi).add(a.mul(b.lo)).mul(v));
+    }
+    out.value()
+}
+fn state_charge(system: &System, x: &[f64], low: &[f64]) -> Vec<f64> {
+    let mut q = vec![Sum::from(0.); system.nv];
+    for (&(i,j), &v) in &system.linear.e { if i < system.nv { q[i] = q[i].add(Sum::from(x[j]).add(Sum::from(low[j])).mul(v)); } }
+    q.into_iter().map(Sum::value).collect()
+}
+fn storage_basis(system: &System) -> Result<(Vec<f64>, Mat<f64>)> {
+    let n = system.linear.n;
+        let scale = system.linear.e.values().map(|v| v.abs()).fold(0., f64::max);
+        // Separate certified gauges before the storage rank calculation. Raw E
+        // stays intact for energy, charge and the original-equation checks.
+        let mut complement: Vec<Vec<f64>> = vec![];
+        for axis in 0..n {
+            let mut v = vec![0.; n];
+            v[axis] = 1.;
+            for _ in 0..2 {
+                for q in &system.structural {
+                    let dot = v.iter().zip(q).map(|(a, b)| a * b).sum::<f64>();
+                    for (a, b) in v.iter_mut().zip(q) {
+                        *a -= dot * b;
+                    }
+                }
+                for q in &complement {
+                    let dot = v.iter().zip(q).map(|(a, b)| a * b).sum::<f64>();
+                    for (a, b) in v.iter_mut().zip(q) {
+                        *a -= dot * b;
+                    }
+                }
+            }
+            let norm = v.iter().map(|a| a * a).sum::<f64>().sqrt();
+            if norm > 1e-12 {
+                for a in &mut v {
+                    *a /= norm;
+                }
+                complement.push(v);
+            }
+        }
+        let m = complement.len();
+        let mut action = Mat::<f64>::zeros(n, m);
+        if scale != 0. {
+            for (&(a, b), v) in &system.linear.e {
+                for j in 0..m {
+                    action[(a, j)] += (v / scale) * complement[j][b];
+                }
+            }
+        }
+        let storage = Mat::from_fn(m, m, |i, j| {
+            (0..n)
+                .map(|a| complement[i][a] * action[(a, j)])
+                .sum::<f64>()
+        })
+        .self_adjoint_eigen(Side::Lower)
+        .map_err(|e| fail("COUPLED_INITIAL", format!("{e:?}")))?;
+        let mut values = vec![0.; n];
+        let mut vectors = Mat::zeros(n, n);
+        for col in 0..m {
+            values[col] = storage.S()[col];
+            for row in 0..n {
+                vectors[(row, col)] = (0..m)
+                    .map(|j| complement[j][row] * storage.U()[(j, col)])
+                    .sum::<f64>();
+            }
+        }
+        for (col, q) in system.structural.iter().enumerate() {
+            for row in 0..system.nv {
+                vectors[(row, m + col)] = q[row];
+            }
+        }
+    Ok((values, vectors))
+}
+fn check_algebraic(system: &System, x: &[f64], low: &[f64], rhs: &[f64]) -> Result<()> {
+    let n = x.len();
+    let (values, vectors) = storage_basis(system)?;
+    let mut residual: Vec<_> = rhs.iter().map(|&v| Sum::from(-v)).collect();
+    let mut magnitude: Vec<_> = rhs.iter().map(|v| v.abs()).collect();
+    for (&(i,j), &v) in &system.linear.g {
+        let term = Sum::from(x[j]).add(Sum::from(low[j])).mul(v);
+        residual[i] = residual[i].add(term);
+        magnitude[i] += term.value().abs();
+    }
+    for k in 0..n {
+        if values[k] < -1e-12 || (values[k] > 0. && values[k] < 1e-14) { return Err(fail("COUPLED_INITIAL", "Unresolved storage rank")); }
+        if values[k] <= 0. {
+            let mut r = Sum::from(0.);
+            let mut m = 0.;
+            for i in 0..n { let q = vectors[(i,k)]; r = r.add(residual[i].mul(q)); m += q.abs()*magnitude[i]; }
+            if r.value().abs() > 1e-14 + 1e-8*m { return Err(fail("COUPLED_INITIAL", "Compensated state failed original algebraic equations")); }
+        }
+    }
+    Ok(())
+}
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Driver {
+    pub port: usize,
+    pub resistance_ohm: f64,
+    pub waveform: Waveform,
+}
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Receiver {
+    pub port: usize,
+    pub resistance_ohm: Option<f64>,
+    pub capacitance_f: f64,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Request {
+    pub resource: Option<frequency::Resource>,
+    pub topology: Option<composition::Topology>,
+    pub drivers: Vec<Driver>,
+    pub receivers: Vec<Receiver>,
+    pub time: Time,
+    pub initial: Option<Value>,
+    pub numerics: Option<Numerics>,
+    pub budget: Option<Budget>,
+}
+/// Both contracts apply: the normalized physical gate must never weaken the
+/// legacy absolute/relative guard at large exchange. Norm uses nonnegative loss.
+fn energy_balance_ok(balance: f64, norm: f64) -> bool {
+    balance.is_finite()
+        && norm.is_finite()
+        && norm >= 0.
+        && balance.abs() <= 1e-14 + 1e-7 * norm
+        && balance.abs() <= if norm == 0. { 1e-20 } else { 1e-4 * norm }
+}
+fn deadline(start: Instant, budget: Option<&Budget>) -> Result<()> {
+    super::super::deadline(start, budget, "Descriptor time")
+}
+pub(crate) fn fastest_front(waveform: &Waveform) -> f64 {
+    match waveform {
+        Waveform::Step { from, to, rise, .. } => {
+            if from == to {
+                f64::INFINITY
+            } else {
+                *rise
+            }
+        }
+        Waveform::Sine { period, .. } => period / 2.,
+        Waveform::Pulse {
+            low,
+            high,
+            rise,
+            fall,
+            ..
+        } => {
+            if low == high {
+                f64::INFINITY
+            } else {
+                rise.min(*fall)
+            }
+        }
+        Waveform::Pwl { points, .. } => points
+            .windows(2)
+            .filter(|v| v[0][1] != v[1][1])
+            .map(|v| v[1][0] - v[0][0])
+            .fold(f64::INFINITY, f64::min),
+    }
+}
+fn source(system: &System, drivers: &[Driver], ports: usize, t: f64) -> Vec<f64> {
+    let ip = terminal_source(drivers, &(0..ports).collect::<Vec<_>>(), ports, t);
+    system.port_rhs(&ip)
+}
+pub(crate) fn terminal_source(
+    drivers: &[Driver],
+    nodes: &[usize],
+    size: usize,
+    t: f64,
+) -> Vec<f64> {
+    let mut ip = vec![0.; size];
+    for d in drivers {
+        ip[nodes[d.port]] += d.waveform.sample(t) / d.resistance_ohm;
+    }
+    ip
+}
+/// The same finite source/load contract and power convention serves descriptor
+/// and delay-containing graphs. Port voltages are always positive to return.
+pub(crate) fn validate_bindings(
+    drivers: &[Driver],
+    receivers: &[Receiver],
+    ports: usize,
+    prefix: &str,
+) -> Result<()> {
+    if drivers.len() > 16
+        || receivers.len() > 32
+        || drivers
+            .iter()
+            .any(|d| d.port >= ports || !d.resistance_ohm.is_finite() || d.resistance_ohm <= 0.)
+        || receivers.iter().any(|r| {
+            r.port >= ports
+                || !r.capacitance_f.is_finite()
+                || r.capacitance_f < 0.
+                || r.resistance_ohm.is_some_and(|v| !v.is_finite() || v <= 0.)
+        })
+    {
+        return Err(fail(
+            &format!("{prefix}_BINDING"),
+            "Finite Thevenin drivers and passive RC receivers required",
+        ));
+    }
+    for d in drivers {
+        d.waveform.validate()?;
+        if d.waveform.discontinuous() {
+            return Err(fail(
+                &format!("{prefix}_FINITE_FRONT"),
+                "Continuous finite fronts required; impulses/jump projection unsupported",
+            ));
+        }
+    }
+    Ok(())
+}
+pub(crate) fn terminal_admittances(
+    drivers: &[Driver],
+    receivers: &[Receiver],
+) -> Vec<(usize, f64, f64)> {
+    drivers
+        .iter()
+        .map(|d| (d.port, 1. / d.resistance_ohm, 0.))
+        .chain(receivers.iter().map(|r| {
+            (
+                r.port,
+                r.resistance_ohm.map(|v| 1. / v).unwrap_or(0.),
+                r.capacitance_f,
+            )
+        }))
+        .collect()
+}
+pub(crate) fn terminal_power(
+    drivers: &[Driver],
+    receivers: &[Receiver],
+    voltage: &[f64],
+    at: f64,
+) -> (f64, f64) {
+    let (mut work, mut loss) = (0., 0.);
+    for d in drivers {
+        let source = d.waveform.sample(at);
+        let current = (source - voltage[d.port]) / d.resistance_ohm;
+        work += source * current;
+        loss += d.resistance_ohm * current * current;
+    }
+    for r in receivers {
+        if let Some(resistance) = r.resistance_ohm {
+            loss += voltage[r.port] * voltage[r.port] / resistance;
+        }
+    }
+    (work, loss)
+}
+impl System {
+    /// Preserve every stored charge/flux coordinate while satisfying algebraic
+    /// equations. E's eigenspaces define the split; a fictitious ground does not.
+    fn consistent(
+        &mut self,
+        initial: &[f64],
+        rhs: &[f64],
+        stats: &mut Counters,
+    ) -> Result<Vec<f64>> {
+        let n = self.linear.n;
+        self.compatible_structural_rhs(rhs)?;
+        let (values, vectors) = storage_basis(self)?;
+        if (0..n).all(|i| values[i] >= 1e-14) {
+            return Ok(initial.to_vec());
+        }
+        let mut matrix = Matrix::new();
+        let mut b = vec![0.; n];
+        for row in 0..n {
+            let value = values[row];
+            if value < -1e-12 {
+                return Err(fail("COUPLED_INITIAL", "Indefinite storage matrix"));
+            }
+            // Near-zero unresolved storage is rejected instead of erased.
+            if value > 0. && value < 1e-14 {
+                return Err(fail("COUPLED_INITIAL", "Unresolved storage rank"));
+            }
+            if value > 0. {
+                for j in 0..n {
+                    let q = vectors[(j, row)];
+                    if q != 0. {
+                        matrix.insert((row, j), q);
+                    }
+                    b[row] += q * initial[j];
+                }
+            } else {
+                for (&(i, j), g) in &self.linear.g {
+                    *matrix.entry((row, j)).or_default() += vectors[(i, row)] * g;
+                }
+                b[row] = (0..n).map(|i| vectors[(i, row)] * rhs[i]).sum();
+            }
+        }
+        let gauges = self.constraints(false, initial)?;
+        let k = gauges.len();
+        b.resize(n + k, 0.);
+        for (g, (mode, constraint, _)) in gauges.iter().enumerate() {
+            for row in 0..n {
+                if values[row] <= 0. {
+                    let coefficient = (0..self.nv)
+                        .map(|i| vectors[(i, row)] * mode[i])
+                        .sum::<f64>();
+                    if coefficient != 0. {
+                        matrix.insert((row, n + g), coefficient);
+                    }
+                }
+                if constraint[row] != 0. {
+                    matrix.insert((n + g, row), constraint[row]);
+                }
+            }
+        }
+        let (x, res, kcl) = self.linear.solve(matrix, b, stats)?;
+        self.residual = self.residual.max(res);
+        self.kcl = self.kcl.max(kcl);
+        let x = x[..n].to_vec();
+        let difference: Vec<_> = x.iter().zip(initial).map(|(a, b)| a - b).collect();
+        let held = multiply(&self.linear.e, &difference, n);
+        let stored = multiply(&self.linear.e, initial, n);
+        if held
+            .iter()
+            .zip(stored)
+            .any(|(a, b)| a.abs() > 1e-20 + 1e-9 * b.abs())
+        {
+            return Err(fail(
+                "COUPLED_INITIAL",
+                "Algebraic initialization changed charge/flux",
+            ));
+        }
+        Ok(x)
+    }
+    /// BE increment form prevents cancellation of E*x/h on a voltage rail.
+    fn advance(
+        &mut self,
+        old: &[f64],
+        old_low: &[f64],
+        rhs: Vec<f64>,
+        h: f64,
+        stats: &mut Counters,
+    ) -> Result<(Vec<f64>, Vec<f64>)> {
+        let n = self.linear.n;
+        self.compatible_structural_rhs(&rhs)?;
+        let mut b: Vec<_> = rhs.iter().map(|&v| Sum::from(v)).collect();
+        for (&(i, j), &g) in &self.linear.g {
+            b[i] = b[i].sub(Sum::from(old[j]).add(Sum::from(old_low[j])).mul(g));
+        }
+        let mut b: Vec<_> = b.into_iter().map(Sum::value).collect();
+        let mut matrix = self.linear.matrix(1. / h, None);
+        // Only exact zero-energy gauges are constrained during evolution.
+        let gauges = self.constraints(false, old)?;
+        b.resize(n + gauges.len(), 0.);
+        for (g, (mode, row, _)) in gauges.iter().enumerate() {
+            for i in 0..n {
+                if i < self.nv && mode[i] != 0. {
+                    matrix.insert((i, n + g), mode[i]);
+                }
+                if row[i] != 0. {
+                    matrix.insert((n + g, i), row[i]);
+                }
+            }
+        }
+        let (delta, res, kcl) = self.linear.solve_compensated(matrix, b, stats)?;
+        self.residual = self.residual.max(res);
+        self.kcl = self.kcl.max(kcl);
+        let sums: Vec<_> = old.iter().zip(old_low).zip(&delta).map(|((&a,&lo),&d)| Sum::from(a).add(Sum::from(lo)).add(Sum::from(d))).collect();
+        let next: Vec<_> = sums.iter().map(|s| s.hi).collect();
+        let next_low: Vec<_> = sums.iter().map(|s| s.lo).collect();
+        if next.iter().chain(&next_low).any(|v| !v.is_finite()) {
+            return Err(fail("COUPLED_NONFINITE", "Time increment overflow"));
+        }
+        // Recheck original physical increment equations, without gauge currents.
+        let mut ed = vec![Sum::from(0.); n];
+        let mut gn = vec![Sum::from(0.); n];
+        for (&(i,j), &v) in &self.linear.e { ed[i] = ed[i].add(Sum::from(v).mul(delta[j])); }
+        for (&(i,j), &v) in &self.linear.g { gn[i] = gn[i].add(sums[j].mul(v)); }
+        let ed: Vec<_> = ed.into_iter().map(Sum::value).collect();
+        let gn: Vec<_> = gn.into_iter().map(Sum::value).collect();
+        if let Some((i, ((e, g), b))) = ed.iter().zip(&gn).zip(&rhs).enumerate().find(|(_, ((e, g), b))| {
+            (*e / h + *g - *b).abs() > 1e-14 + 1e-8 * (e.abs() / h + g.abs() + b.abs())
+        }) {
+            return Err(fail(
+                "COUPLED_KCL",
+                format!("Time step failed original descriptor equations: row={i} h={h:e} storage={:e} conductance={g:e} rhs={b:e} residual={:e}", e / h, e / h + g - b),
+            ));
+        }
+        Ok((next, next_low))
+    }
+}
+pub fn solve(request: Request) -> Result<Value> {
+    let start = Instant::now();
+    deadline(start, request.budget.as_ref())?;
+    if request
+        .resource
+        .as_ref()
+        .is_some_and(|r| r.data["format"] == "delayed-scattering")
+        || request.topology.as_ref().is_some_and(|t| {
+            t.instances
+                .iter()
+                .any(|i| i.model.data["format"] == "delayed-scattering")
+        })
+    {
+        return delayed::time(request, start);
+    }
+    let built = match (&request.resource, &request.topology) {
+        (Some(resource), None) => composition::resource(resource, request.budget.as_ref(), start)?,
+        (None, Some(topology)) => composition::build(topology, request.budget.as_ref(), start)?,
+        _ => {
+            return Err(fail(
+                "COUPLED_INPUT",
+                "Choose exactly one source Resource or explicit topology",
+            ))
+        }
+    };
+    let composition::Built {
+        model,
+        fit,
+        conditional,
+        ports: port_names,
+        band,
+        source_memory,
+        recovery,
+        assembly_plan,
+    } = built;
+    let ports = port_names.len();
+    let physical_initial = request.initial.as_ref().and_then(|v| {
+        if v["kind"] == "physical-state" {
+            Some(v)
+        } else {
+            v.get("physicalInitial").filter(|v| !v.is_null())
+        }
+    });
+    if physical_initial.is_some_and(|v| {
+        v["potentialsV"]
+            .as_array()
+            .is_none_or(|a| a.len() != recovery.potentials.len())
+            || v["currentsA"]
+                .as_array()
+                .is_none_or(|a| a.len() != recovery.currents.len())
+    }) {
+        return Err(fail(
+            "COUPLED_INITIAL_CHARGE",
+            "Complete bounded initial physical state required",
+        ));
+    }
+    let identity = serde_json::to_string(&(
+        &model,
+        &port_names,
+        &request.drivers,
+        &request.receivers,
+        &recovery,
+        &physical_initial,
+        &request
+            .topology
+            .as_ref()
+            .map(|t| (&t.connections, &t.connection_contacts)),
+    ))
+    .map_err(|e| fail("COUPLED_INPUT", e))?;
+    validate_bindings(&request.drivers, &request.receivers, ports, "COUPLED")?;
+    let fit_max = if let Some(report) = &fit {
+        Some(
+            report["frequenciesHz"]
+                .as_array()
+                .and_then(|f| f.last())
+                .and_then(Value::as_f64)
+                .ok_or_else(|| fail("TEMPORAL_BAND", "Missing fitted source band"))?,
+        )
+    } else {
+        None
+    };
+    if let Some(maximum) = fit_max
+        .into_iter()
+        .chain(band.map(|v| v[1]))
+        .reduce(f64::min)
+    {
+        if request
+            .drivers
+            .iter()
+            .any(|d| fastest_front(&d.waveform) < 10. / maximum)
+        {
+            return Err(fail(
+                "TEMPORAL_SOURCE_BAND",
+                "Fastest declared front must be at least 10/fMax; closure stays conditional",
+            ));
+        }
+    }
+    let time = &request.time;
+    if !time.stop_s.is_finite()
+        || time.stop_s <= 0.
+        || !time.sample_step_s.is_finite()
+        || time.sample_step_s <= 0.
+        || time.stop_s / time.sample_step_s > 100000.
+    {
+        return Err(fail(
+            "COUPLED_TIME",
+            "Invalid or oversized output time axis",
+        ));
+    }
+    let matrix_budget = composition::remaining_budget(request.budget.as_ref(), source_memory)?;
+    let mut system = System::compile(&model, ports, Some(&matrix_budget))?;
+    deadline(start, request.budget.as_ref())?;
+    for (port, conductance, capacitance) in
+        terminal_admittances(&request.drivers, &request.receivers)
+    {
+        system.add_port_admittance(port, conductance, capacitance)?;
+    }
+    let n = system.linear.n;
+    let transient_plan = n.saturating_mul(512);
+    if (system.memory_plan.max(assembly_plan).saturating_add(source_memory).saturating_add(transient_plan)) as f64 > request.budget.as_ref().and_then(|b| b.max_memory_mi_b).unwrap_or(256.) * 1048576. {
+        return Err(fail("COUPLED_BUDGET", "Compensated time state exceeds admitted memory"));
+    }
+    let mut stats = Counters::default();
+    let (mut t, mut x, mut x_low) = match request.initial.as_ref() {
+        None | Some(Value::String(_)) => {
+            if request.initial.as_ref().is_some_and(|v| v != "steady") {
+                return Err(fail("COUPLED_INITIAL", "Unknown initial condition"));
+            }
+            if recovery.mapped
+                && system.null_modes()?.iter().any(|q| {
+                    let mut v = vec![0.; n];
+                    v[..system.nv].copy_from_slice(q);
+                    multiply(&system.linear.e, &v, n).iter().any(|v| *v != 0.)
+                })
+            {
+                return Err(fail(
+                    "COUPLED_INITIAL_CHARGE",
+                    "Floating physical charge requires explicit assembled physical-state",
+                ));
+            }
+            let rhs = source(&system, &request.drivers, ports, 0.);
+            (0., system.solve(0., rhs, &vec![0.; n], &mut stats)?, vec![0.; n])
+        }
+        Some(state) if state["kind"] == "physical-state" => {
+            let (x, steady) = recovery.initial(state, n)?;
+            let rhs = source(&system, &request.drivers, ports, 0.);
+            let initialized = if steady {
+                system.solve(0., rhs, &x, &mut stats)?
+            } else {
+                system.consistent(&x, &rhs, &mut stats)?
+            };
+            if steady
+                && initialized
+                    .iter()
+                    .zip(&x)
+                    .any(|(a, b)| (a - b).abs() > 1e-12 + 1e-9 * a.abs().max(b.abs()))
+            {
+                return Err(fail(
+                    "COUPLED_INITIAL",
+                    "Physical state is not an assembled steady solution",
+                ));
+            }
+            (0., initialized, vec![0.; n])
+        }
+        Some(state) => {
+            if state["identity"] != identity {
+                return Err(fail(
+                    "COUPLED_INITIAL",
+                    "Continuation identity differs from fully assembled model",
+                ));
+            }
+            let at = state["timeS"]
+                .as_f64()
+                .filter(|v| v.is_finite() && *v >= 0.)
+                .ok_or_else(|| fail("COUPLED_INITIAL", "Missing physical time"))?;
+            let x: Vec<f64> = serde_json::from_value(state["x"].clone())
+                .map_err(|e| fail("COUPLED_INITIAL", e))?;
+            if x.len() != n || x.iter().any(|v| !v.is_finite()) {
+                return Err(fail("COUPLED_INITIAL", "Invalid physical state"));
+            }
+            let low: Vec<f64> = match state.get("xLow") { Some(v) => serde_json::from_value(v.clone()).map_err(|e| fail("COUPLED_INITIAL", e))?, None => vec![0.; n] };
+            if low.len() != n || low.iter().zip(&x).any(|(l,h)| !l.is_finite() || l.abs() > f64::EPSILON * h.abs().max(f64::MIN_POSITIVE)) { return Err(fail("COUPLED_INITIAL", "Invalid compensated physical state")); }
+            let rhs = source(&system, &request.drivers, ports, at);
+            let high = system.consistent(&x, &rhs, &mut stats)?;
+            let tail = system.consistent(&low, &vec![0.; n], &mut stats)?;
+            let combined: Vec<_> = high.iter().zip(&tail).map(|(&h,&l)| Sum::from(h).add(Sum::from(l))).collect();
+            let high: Vec<_> = combined.iter().map(|v| v.hi).collect();
+            let low: Vec<_> = combined.iter().map(|v| v.lo).collect();
+            check_algebraic(&system, &high, &low, &rhs)?;
+            (at, high, low)
+        }
+    };
+    if t >= time.stop_s {
+        return Err(fail(
+            "COUPLED_TIME",
+            "Stop must follow initial physical time",
+        ));
+    }
+    let initial_time = t;
+    deadline(start, request.budget.as_ref())?;
+    let initial_energy_sum = state_energy(&system, &x, &x_low);
+    let initial_energy = initial_energy_sum.value();
+    if !initial_energy.is_finite() || x.iter().any(|v| !v.is_finite()) {
+        return Err(fail("COUPLED_NONFINITE", "Nonfinite initial state/energy"));
+    }
+    let initial_charge = state_charge(&system, &x, &x_low);
+    let gauge_count = system.constraints(false, &x)?.len();
+    let capture_physical = recovery.mapped || physical_initial.is_some();
+    let mut conductor_potentials = if capture_physical {
+        vec![x[..system.nv].to_vec()]
+    } else {
+        vec![]
+    };
+    let mut conductor_charges = if capture_physical {
+        vec![initial_charge.clone()]
+    } else {
+        vec![]
+    };
+    let samples = super::super::solve::output_samples(time, t)?;
+    let output_plan = samples
+        .saturating_mul(
+            ports + request.drivers.len() + if capture_physical { 2 * system.nv } else { 0 } + 4,
+        )
+        .saturating_mul(64);
+    if samples > 100001
+        || (system.memory_plan.max(assembly_plan).saturating_add(output_plan).saturating_add(source_memory).saturating_add(transient_plan)) as f64
+            > request
+                .budget
+                .as_ref()
+                .and_then(|b| b.max_memory_mi_b)
+                .unwrap_or(256.)
+                * 1048576.
+    {
+        return Err(fail(
+            "COUPLED_BUDGET",
+            "Time output exceeds admitted memory",
+        ));
+    }
+    let rel = request
+        .numerics
+        .as_ref()
+        .and_then(|v| v.relative_tolerance)
+        .unwrap_or(1e-5);
+    let abs = request
+        .numerics
+        .as_ref()
+        .and_then(|v| v.absolute_tolerance)
+        .unwrap_or(1e-8);
+    let limit = request
+        .numerics
+        .as_ref()
+        .and_then(|v| v.max_iterations)
+        .unwrap_or(100000);
+    if !rel.is_finite()
+        || rel <= 0.
+        || rel > 1e-3
+        || !abs.is_finite()
+        || abs <= 0.
+        || abs > 1e-5
+        || limit == 0
+        || limit > 1000000
+    {
+        return Err(fail("COUPLED_NUMERICS", "Invalid accuracy/step controls"));
+    }
+    let mut axis = vec![t];
+    let mut outputs = vec![state_ports(&system, &x, &x_low, ports)];
+    let mut currents = vec![request
+        .drivers
+        .iter()
+        .map(|d| (d.waveform.sample(t) - outputs[0][d.port]) / d.resistance_ohm)
+        .collect::<Vec<_>>()];
+    let mut energies = vec![initial_energy];
+    let mut next_sample = 1;
+    // Start from declared fastest fitted pole, and reset at every source corner.
+    // For generic descriptors step doubling plus independent refinement is still
+    // required by callers: a successful local estimate is not global convergence.
+    let fastest = fit
+        .as_ref()
+        .and_then(|f| f["coefficients"].as_array())
+        .into_iter()
+        .flatten()
+        .filter_map(|m| m["polesPerS"].as_array())
+        .flatten()
+        .filter_map(Value::as_f64)
+        .fold(0., f64::max);
+    let seed = ((time.stop_s - t) / 1000.).min(if fastest > 0. {
+        0.1 / fastest
+    } else {
+        f64::INFINITY
+    });
+    let max_h = request
+        .drivers
+        .iter()
+        .map(|d| d.waveform.max_step())
+        .fold((time.stop_s - t) / 100., f64::min);
+    let maximum_step = request
+        .numerics
+        .as_ref()
+        .and_then(|v| v.max_step_s)
+        .unwrap_or(f64::INFINITY);
+    if maximum_step <= 0. || maximum_step.is_nan() || maximum_step == f64::NEG_INFINITY {
+        return Err(fail(
+            "COUPLED_NUMERICS",
+            "maxStepS must be finite positive when provided",
+        ));
+    }
+    if request
+        .numerics
+        .as_ref()
+        .and_then(|v| v.max_step_s)
+        .is_some_and(|v| !v.is_finite())
+    {
+        return Err(fail("COUPLED_NUMERICS", "maxStepS must be finite"));
+    }
+    let max_h = max_h.min(maximum_step);
+    let mut max_accepted_h = 0_f64;
+    let mut h = seed;
+    let (mut work, mut loss, mut numerical, mut maxerr) = (0., 0., 0., 0_f64);
+    while t < time.stop_s {
+        deadline(start, request.budget.as_ref())?;
+        if stats.accepted_steps + stats.rejected_steps >= limit {
+            return Err(fail(
+                "NETWORK_STEP_BUDGET",
+                "Descriptor internal step limit; incomplete result",
+            ));
+        }
+        let event = request
+            .drivers
+            .iter()
+            .map(|d| d.waveform.next(t))
+            .fold(time.stop_s, f64::min);
+        h = h.min(max_h).min(event - t).min(time.stop_s - t);
+        if h <= 32. * f64::EPSILON * t.abs().max(1e-30) {
+            return Err(fail(
+                "NETWORK_STEP_UNDERFLOW",
+                "Cannot resolve descriptor dynamics/front",
+            ));
+        }
+        let full = system.advance(
+            &x,
+            &x_low,
+            source(&system, &request.drivers, ports, t + h),
+            h,
+            &mut stats,
+        )?;
+        let half = system.advance(
+            &x,
+            &x_low,
+            source(&system, &request.drivers, ports, t + h / 2.),
+            h / 2.,
+            &mut stats,
+        )?;
+        let fine = system.advance(
+            &half.0,
+            &half.1,
+            source(&system, &request.drivers, ports, t + h),
+            h / 2.,
+            &mut stats,
+        )?;
+        let err = full.0.iter().zip(&full.1).zip(fine.0.iter().zip(&fine.1)).zip(x.iter().zip(&x_low))
+            .map(|(((&a,&al),(&b,&bl)),(&c,&cl))| Sum::from(a).add(Sum::from(al)).sub(Sum::from(b).add(Sum::from(bl))).value().abs() / (abs + rel * Sum::from(b).add(Sum::from(bl)).value().abs().max(Sum::from(c).add(Sum::from(cl)).value().abs())))
+            .fold(0., f64::max);
+        if err > 1. {
+            stats.rejected_steps += 1;
+            h *= (0.9 / err.sqrt()).clamp(0.1, 0.5);
+            continue;
+        }
+        maxerr = maxerr.max(err);
+        stats.accepted_steps += 1;
+        max_accepted_h = max_accepted_h.max(h);
+        let mut previous = (&x, &x_low);
+        for (y, yl, at) in [(&half.0, &half.1, t + h / 2.), (&fine.0, &fine.1, t + h)] {
+            let voltage = state_ports(&system, y, yl, ports);
+            let (p, external_loss) =
+                terminal_power(&request.drivers, &request.receivers, &voltage, at);
+            let dissipated = state_loss(&system, y, yl) + external_loss;
+            work += p * h / 2.;
+            loss += dissipated * h / 2.;
+            let delta: Vec<_> = y.iter().zip(yl).zip(previous.0.iter().zip(previous.1)).map(|((&a,&al),(&b,&bl))| Sum::from(a).add(Sum::from(al)).sub(Sum::from(b).add(Sum::from(bl))).value()).collect();
+            numerical += system.energy(&delta);
+            previous = (y, yl);
+        }
+        while next_sample < samples {
+            let out = (initial_time + next_sample as f64 * time.sample_step_s).min(time.stop_s);
+            if out > t + h {
+                break;
+            }
+            let (a, al, b, bl, fraction) = if out <= t + h / 2. {
+                (&x, &x_low, &half.0, &half.1, (out - t) / (h / 2.))
+            } else {
+                (&half.0, &half.1, &fine.0, &fine.1, (out - t - h / 2.) / (h / 2.))
+            };
+            let state: Vec<_> = a
+                .iter().zip(al).zip(b.iter().zip(bl))
+                .map(|((&a,&al),(&b,&bl))| {let a=Sum::from(a).add(Sum::from(al)); let b=Sum::from(b).add(Sum::from(bl)); a.add(b.sub(a).mul(fraction))})
+                .collect();
+            let hi: Vec<_> = state.iter().map(|v| v.hi).collect();
+            let lo: Vec<_> = state.iter().map(|v| v.lo).collect();
+            let voltage = state_ports(&system, &hi, &lo, ports);
+            currents.push(
+                request
+                    .drivers
+                    .iter()
+                    .map(|d| (d.waveform.sample(out) - voltage[d.port]) / d.resistance_ohm)
+                    .collect(),
+            );
+            energies.push(state_energy(&system, &hi, &lo).value());
+            if capture_physical {
+                conductor_potentials.push(state[..system.nv].iter().map(|v| v.value()).collect());
+                let mut q = vec![Sum::from(0.); system.nv];
+                for (&(i,j), &v) in &system.linear.e { if i < system.nv { q[i] = q[i].add(state[j].mul(v)); } }
+                conductor_charges.push(q.into_iter().map(Sum::value).collect());
+            }
+            axis.push(out);
+            outputs.push(voltage);
+            next_sample += 1;
+        }
+        t += h;
+        x = fine.0;
+        x_low = fine.1;
+        h *= if err == 0. {
+            2.
+        } else {
+            (0.9 / err.sqrt()).clamp(0.5, 2.)
+        };
+        if (t - event).abs() <= 16. * f64::EPSILON * event.abs() {
+            h = h.min(seed);
+        }
+    }
+    let energy_change = state_energy(&system, &x, &x_low).sub(initial_energy_sum).value();
+    deadline(start, request.budget.as_ref())?;
+    let balance = work - loss - energy_change - numerical;
+    let norm = work.abs() + loss + energy_change.abs() + numerical;
+    if loss < 0. || numerical < 0. || !energy_balance_ok(balance, norm) {
+        return Err(fail(
+            "COUPLED_ENERGY",
+            format!("BE work/loss/storage balance unresolved: defect {balance} J, exchange norm {norm} J; no energy-floor relaxation"),
+        ));
+    }
+    Ok(
+        json!({"status":"complete","diagnostics":[],"axis":axis,"portVoltages":outputs,"driverCurrentsA":currents,"energyJ":energies,"conductorPotentialsV":conductor_potentials,"conductorChargesC":conductor_charges,"physicalRecovery":recovery,"initialConductorChargesC":initial_charge,"finalConductorChargesC":state_charge(&system,&x,&x_low),"zeroEnergyGauges":gauge_count,"fit":fit,"conditional":conditional,"counters":stats,"quality":{"relativeResidual":system.residual,"kclAbsA":system.kcl,"maximumLocalErrorRatio":maxerr,"workJ":work,"dissipatedJ":loss,"storedEnergyChangeJ":energy_change,"beNumericalDissipationJ":numerical,"energyBalanceJ":balance,"rawEnergyBalanceJ":balance+numerical,"energyNormalizationJ":norm,"normalizedEnergyBalance":if norm==0.{0.}else{balance.abs()/norm},"maximumAcceptedStepS":max_accepted_h},"finalState":{"kind":"coupled-state","physicalInitial":physical_initial,"identity":identity,"timeS":t,"x":x,"xLow":x_low},"elapsedMs":start.elapsed().as_secs_f64()*1000.,"memoryPlanBytes":system.memory_plan.max(assembly_plan)+output_plan+source_memory+transient_plan,"assumptions":["Full assembled descriptor; charge evolves with excitation; no per-island neutrality imposed","Block-diagonal supplied models omit intermodel mutual C/L; close coupled objects require a jointly extracted model. Physical weld is not EM extraction","Continuous finite fronts, finite Thevenin drivers and passive RC receiver loads","Finite-band front screening is conditional and does not prove absence of source spectrum outside the authored band","Backward Euler step doubling; local error control is not independent global time convergence","Output is interpolation over accepted half steps; sampled extrema are not continuous extrema"]}),
+    )
+}
+pub fn run(request: Request) -> Value {
+    match solve(request) {
+        Ok(value) => value,
+        Err(error) => {
+            json!({"status":"rejected","diagnostics":[{"code":error.split(':').next().unwrap_or("COUPLED_ERROR"),"severity":"error","message":error}]})
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn energy_guard_preserves_legacy_large_exchange_and_strict_small_zero_cases() {
+        // R1 counterexample: normalized-only accepts this, legacy must reject.
+        assert!(1e-8 <= 1e-4 * 1e-3);
+        assert!(!energy_balance_ok(1e-8, 1e-3));
+        assert!(!energy_balance_ok(-1e-8, 1e-3));
+        assert!(energy_balance_ok(5e-11, 1e-3));
+        // Do not restore the old small-energy floor as an alternative gate.
+        assert!(1e-15 <= 1e-14 + 1e-7 * 1e-12);
+        assert!(!energy_balance_ok(1e-15, 1e-12));
+        assert!(energy_balance_ok(5e-17, 1e-12));
+        assert!(energy_balance_ok(0., 0.));
+        assert!(energy_balance_ok(1e-20, 0.));
+        assert!(!energy_balance_ok(2e-20, 0.));
+        for invalid in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert!(!energy_balance_ok(invalid, 1.));
+            assert!(!energy_balance_ok(0., invalid));
+        }
+        assert!(!energy_balance_ok(0., -1.));
+    }
+    #[test]
+    fn balanced_currents_evolve_island_charges_and_preserve_nonzero_total_charge() {
+        let c1 = 2.225300110895741e-13;
+        let c2 = 4.450600221791482e-13;
+        let model:Model=serde_json::from_value(json!({"format":"coupled-rlc","referenceTopology":"infinity","potentialNodes":["inner","middle","outer"],"currentDofs":[],"incidence":[],"portIncidence":[[0,0,1.],[2,0,-1.],[1,1,1.],[2,1,-1.]],"resistanceOhm":[],"inductanceH":[],"capacitanceF":[[0,0,c1],[0,1,-c1],[1,0,-c1],[1,1,c1+c2],[1,2,-c2],[2,1,-c2],[2,2,2.*c2]]})).unwrap();
+        let mut system = System::compile(&model, 2, None).unwrap();
+        let charge = 1e-12;
+        let old = vec![charge / c2; 3];
+        let rhs = system.port_rhs(&[0.1, 0.2]);
+        assert!(system
+            .solve(0., rhs.clone(), &old, &mut Counters::default())
+            .unwrap_err()
+            .starts_with("COUPLED_DC_INCOMPATIBLE"));
+        let dt = 1e-12;
+        let x = system
+            .advance(&old, &[0.; 3], rhs, dt, &mut Counters::default())
+            .unwrap().0;
+        let expected = [
+            old[0] + 0.3 * dt / c2 + 0.1 * dt / c1,
+            old[0] + 0.3 * dt / c2,
+            old[0],
+        ];
+        for (actual, expected) in x.iter().zip(expected) {
+            assert!((actual - expected).abs() < 1e-12);
+        }
+        // NᵀB is nonzero for individual isolated conductors; these charges must
+        // accumulate, while the balanced system's TOTAL nonzero charge is held.
+        let q = multiply(&system.linear.e, &x, 3);
+        assert!((q[0] - 0.1 * dt).abs() < 1e-25);
+        assert!((q[1] - 0.2 * dt).abs() < 1e-25);
+        assert!((q.iter().sum::<f64>() - charge).abs() < 1e-25);
+        assert!((x[2] - old[2]).abs() < 1e-12);
+    }
+    #[test]
+    fn tiny_differential_survives_large_common_potential() {
+        let model: Model = serde_json::from_value(json!({"format":"coupled-rlc","referenceTopology":"infinity","potentialNodes":["a","b"],"currentDofs":[],"incidence":[],"portIncidence":[[0,0,1.],[1,0,-1.]],"resistanceOhm":[],"inductanceH":[],"capacitanceF":[[0,0,1.],[1,1,1.]]})).unwrap();
+        let mut system = System::compile(&model, 1, None).unwrap();
+        system.add_port_admittance(0, 0.02, 0.).unwrap();
+        let old = [1e8, 1e8];
+        let rhs = system.port_rhs(&[1e-4]);
+        let (hi, low) = system.advance(&old, &[0.,0.], rhs.clone(), 1e-8, &mut Counters::default()).unwrap();
+        assert_eq!(hi, old);
+        let first = state_ports(&system, &hi, &low, 1)[0];
+        assert!(first > 1.99e-12 && first < 2.01e-12);
+        let (hi2, low2) = system.advance(&hi, &low, rhs, 1e-8, &mut Counters::default()).unwrap();
+        let second = state_ports(&system, &hi2, &low2, 1)[0];
+        assert!(second > 3.99e-12 && second < 4.01e-12);
+        assert_eq!(state_charge(&system, &hi2, &low2).iter().sum::<f64>(), 2e8);
+        let rhs = system.port_rhs(&[1e-4]);
+        let h = system.consistent(&hi, &rhs, &mut Counters::default()).unwrap();
+        let l = system.consistent(&low, &[0.,0.], &mut Counters::default()).unwrap();
+        check_algebraic(&system, &h, &l, &rhs).unwrap();
+        let (resumed, resumed_low) = system.advance(&h, &l, rhs, 1e-8, &mut Counters::default()).unwrap();
+        assert_eq!(state_ports(&system, &resumed, &resumed_low, 1), state_ports(&system, &hi2, &low2, 1));
+        assert_eq!(state_charge(&system, &resumed, &resumed_low), state_charge(&system, &hi2, &low2));
+    }
+    #[test]
+    fn compensated_resume_keeps_certified_structural_gauge() {
+        let model: Model = serde_json::from_value(json!({"format":"coupled-rlc","referenceTopology":"infinity","potentialNodes":["a","b"],"currentDofs":[],"incidence":[],"portIncidence":[[0,0,1.],[1,0,-1.]],"resistanceOhm":[],"inductanceH":[],"capacitanceF":[[0,0,1.],[0,1,-1.],[1,0,-1.],[1,1,1.]],"structuralGaugeModes":[[1.,1.]]})).unwrap();
+        let mut system = System::compile(&model, 1, None).unwrap();
+        system.add_port_admittance(0, 0.02, 0.).unwrap();
+        let rhs = system.port_rhs(&[1e-4]);
+        let (hi, lo) = system.advance(&[0.,0.], &[0.,0.], rhs.clone(), 1e-8, &mut Counters::default()).unwrap();
+        let h = system.consistent(&hi, &rhs, &mut Counters::default()).unwrap();
+        let l = system.consistent(&lo, &[0.,0.], &mut Counters::default()).unwrap();
+        check_algebraic(&system, &h, &l, &rhs).unwrap();
+        let (a, al) = system.advance(&hi, &lo, rhs.clone(), 1e-8, &mut Counters::default()).unwrap();
+        let (b, bl) = system.advance(&h, &l, rhs, 1e-8, &mut Counters::default()).unwrap();
+        assert!((state_ports(&system, &a, &al, 1)[0] - state_ports(&system, &b, &bl, 1)[0]).abs() < 1e-20);
+    }
+}
+
+

@@ -1,0 +1,55 @@
+{
+  "fixture": "STM32G0_CAN_RS485",
+  "binding": {
+    "input": {
+      "positive": [
+        "U2",
+        "1",
+        "+5V"
+      ],
+      "negative": [
+        "U2",
+        "2",
+        "GND"
+      ]
+    },
+    "output": {
+      "positive": [
+        "U2",
+        "5",
+        "+3V3"
+      ],
+      "negative": [
+        "U2",
+        "2",
+        "GND"
+      ]
+    },
+    "assumptions": "U2 regulator input/output/return contacts verified in saved PCB. The independent GHz RF examples below are synthetic benchmarks; this low-frequency controller is NOT modeled as a GHz amplifier. No coupling of models to PCB copper."
+  },
+  "cases": [
+    "Attenuator Pad",
+    "reflecting cascade",
+    "cascade reference 75",
+    "active nonreciprocal",
+    "coupled with explicit load"
+  ],
+  "boardSection": {
+    "resourceId": "STM32G0_CAN_RS485-explicit-section-hypothesis",
+    "frequenciesHz": [
+      1000,
+      10000,
+      100000
+    ],
+    "matrixOhm": [
+      [
+        1000,
+        20
+      ],
+      [
+        20,
+        10
+      ]
+    ]
+  }
+}

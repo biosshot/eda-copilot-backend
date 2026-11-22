@@ -1,0 +1,43 @@
+{
+  "refinement": 48,
+  "panels": 41472,
+  "seconds": 39.82094340000185,
+  "peakBytes": 790548480,
+  "exitCode": 0,
+  "externalRefusal": null,
+  "inputSha256": "143b7a4d179647b942cc2360bf47ae0be4c5d840e47f13910a423dd6e9359e38",
+  "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+  "preflightSha256": "f6d5cc267dabcb191a13e363fc4a1e9f853b78fa78db521cf87e8559d64b6748",
+  "command": [
+    "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\analyze-p7-extraction\\debugging\\p7-design-checkpoint\\fastcap-cli\\fastcap-reference.exe",
+    "-t1e-8",
+    "-o6",
+    "input.qui"
+  ],
+  "primarySolverSource": {
+    "source": "https://github.com/ediloren/FastCap2",
+    "sourceCommit": "04eee66446be0629f0607e68f369acad1072dc4d",
+    "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1"
+  },
+  "driverSha256": "0ba2d9ad29ac8f9a3149e68c3c48e0532bf30723203da25a43c708a944467a22",
+  "stdout.logSha256": "cd7f56a6215c71454cd2e4421d474e70f21098201e6b8471a31a1823c37dd71e",
+  "stderr.logSha256": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9",
+  "rawCapacitanceF": [
+    [
+      4.874469757401885e-14,
+      -1.4522565385332232e-14,
+      -4.23371207341883e-15
+    ],
+    [
+      -1.452284073735433e-14,
+      5.2745821272643e-14,
+      -1.4522562266501808e-14
+    ],
+    [
+      -4.233688732787976e-15,
+      -1.4522392382629692e-14,
+      4.8744391673804344e-14
+    ]
+  ],
+  "capacitance-raw-f.jsonSha256": "405c9400a5bcbe3f7afa4e10acfdfda9a8cf526532127bf1828738cf6f40cf68"
+}

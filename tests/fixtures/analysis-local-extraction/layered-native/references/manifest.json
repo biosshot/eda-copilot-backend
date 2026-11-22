@@ -1,0 +1,133 @@
+{
+  "primarySolverSource": {
+    "source": "https://github.com/ediloren/FastCap2",
+    "sourceCommit": "04eee66446be0629f0607e68f369acad1072dc4d",
+    "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1"
+  },
+  "rows": [
+    {
+      "case": "shifted",
+      "n": 16,
+      "rawCapacitanceF": [
+        [
+          4.814719139629659e-14,
+          -1.5462844457981712e-14
+        ],
+        [
+          -1.546306479067643e-14,
+          4.814641612536771e-14
+        ]
+      ],
+      "inputSha256": "980f624772e8504c6b0d8b70499d76515a6cb4117f9223b6e1488c3db442208e",
+      "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+      "seconds": 0.46324789999925997,
+      "peakBytes": 47472640,
+      "command": [
+        "fastcap-reference.exe",
+        "-t1e-8",
+        "-o6",
+        "input.qui"
+      ],
+      "capacitance-raw-f.jsonSha256": "d2100d85cc820a66191b08a25fd923c6dced1dec422788661a329cb92e54c082",
+      "stdout.logSha256": "7c8a188d85c385fd33477c171e5683d20f53897d768ec70990316101bdef4522",
+      "stderr.logSha256": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9"
+    },
+    {
+      "case": "shifted",
+      "n": 32,
+      "rawCapacitanceF": [
+        [
+          4.821433410705861e-14,
+          -1.5495525796984953e-14
+        ],
+        [
+          -1.5495645572813337e-14,
+          4.821113848857423e-14
+        ]
+      ],
+      "inputSha256": "3f51392354280a2a5aac06d03294a6b7a503a7577c4e6ae1b112a8ad0635e17b",
+      "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+      "seconds": 3.0130063999968115,
+      "peakBytes": 197492736,
+      "command": [
+        "fastcap-reference.exe",
+        "-t1e-8",
+        "-o6",
+        "input.qui"
+      ],
+      "capacitance-raw-f.jsonSha256": "5cf4c66cdc114e5ac1250b76a60d34825001b214ab0d35eee4f94d9b869d2789",
+      "stdout.logSha256": "4b2a7bd608dfacd1008084b75c3d46ee503afc0095d1e587ae450bb3123d2534",
+      "stderr.logSha256": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9"
+    },
+    {
+      "case": "three",
+      "n": 16,
+      "rawCapacitanceF": [
+        [
+          4.865693886159473e-14,
+          -1.4483452798879895e-14,
+          -4.223050855200982e-15
+        ],
+        [
+          -1.4484029685803926e-14,
+          5.264235316046069e-14,
+          -1.448297418837052e-14
+        ],
+        [
+          -4.2228659848524766e-15,
+          -1.4483069367691837e-14,
+          4.8656461572303066e-14
+        ]
+      ],
+      "inputSha256": "39af6f4b5e4573e5a2ccb16eb586eb80c810efccdc954c49cbad8dbbb9dca2d7",
+      "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+      "seconds": 1.4061500000098022,
+      "peakBytes": 78798848,
+      "command": [
+        "fastcap-reference.exe",
+        "-t1e-8",
+        "-o6",
+        "input.qui"
+      ],
+      "capacitance-raw-f.jsonSha256": "b29b90f1e538629897c3a9c58cd1387753b073c572e49ab6c60f2813272ecf90",
+      "stdout.logSha256": "e383fe3d6b213f0bf542f18d8835e8b721b47e66de629acf8e1e40c8b0b9fafc",
+      "stderr.logSha256": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9"
+    },
+    {
+      "case": "three",
+      "n": 32,
+      "rawCapacitanceF": [
+        [
+          4.87317455079368e-14,
+          -1.4516585668763292e-14,
+          -4.232187233822526e-15
+        ],
+        [
+          -1.4516990801389566e-14,
+          5.2728436079561744e-14,
+          -1.4516243139500413e-14
+        ],
+        [
+          -4.2320911538481324e-15,
+          -1.451621824893753e-14,
+          4.8731161355059443e-14
+        ]
+      ],
+      "inputSha256": "7408777a617de0c06ac9d38709f7624459f54c61d2f8a42fdff0eb67a10dd0a3",
+      "binarySha256": "537aa632111eddd63c8d25f1c1ef90580cdae8a4eecc9749802229aa78796dd1",
+      "seconds": 4.5836867000034545,
+      "peakBytes": 333864960,
+      "command": [
+        "fastcap-reference.exe",
+        "-t1e-8",
+        "-o6",
+        "input.qui"
+      ],
+      "capacitance-raw-f.jsonSha256": "7e4f554df21e1c149790ff573f37e8aa0276e71e0be4e16009837dedca719f1d",
+      "stdout.logSha256": "74b81d6f08ecc377b5e1c7551753eb1467005f921d672611f14353811fefa0d2",
+      "stderr.logSha256": "9d53b04e8b053c37360e3d0203923d4394826bbaf1990688a1899f533dbf7cb9"
+    }
+  ],
+  "geometryGeneratorSha256": "5da6211466a149298610b15f49c8b95e190a1d87c0c3b2cc4f6785a98d0d97d9",
+  "referenceUncertaintyGate": "n16->32 full quadratic change<=1%; raw asymmetry retained; primary vacuum solver only, not used for dielectric."
+}

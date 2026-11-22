@@ -1,0 +1,2867 @@
+{
+  "schema": 1,
+  "supplementalControls": [
+    {
+      "id": "coupled-stripline",
+      "dsl": "tests/fixtures/analysis-p7-closure/coupled-stripline.js",
+      "dslSha256": "c3aa9f04720f462d1187e5d6d591dc747c3992ac29247a33a63ab690ed20966c",
+      "line": {
+        "kind": "coupled-stripline",
+        "widthMm": 0.3,
+        "gapMm": 0.3,
+        "copperThicknessMm": 0.035,
+        "topDielectricHeightMm": 0.3,
+        "bottomDielectricHeightMm": 0.3,
+        "lengthMm": 20,
+        "topMaterial": {
+          "relativePermittivity": 4,
+          "lossTangent": 0,
+          "state": "Explicit homogeneous analytic TEM benchmark"
+        },
+        "bottomMaterial": {
+          "relativePermittivity": 4,
+          "lossTangent": 0,
+          "state": "Explicit homogeneous analytic TEM benchmark"
+        }
+      },
+      "reference": {
+        "path": "tests/fixtures/analysis-p7-closure/stripline-fd-reference.json",
+        "sha256": "217ebc00ac2bca90ab0358c9a66cdf1b3a50bccb7ff2d078b348ab1eb519054f",
+        "category": "independent numerical Laplace finite difference",
+        "uncertaintyRelative": 0.02
+      },
+      "frequenciesHz": [
+        1000000.0,
+        10000000.0,
+        100000000.0
+      ],
+      "status": "runnable-independent-comparison",
+      "ports": [
+        "positiveInput",
+        "negativeInput",
+        "positiveOutput",
+        "negativeOutput"
+      ]
+    }
+  ],
+  "units": {
+    "capacitance": "F/m",
+    "inductance": "H/m",
+    "delay": "s/m",
+    "impedance": "Ohm",
+    "response": "dimensionless complex S"
+  },
+  "frequenciesHz": [
+    1000000.0,
+    10000000.0,
+    100000000.0
+  ],
+  "metrics": {
+    "relativeTolerance": 0.08,
+    "capacitanceFloor": 1e-15,
+    "inductanceFloor": 1e-12,
+    "complexResponseFloor": 0.0001,
+    "delayFloor": 1e-13,
+    "impedanceFloor": 0.01,
+    "floorRationale": "Far below expected modal coefficients/delay; S floor -80dB avoids division by symmetry zeros; fixed before execution"
+  },
+  "cases": [
+    {
+      "id": "coupled",
+      "category": "independent-engineering-equations",
+      "dsl": "tests/fixtures/analysis-p7-closure/coupled.js",
+      "dslSha256": "776239ab7b53a33c2c087e3ee7461f148edd1fcbd182116881eec67d01803004",
+      "line": {
+        "kind": "coupled-microstrip",
+        "widthMm": 1,
+        "copperThicknessMm": 0.035,
+        "dielectricHeightMm": 1,
+        "gapMm": 1,
+        "lengthMm": 20,
+        "material": {
+          "relativePermittivity": 4,
+          "lossTangent": 0,
+          "state": "Explicit lossless finite-thickness engineering benchmark against thin reference"
+        }
+      },
+      "reference": {
+        "path": "tests/fixtures/analysis-cross-section/references.json",
+        "sha256": "67370de41037d8de999f31daea6bd0fb146332e12b5fb191d9706adda0725ef8",
+        "source": "https://qucs.github.io/tech/node77.html",
+        "data": {
+          "widthMm": 1,
+          "heightMm": 1,
+          "epsilon": 4,
+          "gapMm": 1.0,
+          "thicknessMm": 1e-05,
+          "referenceThicknessMm": 0,
+          "impedanceOhm": [
+            84.45650283954421,
+            63.00856152600554
+          ],
+          "effectivePermittivity": [
+            3.103831868567447,
+            2.6651761458121928
+          ],
+          "equations": "node77 11.91--11.126 static Kirschning/Jansen; u=1, g=gap/h; within 0.1<=u,g<=10 and 1<=epsilon<=18"
+        },
+        "uncertainty": "Engineering approximation; no rigorous measured uncertainty; thin-conductor reference versus explicit t/h=.035 candidate; finite-thickness systematic uncertainty unbounded"
+      },
+      "ports": [
+        "positiveInput",
+        "negativeInput",
+        "positiveOutput",
+        "negativeOutput"
+      ],
+      "status": "runnable"
+    },
+    {
+      "id": "STM32G0_CAN_RS485",
+      "category": "real-copper-channel",
+      "board": "tests/pcb-analyze/STM32G0_CAN_RS485/STM32G0_CAN_RS485.json",
+      "boardSha256": "0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3",
+      "dsl": "tests/fixtures/analysis-p7-closure/STM32G0_CAN_RS485.js",
+      "dslSha256": "5057272b14b44e316b42e59d0a393394716e511f4aa55996c4323f86950b15df",
+      "layers": 2,
+      "contacts": [
+        [
+          {
+            "id": "343f3feaf5557346e25",
+            "component": "U5",
+            "number": "7",
+            "net": "RS485_B",
+            "at": {
+              "x": 14.7295,
+              "y": 4.0742
+            },
+            "layers": [
+              "TOP"
+            ]
+          },
+          {
+            "id": "343f3feaf5557346e23",
+            "component": "U5",
+            "number": "5",
+            "net": "GND",
+            "at": {
+              "x": 17.2695,
+              "y": 4.0742
+            },
+            "layers": [
+              "TOP"
+            ]
+          }
+        ],
+        [
+          {
+            "id": "8ba29b17e9a54657e14",
+            "component": "J5",
+            "number": "2",
+            "net": "RS485_B",
+            "at": {
+              "x": 25.8724,
+              "y": 6.2255
+            },
+            "layers": [
+              "TOP",
+              "BOTTOM"
+            ]
+          },
+          {
+            "id": "8ba29b17e9a54657e15",
+            "component": "J5",
+            "number": "3",
+            "net": "GND",
+            "at": {
+              "x": 25.8724,
+              "y": 9.7257
+            },
+            "layers": [
+              "TOP",
+              "BOTTOM"
+            ]
+          }
+        ]
+      ],
+      "selectedNetTracks": [
+        {
+          "id": "a5cbdce2ba9b2a48",
+          "net": "RS485_B",
+          "layer": "TOP"
+        },
+        {
+          "id": "44c8f697bd1183f8",
+          "net": "RS485_B",
+          "layer": "TOP"
+        },
+        {
+          "id": "43e27db2346a5269",
+          "net": "RS485_B",
+          "layer": "TOP"
+        },
+        {
+          "id": "0ece656f8ef37ce9",
+          "net": "RS485_B",
+          "layer": "TOP"
+        },
+        {
+          "id": "bb0f3c84dddd5b73",
+          "net": "RS485_B",
+          "layer": "TOP"
+        },
+        {
+          "id": "1af1f3dc252fab95",
+          "net": "RS485_B",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "ceb3d18434b3aee2",
+          "net": "RS485_B",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "86ded670ece799c3",
+          "net": "RS485_B",
+          "layer": "TOP"
+        },
+        {
+          "id": "906062670841a35b",
+          "net": "RS485_B",
+          "layer": "TOP"
+        },
+        {
+          "id": "f291fb792d8b70f1",
+          "net": "RS485_B",
+          "layer": "TOP"
+        },
+        {
+          "id": "28764ece21037043",
+          "net": "RS485_B",
+          "layer": "TOP"
+        },
+        {
+          "id": "137ab2b05f9adf97",
+          "net": "RS485_B",
+          "layer": "TOP"
+        },
+        {
+          "id": "0aa21c29329f37ce",
+          "net": "RS485_B",
+          "layer": "TOP"
+        },
+        {
+          "id": "b01d3871a18b36b4",
+          "net": "RS485_B",
+          "layer": "TOP"
+        },
+        {
+          "id": "2d3e285cc6233b23",
+          "net": "RS485_B",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "ab8d1743aad73487",
+          "net": "RS485_B",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "4478977ab500bb9d",
+          "net": "RS485_B",
+          "layer": "TOP"
+        },
+        {
+          "id": "afafc80ee8c5018d",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "35ba1c651e15673e",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "fb7920084c02d51e",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "9e2aa177b8a3fedf",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "114251feb4e16cac",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "10777991512d03bf",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "8f4f29c75196f3ba",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "5b9ffc3b013868d5",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "311189bdd0e42d9e",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "d4379d7871121886",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "351d93bd0ba1842a",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "fce97a0ae36706dc",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "f9acc5519f45b286",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "296ad04352c31c02",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "192302994ec7993a",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "4a03fc3366590f28",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "f094bca1b6f6e629",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "5d061cceb816f7d5",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "b16423260874c1e8",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "98b2a0e2912e0e17",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "43f95ea354d550aa",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "16ad1efe33998c8e",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "a9a3eed758effafd",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "0c3b8da399df4d9a",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "6afe68c5c72c3159",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "4bd801694fbfd409",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "071934200b8cf61a",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "31eae5363db9b735",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "7ad7b4233df7ec43",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "44ba0ff7575908f0",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "29696122249a3a27",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "63f64e14284d4215",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "1646fd7588504977",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "c2c5bcd5ff39022d",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "03fb639ee9aa4f57",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "dca222c835df3579",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "2afbf07883b1eaec",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "afa7587d5f2953cc",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "a0d7d0b700218809",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "6e580fceaa114648",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e7063423f3b12397",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "90ca07f71840d76e",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "db88b29dfd5c2b57",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "60de89b2f0e30099",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "c26d11593d33b880",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "1c6a6ffa777ce7b3",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "98cdadfc299447fe",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "370645b71717f2d9",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "209faac2ef5e5a2c",
+          "net": "GND",
+          "layer": "TOP"
+        }
+      ],
+      "branches": "All physical branches on selected nets retained; no source clipping",
+      "status": "blocked",
+      "diagnostic": "Full-channel EM/reference admission unestablished; geometry planning audit required before heavy run",
+      "reference": null,
+      "missingFields": [
+        "actual dielectric stack",
+        "loss tangent",
+        "roughness",
+        "measured channel response"
+      ],
+      "loads": "50 Ohm power-wave comparison convention; no inferred component loads",
+      "physicalConnectivity": {
+        "status": "partial",
+        "contacts": [
+          [
+            {
+              "id": "343f3feaf5557346e25",
+              "net": "RS485_B",
+              "islands": [
+                "island-000052"
+              ]
+            },
+            {
+              "id": "343f3feaf5557346e23",
+              "net": "GND",
+              "islands": [
+                "island-000001"
+              ]
+            }
+          ],
+          [
+            {
+              "id": "8ba29b17e9a54657e14",
+              "net": "RS485_B",
+              "islands": [
+                "island-000052"
+              ]
+            },
+            {
+              "id": "8ba29b17e9a54657e15",
+              "net": "GND",
+              "islands": [
+                "island-000001"
+              ]
+            }
+          ]
+        ],
+        "signalConnected": true,
+        "returnConnected": true
+      },
+      "physicalValidation": "geometry-only",
+      "comparisonPassed": false
+    },
+    {
+      "id": "NanoScope",
+      "category": "real-copper-channel",
+      "board": "tests/pcb-analyze/NanoScope/NanoScope.json",
+      "boardSha256": "8515e761f131df0731c3cc84fa293457f526e0d6ea91eff8fe73aa8a587b65e6",
+      "dsl": "tests/fixtures/analysis-p7-closure/NanoScope.js",
+      "dslSha256": "cf1d2b8fec7b32d537b2b56833b6d75df8a90f2274f28168f3760c2f6da6f16f",
+      "layers": 4,
+      "contacts": [
+        [
+          {
+            "id": "e1494e182",
+            "component": "U3",
+            "number": "52",
+            "net": "QSPI_SCLK",
+            "at": {
+              "x": 37.5539,
+              "y": -34.384
+            },
+            "layers": [
+              "TOP"
+            ]
+          },
+          {
+            "id": "e1494e187",
+            "component": "U3",
+            "number": "57",
+            "net": "GND",
+            "at": {
+              "x": 34.3383,
+              "y": -36.1874
+            },
+            "layers": [
+              "TOP"
+            ]
+          }
+        ],
+        [
+          {
+            "id": "e35e9",
+            "component": "U4",
+            "number": "6",
+            "net": "QSPI_SCLK",
+            "at": {
+              "x": 46.1315,
+              "y": -30.6019
+            },
+            "layers": [
+              "TOP"
+            ]
+          },
+          {
+            "id": "e35e6",
+            "component": "U4",
+            "number": "4",
+            "net": "GND",
+            "at": {
+              "x": 43.1165,
+              "y": -30.1015
+            },
+            "layers": [
+              "TOP"
+            ]
+          }
+        ]
+      ],
+      "selectedNetTracks": [
+        {
+          "id": "e126",
+          "net": "QSPI_SCLK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e129",
+          "net": "QSPI_SCLK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e130",
+          "net": "QSPI_SCLK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e1720",
+          "net": "QSPI_SCLK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e12152",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e12153",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e13605",
+          "net": "QSPI_SCLK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e13606",
+          "net": "QSPI_SCLK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e13607",
+          "net": "QSPI_SCLK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e29832",
+          "net": "GND",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "e29833",
+          "net": "GND",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "e29842",
+          "net": "GND",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "e29843",
+          "net": "GND",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "e29848",
+          "net": "GND",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "e29849",
+          "net": "GND",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "e43547",
+          "net": "QSPI_SCLK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e43559",
+          "net": "QSPI_SCLK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e43560",
+          "net": "QSPI_SCLK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e43561",
+          "net": "QSPI_SCLK",
+          "layer": "TOP"
+        }
+      ],
+      "branches": "All physical branches on selected nets retained; no source clipping",
+      "status": "blocked",
+      "diagnostic": "Full-channel EM/reference admission unestablished; geometry planning audit required before heavy run",
+      "reference": null,
+      "missingFields": [
+        "actual dielectric stack",
+        "loss tangent",
+        "roughness",
+        "measured channel response"
+      ],
+      "loads": "50 Ohm power-wave comparison convention; no inferred component loads",
+      "physicalConnectivity": {
+        "status": "partial",
+        "contacts": [
+          [
+            {
+              "id": "e1494e182",
+              "net": "QSPI_SCLK",
+              "islands": [
+                "island-000027"
+              ]
+            },
+            {
+              "id": "e1494e187",
+              "net": "GND",
+              "islands": [
+                "island-000009"
+              ]
+            }
+          ],
+          [
+            {
+              "id": "e35e9",
+              "net": "QSPI_SCLK",
+              "islands": [
+                "island-000027"
+              ]
+            },
+            {
+              "id": "e35e6",
+              "net": "GND",
+              "islands": [
+                "island-000009"
+              ]
+            }
+          ]
+        ],
+        "signalConnected": true,
+        "returnConnected": true
+      },
+      "physicalValidation": "geometry-only",
+      "comparisonPassed": false
+    },
+    {
+      "id": "ThunderF722",
+      "category": "real-copper-channel",
+      "board": "tests/pcb-analyze/ThunderF722/ThunderF722.json",
+      "boardSha256": "3911d02ef76af2a490c2db055a863a2b336b16d52e112162593865490e88683c",
+      "dsl": "tests/fixtures/analysis-p7-closure/ThunderF722.js",
+      "dslSha256": "d483b2fa279369fcb638e42128d3ac604f05b0b62df9c917fb81e63dc7e4a440",
+      "layers": 6,
+      "contacts": [
+        [
+          {
+            "id": "e795e181",
+            "component": "U2",
+            "number": "34",
+            "net": "SPI2_SCK",
+            "at": {
+              "x": 31.2776,
+              "y": 22.2987
+            },
+            "layers": [
+              "TOP"
+            ]
+          },
+          {
+            "id": "e795e184",
+            "component": "U2",
+            "number": "31",
+            "net": "GND",
+            "at": {
+              "x": 28.7782,
+              "y": 24.8006
+            },
+            "layers": [
+              "TOP"
+            ]
+          }
+        ],
+        [
+          {
+            "id": "e785e13",
+            "component": "U4",
+            "number": "6",
+            "net": "SPI2_SCK",
+            "at": {
+              "x": 34.1986,
+              "y": 24.3154
+            },
+            "layers": [
+              "TOP"
+            ]
+          },
+          {
+            "id": "e785e16",
+            "component": "U4",
+            "number": "4",
+            "net": "GND",
+            "at": {
+              "x": 41.6001,
+              "y": 23.0454
+            },
+            "layers": [
+              "TOP"
+            ]
+          }
+        ]
+      ],
+      "selectedNetTracks": [
+        {
+          "id": "e281",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e282",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e283",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e293",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e294",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e329",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e330",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e331",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e332",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e333",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e334",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e335",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e336",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e337",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e340",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e341",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e342",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e373",
+          "net": "SPI2_SCK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e374",
+          "net": "SPI2_SCK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e375",
+          "net": "SPI2_SCK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e376",
+          "net": "SPI2_SCK",
+          "layer": "TOP"
+        },
+        {
+          "id": "e556",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e557",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e594",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e595",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e606",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e607",
+          "net": "GND",
+          "layer": "TOP"
+        }
+      ],
+      "branches": "All physical branches on selected nets retained; no source clipping",
+      "status": "blocked",
+      "diagnostic": "Full-channel EM/reference admission unestablished; geometry planning audit required before heavy run",
+      "reference": null,
+      "missingFields": [
+        "actual dielectric stack",
+        "loss tangent",
+        "roughness",
+        "measured channel response"
+      ],
+      "loads": "50 Ohm power-wave comparison convention; no inferred component loads",
+      "physicalConnectivity": {
+        "status": "partial",
+        "contacts": [
+          [
+            {
+              "id": "e795e181",
+              "net": "SPI2_SCK",
+              "islands": [
+                "island-000074"
+              ]
+            },
+            {
+              "id": "e795e184",
+              "net": "GND",
+              "islands": [
+                "island-000015"
+              ]
+            }
+          ],
+          [
+            {
+              "id": "e785e13",
+              "net": "SPI2_SCK",
+              "islands": [
+                "island-000074"
+              ]
+            },
+            {
+              "id": "e785e16",
+              "net": "GND",
+              "islands": [
+                "island-000015"
+              ]
+            }
+          ]
+        ],
+        "signalConnected": true,
+        "returnConnected": true
+      },
+      "physicalValidation": "geometry-only",
+      "comparisonPassed": false
+    },
+    {
+      "id": "TPS63060DSCR",
+      "category": "real-copper-channel",
+      "board": "tests/pcb-analyze/TPS63060DSCR/TPS63060DSCR.json",
+      "boardSha256": "70be39ae0c55885fd72d283b53c8a605e098c347641c032bbd651d07943dfd39",
+      "dsl": "tests/fixtures/analysis-p7-closure/TPS63060DSCR.js",
+      "dslSha256": "7ddb1063eca1c19706d92cef8055a45cad74ea5cf2e299bf7f3f900264cfac20",
+      "layers": 2,
+      "contacts": [
+        [
+          {
+            "id": "cd8747d128aec8e3e15",
+            "component": "J1",
+            "number": "1",
+            "net": "VIN",
+            "at": {
+              "x": -11.5011,
+              "y": 1.2497
+            },
+            "layers": [
+              "TOP",
+              "BOTTOM"
+            ]
+          },
+          {
+            "id": "cd8747d128aec8e3e16",
+            "component": "J1",
+            "number": "2",
+            "net": "GND",
+            "at": {
+              "x": -11.5011,
+              "y": -1.2497
+            },
+            "layers": [
+              "TOP",
+              "BOTTOM"
+            ]
+          }
+        ],
+        [
+          {
+            "id": "387993583cdeb7cce31",
+            "component": "U1",
+            "number": "3",
+            "net": "VIN",
+            "at": {
+              "x": -1.5011,
+              "y": -1.0008
+            },
+            "layers": [
+              "TOP"
+            ]
+          },
+          {
+            "id": "387993583cdeb7cce30",
+            "component": "U1",
+            "number": "4",
+            "net": "GND",
+            "at": {
+              "x": -1.5011,
+              "y": -0.5004
+            },
+            "layers": [
+              "TOP"
+            ]
+          }
+        ]
+      ],
+      "selectedNetTracks": [
+        {
+          "id": "d5203a58f3a8ffa9",
+          "net": "VIN",
+          "layer": "TOP"
+        },
+        {
+          "id": "94f4bc31e454d91a",
+          "net": "VIN",
+          "layer": "TOP"
+        },
+        {
+          "id": "9a1cd4bf052b2362",
+          "net": "VIN",
+          "layer": "TOP"
+        },
+        {
+          "id": "c28755cb1c7f49c7",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "af5ec6787b8e8ec2",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "d0bc1049eb536c6a",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "84547caaf51f2cbe",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "a039dd13f2f9de36",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "23fca09a054cfca1",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "1d3884e0384f6f46",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "dfd61b2d39d622ae",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "f957531e8ccd6195",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "adc26e3dc08082a4",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "8db6de2d2a3b8425",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "f8e04262007a57d6",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "7150017634006917",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "2a97cb0914c6c796",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "ceba330fc201a634",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "b6a44b46db902829",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "7d253a4b6b3e5400",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "31bac87b09537e08",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e86ea8d4d9a2c78f",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "a79be2de2d7e2d04",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "916b370ba40bbca7",
+          "net": "GND",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "31cbe8d8353ef7b9",
+          "net": "GND",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "74a512601a5a4cfe",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "634388b2455008ac",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "284c9af1621d6f4c",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "bc5289ef67c8035c",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "c55eb84e05d96d71",
+          "net": "GND",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "5f5a0bfce7ada367",
+          "net": "GND",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "1ddb01350acb3fca",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "af8596d49b9860b9",
+          "net": "GND",
+          "layer": "TOP"
+        },
+        {
+          "id": "e251b00b94ebaf84",
+          "net": "GND",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "379a18edc67255f8",
+          "net": "GND",
+          "layer": "BOTTOM"
+        },
+        {
+          "id": "8ef8a7be2ef3387b",
+          "net": "VIN",
+          "layer": "TOP"
+        },
+        {
+          "id": "0aed73aa4f8ed7ba",
+          "net": "VIN",
+          "layer": "TOP"
+        },
+        {
+          "id": "8ec6f60da2b452c6",
+          "net": "VIN",
+          "layer": "TOP"
+        },
+        {
+          "id": "aaebaad289af84fe",
+          "net": "VIN",
+          "layer": "TOP"
+        }
+      ],
+      "branches": "All physical branches on selected nets retained; no source clipping",
+      "status": "blocked",
+      "diagnostic": "Full-channel EM/reference admission unestablished; geometry planning audit required before heavy run",
+      "reference": null,
+      "missingFields": [
+        "actual dielectric stack",
+        "loss tangent",
+        "roughness",
+        "measured channel response"
+      ],
+      "loads": "50 Ohm power-wave comparison convention; no inferred component loads",
+      "physicalConnectivity": {
+        "status": "partial",
+        "contacts": [
+          [
+            {
+              "id": "cd8747d128aec8e3e15",
+              "net": "VIN",
+              "islands": [
+                "island-000001"
+              ]
+            },
+            {
+              "id": "cd8747d128aec8e3e16",
+              "net": "GND",
+              "islands": [
+                "island-000000"
+              ]
+            }
+          ],
+          [
+            {
+              "id": "387993583cdeb7cce31",
+              "net": "VIN",
+              "islands": [
+                "island-000001"
+              ]
+            },
+            {
+              "id": "387993583cdeb7cce30",
+              "net": "GND",
+              "islands": [
+                "island-000000"
+              ]
+            }
+          ]
+        ],
+        "signalConnected": true,
+        "returnConnected": true
+      },
+      "physicalValidation": "geometry-only",
+      "comparisonPassed": false
+    },
+    {
+      "id": "BandAmpV5",
+      "category": "real-copper-channel",
+      "board": "tests/pcb-analyze/BandAmpV5/BandAmpV5.json",
+      "boardSha256": "032f0965d31f76474501fe10494b4de5c7c054bd24b4c30df964c4cc5590d1fc",
+      "dsl": "tests/fixtures/analysis-p7-closure/BandAmpV5.js",
+      "dslSha256": "2938b3459616a4e4d5c633a6a13785b0fbb74cd1ea0b7cc7dad1aa8132ea1aba",
+      "layers": 2,
+      "contacts": [
+        [
+          {
+            "id": "be6bc021c94e874ce14",
+            "component": "RF1",
+            "number": "2",
+            "net": "RF_IN_PORT",
+            "at": {
+              "x": -15.8293,
+              "y": 0
+            },
+            "layers": [
+              "TOP"
+            ]
+          },
+          {
+            "id": "be6bc021c94e874ce15",
+            "component": "RF1",
+            "number": "1",
+            "net": "GND",
+            "at": {
+              "x": -15.9791,
+              "y": 2.6391
+            },
+            "layers": [
+              "TOP"
+            ]
+          }
+        ],
+        [
+          {
+            "id": "1ef61450f2f63c6ee15",
+            "component": "C1",
+            "number": "1",
+            "net": "RF_IN_PORT",
+            "at": {
+              "x": -4.2012,
+              "y": 1.0008
+            },
+            "layers": [
+              "TOP"
+            ]
+          },
+          {
+            "id": "dbc6321021dda95ae8",
+            "component": "U1",
+            "number": "2",
+            "net": "GND",
+            "at": {
+              "x": 0.9906,
+              "y": -0.1753
+            },
+            "layers": [
+              "TOP"
+            ]
+          }
+        ]
+      ],
+      "selectedNetTracks": [
+        {
+          "id": "9fdfa248b54a5507",
+          "net": "RF_IN_PORT",
+          "layer": "TOP"
+        },
+        {
+          "id": "dcc17162579803b7",
+          "net": "RF_IN_PORT",
+          "layer": "TOP"
+        }
+      ],
+      "branches": "All physical branches on selected nets retained; no source clipping",
+      "status": "blocked",
+      "diagnostic": "Full-channel EM/reference admission unestablished; geometry planning audit required before heavy run",
+      "reference": null,
+      "missingFields": [
+        "actual dielectric stack",
+        "loss tangent",
+        "roughness",
+        "measured channel response"
+      ],
+      "loads": "50 Ohm power-wave comparison convention; no inferred component loads",
+      "physicalConnectivity": {
+        "status": "partial",
+        "contacts": [
+          [
+            {
+              "id": "be6bc021c94e874ce14",
+              "net": "RF_IN_PORT",
+              "islands": [
+                "island-000001"
+              ]
+            },
+            {
+              "id": "be6bc021c94e874ce15",
+              "net": "GND",
+              "islands": [
+                "island-000004"
+              ]
+            }
+          ],
+          [
+            {
+              "id": "1ef61450f2f63c6ee15",
+              "net": "RF_IN_PORT",
+              "islands": [
+                "island-000001"
+              ]
+            },
+            {
+              "id": "dbc6321021dda95ae8",
+              "net": "GND",
+              "islands": [
+                "island-000004"
+              ]
+            }
+          ]
+        ],
+        "signalConnected": true,
+        "returnConnected": true
+      },
+      "physicalValidation": "geometry-only",
+      "comparisonPassed": false
+    }
+  ],
+  "coupons": [
+    {
+      "id": "split-reference",
+      "board": "tests/fixtures/analysis-p7-closure/split-reference.json",
+      "boardSha256": "263c11ea651ea857e114e61abf81201ff4b7c58cd8a0a9b705f6f6cd5d843176",
+      "dsl": "tests/fixtures/analysis-p7-closure/split-reference.js",
+      "dslSha256": "5666520e38b7c9f9812c40adf47ddbe3b66ac515bf5b0adcb50eca422ab8f7d7",
+      "status": "unsupported",
+      "diagnostic": "Requires independently validated distributed reference/mutual/bridge assembly; no EM solve attempted",
+      "reference": null,
+      "componentModels": [],
+      "geometry": "Two finite 10mm signal strips over finite 1.5mm return copper; exact split/fence/extra-reference features retained",
+      "materialConvention": "Explicit benchmark stack/materials in direct DSL; not manufacturing data",
+      "physicalConnectivity": {
+        "status": "complete",
+        "contacts": [
+          [
+            {
+              "id": "s0",
+              "net": "SIGNAL",
+              "islands": [
+                "island-000002"
+              ]
+            },
+            {
+              "id": "r0",
+              "net": "RETURN",
+              "islands": [
+                "island-000000"
+              ]
+            }
+          ],
+          [
+            {
+              "id": "s1",
+              "net": "SIGNAL",
+              "islands": [
+                "island-000002"
+              ]
+            },
+            {
+              "id": "r1",
+              "net": "RETURN",
+              "islands": [
+                "island-000001"
+              ]
+            }
+          ]
+        ],
+        "signalConnected": true,
+        "returnConnected": false
+      },
+      "physicalValidation": "geometry-only",
+      "comparisonPassed": false
+    },
+    {
+      "id": "multiple-reference",
+      "board": "tests/fixtures/analysis-p7-closure/multiple-reference.json",
+      "boardSha256": "58df554bd872fbe9b0db903a0dcd5b36d1f706c60a606f312f231a5565078e0c",
+      "dsl": "tests/fixtures/analysis-p7-closure/multiple-reference.js",
+      "dslSha256": "5666520e38b7c9f9812c40adf47ddbe3b66ac515bf5b0adcb50eca422ab8f7d7",
+      "status": "unsupported",
+      "diagnostic": "Requires independently validated distributed reference/mutual/bridge assembly; no EM solve attempted",
+      "reference": null,
+      "componentModels": [],
+      "geometry": "Two finite 10mm signal strips over finite 1.5mm return copper; exact split/fence/extra-reference features retained",
+      "materialConvention": "Explicit benchmark stack/materials in direct DSL; not manufacturing data",
+      "physicalConnectivity": {
+        "status": "complete",
+        "contacts": [
+          [
+            {
+              "id": "s0",
+              "net": "SIGNAL",
+              "islands": [
+                "island-000001"
+              ]
+            },
+            {
+              "id": "r0",
+              "net": "RETURN",
+              "islands": [
+                "island-000000"
+              ]
+            }
+          ],
+          [
+            {
+              "id": "s1",
+              "net": "SIGNAL",
+              "islands": [
+                "island-000001"
+              ]
+            },
+            {
+              "id": "r1",
+              "net": "RETURN",
+              "islands": [
+                "island-000000"
+              ]
+            }
+          ]
+        ],
+        "signalConnected": true,
+        "returnConnected": true
+      },
+      "physicalValidation": "geometry-only",
+      "comparisonPassed": false
+    },
+    {
+      "id": "agnd-dgnd-bridge",
+      "board": "tests/fixtures/analysis-p7-closure/agnd-dgnd-bridge.json",
+      "boardSha256": "51bf10329d2f6c9b6f1e3ceb2784e2a91dc15d169ff7dd6cf690270d47f9df20",
+      "dsl": "tests/fixtures/analysis-p7-closure/agnd-dgnd-bridge.js",
+      "dslSha256": "5666520e38b7c9f9812c40adf47ddbe3b66ac515bf5b0adcb50eca422ab8f7d7",
+      "status": "unsupported",
+      "diagnostic": "Requires independently validated distributed reference/mutual/bridge assembly; no EM solve attempted",
+      "reference": null,
+      "componentModels": [
+        {
+          "component": "BR1",
+          "contacts": [
+            "1",
+            "2"
+          ],
+          "model": {
+            "resistanceOhm": 0.01
+          },
+          "state": "explicit benchmark bridge, not inferred from pad geometry"
+        }
+      ],
+      "geometry": "Two finite 10mm signal strips over finite 1.5mm return copper; exact split/fence/extra-reference features retained",
+      "materialConvention": "Explicit benchmark stack/materials in direct DSL; not manufacturing data",
+      "physicalConnectivity": {
+        "status": "complete",
+        "contacts": [
+          [
+            {
+              "id": "s0",
+              "net": "SIGNAL",
+              "islands": [
+                "island-000002"
+              ]
+            },
+            {
+              "id": "r0",
+              "net": "AGND",
+              "islands": [
+                "island-000000"
+              ]
+            }
+          ],
+          [
+            {
+              "id": "s1",
+              "net": "SIGNAL",
+              "islands": [
+                "island-000002"
+              ]
+            },
+            {
+              "id": "r1",
+              "net": "DGND",
+              "islands": [
+                "island-000001"
+              ]
+            }
+          ]
+        ],
+        "signalConnected": true,
+        "returnConnected": false
+      },
+      "physicalValidation": "geometry-only",
+      "comparisonPassed": false
+    },
+    {
+      "id": "regular-fence",
+      "board": "tests/fixtures/analysis-p7-closure/regular-fence.json",
+      "boardSha256": "b495a720feee21a601a19a56de6b573b5457afd04392635a38998fd331f9a16c",
+      "dsl": "tests/fixtures/analysis-p7-closure/regular-fence.js",
+      "dslSha256": "5666520e38b7c9f9812c40adf47ddbe3b66ac515bf5b0adcb50eca422ab8f7d7",
+      "status": "unsupported",
+      "diagnostic": "Requires independently validated distributed reference/mutual/bridge assembly; no EM solve attempted",
+      "reference": null,
+      "componentModels": [],
+      "geometry": "Two finite 10mm signal strips over finite 1.5mm return copper; exact split/fence/extra-reference features retained",
+      "materialConvention": "Explicit benchmark stack/materials in direct DSL; not manufacturing data",
+      "physicalConnectivity": {
+        "status": "complete",
+        "contacts": [
+          [
+            {
+              "id": "s0",
+              "net": "SIGNAL",
+              "islands": [
+                "island-000001"
+              ]
+            },
+            {
+              "id": "r0",
+              "net": "RETURN",
+              "islands": [
+                "island-000000"
+              ]
+            }
+          ],
+          [
+            {
+              "id": "s1",
+              "net": "SIGNAL",
+              "islands": [
+                "island-000001"
+              ]
+            },
+            {
+              "id": "r1",
+              "net": "RETURN",
+              "islands": [
+                "island-000000"
+              ]
+            }
+          ]
+        ],
+        "signalConnected": true,
+        "returnConnected": true
+      },
+      "physicalValidation": "geometry-only",
+      "comparisonPassed": false
+    },
+    {
+      "id": "broken-fence",
+      "board": "tests/fixtures/analysis-p7-closure/broken-fence.json",
+      "boardSha256": "8f6086e96ca7d213803f694b2ae8936032384ba2ae7138a8ad92f90ee821528d",
+      "dsl": "tests/fixtures/analysis-p7-closure/broken-fence.js",
+      "dslSha256": "5666520e38b7c9f9812c40adf47ddbe3b66ac515bf5b0adcb50eca422ab8f7d7",
+      "status": "unsupported",
+      "diagnostic": "Requires independently validated distributed reference/mutual/bridge assembly; no EM solve attempted",
+      "reference": null,
+      "componentModels": [],
+      "geometry": "Two finite 10mm signal strips over finite 1.5mm return copper; exact split/fence/extra-reference features retained",
+      "materialConvention": "Explicit benchmark stack/materials in direct DSL; not manufacturing data",
+      "physicalConnectivity": {
+        "status": "complete",
+        "contacts": [
+          [
+            {
+              "id": "s0",
+              "net": "SIGNAL",
+              "islands": [
+                "island-000001"
+              ]
+            },
+            {
+              "id": "r0",
+              "net": "RETURN",
+              "islands": [
+                "island-000000"
+              ]
+            }
+          ],
+          [
+            {
+              "id": "s1",
+              "net": "SIGNAL",
+              "islands": [
+                "island-000001"
+              ]
+            },
+            {
+              "id": "r1",
+              "net": "RETURN",
+              "islands": [
+                "island-000000"
+              ]
+            }
+          ]
+        ],
+        "signalConnected": true,
+        "returnConnected": true
+      },
+      "physicalValidation": "geometry-only",
+      "comparisonPassed": false
+    }
+  ],
+  "geometryAudit": {
+    "path": "tests/fixtures/analysis-p7-closure/geometry-audit-summary.json",
+    "sha256": "5d32671be9535e5e982a697730c731cb8582ea99011aeac317ab49dbf65fdc95",
+    "method": "capturedBoardGeometry existing native geometry; common reliable island membership of physical pad sources; partial statuses retain freshness/drill diagnostics"
+  },
+  "caseTraceability": {
+    "source": "docs/analyze/reference/p7-extraction/p7-case-matrix.md",
+    "rowCount": 39,
+    "rows": [
+      {
+        "id": "primary-01",
+        "sourceSection": "primary",
+        "case": "Земля под дорожкой (сплошная)",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/section_return.rs",
+            "scripts/verify-p7-closure-stripline.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-closure-stripline.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 78,
+        "coverageGap": "Однородный участок → 2D-сечение; straight/bend приняты в низкой полосе. D1 continuous ещё открыт, переносить на любые длины нельзя",
+        "implementationScope": "**Поддерживается (условно)**"
+      },
+      {
+        "id": "primary-02",
+        "sourceSection": "primary",
+        "case": "Изгиб 90°",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-closure-baseline.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-closure-baseline.ts"
+          ],
+          "coverageGap": "coupon control only; arbitrary board bend unverified"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 79,
+        "coverageGap": "Принят как coupon; не гарантия для произвольной геометрии",
+        "implementationScope": "**Поддерживается (условно)**"
+      },
+      {
+        "id": "primary-03",
+        "sourceSection": "primary",
+        "case": "Дорожка 45°",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-hybrid-orientation.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-hybrid-orientation.ts"
+          ],
+          "coverageGap": "Partial: supervised 0/45/90 degree compact hybrid orientation control; latest cited orientation run timed out; no rotation sensitivity acceptance."
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [
+            "spatial-delay"
+          ],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 80,
+        "coverageGap": "spatial-delay 2.174198% принят при пороге 3% (2026-11-03)",
+        "implementationScope": "**Поддерживается (условно)**"
+      },
+      {
+        "id": "primary-04",
+        "sourceSection": "primary",
+        "case": "Связанная пара (два сигнала)",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "scripts/verify-p7-closure-stripline.ts",
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-closure-stripline.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 81,
+        "coverageGap": "Явное coupled-сечение принято в своей полосе. Автоматический N-port planner и joint four-port differential runtime реализованы, автоматическая пара по плате требует независимой EM-проверки",
+        "implementationScope": "**Поддерживается** только для явного coupled-сечения"
+      },
+      {
+        "id": "primary-05",
+        "sourceSection": "primary",
+        "case": "Земля с разрывом под дорожкой",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_section_model.rs",
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-joint-section.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": {
+            "sourceText": [
+              "10 кГц"
+            ],
+            "status": "as-stated-in-matrix; not independently bound"
+          },
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 82,
+        "coverageGap": "Bounded joint event удерживает разрыв и обходы и различает острова. После исправления выбора resume D1 вернул domain 4 с внутренней сходимостью в 1–10 кГц. В исторической проверке domain 1 → 2 был FAIL. Matched full joint и hybrid завершены. Four-port/open сравнения 1.25208%/1.45596%. Strict loaded replay после правки прошёл на обновлённом joint state. Joint spatial loaded-reactance отказал, приёмка открыта",
+        "implementationScope": "**Моделируется / проверяется**"
+      },
+      {
+        "id": "primary-06",
+        "sourceSection": "primary",
+        "case": "Земля сверху и снизу — явное идеальное сечение",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "scripts/verify-p7-closure-stripline.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-closure-stripline.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 83,
+        "coverageGap": "`a.line({kind:\"stripline\"})`; две плоскости сводятся к общему reference",
+        "implementationScope": "**Поддерживается**"
+      },
+      {
+        "id": "primary-07",
+        "sourceSection": "primary",
+        "case": "Земля сверху и снизу — авто по реальной плате",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/section_return.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "basis representation exists; no board-level physical control identified"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 84,
+        "coverageGap": "Базис сохраняет отдельные координаты плоскостей. Нужен подтверждённый маршрут на реальной плате с фактическими связями между плоскостями",
+        "implementationScope": "**Unverified**"
+      },
+      {
+        "id": "primary-08",
+        "sourceSection": "primary",
+        "case": "Сверху+снизу + разрыв на одном/двух слоях",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial; structural mesh/map and small hybrid electrical split-reference control",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_section_model.rs",
+            "native/analyze/src/extraction/local/mixed_conductor.rs"
+          ],
+          "shortControls": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected",
+            "native/analyze/src/extraction/local/hybrid_five_island_test.rs"
+          ],
+          "coverageGap": "Combined TOP/BOTTOM split geometry preserves five components (1794143097287789000); small five-island hybrid electrical response, displacement current and charge/power balance pass at 1/10 kHz (1794146923747180500). Automatic full-board coupling, actual inter-plane connections and independent physical reference remain unverified."
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 85,
+        "coverageGap": "Раздельные координаты и bounded split-return реализованы. Совместный сценарий двух плоскостей с разрывами требует своего контроля",
+        "implementationScope": "**Не поддерживается**"
+      },
+      {
+        "id": "primary-09",
+        "sourceSection": "primary",
+        "case": "Сшивка / via fence",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs",
+            "tests/analyze-auto-foil.test.ts"
+          ],
+          "shortControls": [
+            "tests/analyze-auto-foil.test.ts"
+          ],
+          "coverageGap": "geometric barrel/pad handling only; no fence extraction/acceptance"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 86,
+        "coverageGap": "Реальные barrel/pads внутри окна считаются; универсального fence-экстрактора и приёмки нет",
+        "implementationScope": "**Моделируется геометрически**"
+      },
+      {
+        "id": "primary-10",
+        "sourceSection": "primary",
+        "case": "Return via рядом с дорожкой",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs",
+            "scripts/verify-p7-auto-foil.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-auto-foil.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [
+            "spatial-delay"
+          ],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 87,
+        "coverageGap": "spatial-delay 2.763860% принят при пороге 3% (2026-11-03)",
+        "implementationScope": "**Поддерживается (условно)**"
+      },
+      {
+        "id": "primary-11",
+        "sourceSection": "primary",
+        "case": "Signal via / смена слоя",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs",
+            "tests/analysis-dsl.test.ts"
+          ],
+          "shortControls": [
+            "tests/analysis-dsl.test.ts"
+          ],
+          "coverageGap": "physical via contact binding tested; channel EM acceptance missing"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 88,
+        "coverageGap": "Via corridor реализован, приёмки канала нет",
+        "implementationScope": "**Моделируется / проверяется**"
+      },
+      {
+        "id": "primary-12",
+        "sourceSection": "primary",
+        "case": "Ветвления",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "coverageGap": "three-port geometry control does not validate all branch currents/loads"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 89,
+        "coverageGap": "Трёхпортовая ветвь проходит геометрический контроль. Электрическая приёмка всех ветвей и нагрузок открыта",
+        "implementationScope": "**Моделируется геометрически**"
+      },
+      {
+        "id": "primary-13",
+        "sourceSection": "primary",
+        "case": "Земля подключена на другом конце платы",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/board_foil.rs",
+            "scripts/verify-p7-wide-return-domains.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-wide-return-domains.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": {
+            "sourceText": [
+              "10 кГц"
+            ],
+            "status": "as-stated-in-matrix; not independently bound"
+          },
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 90,
+        "coverageGap": "Remote physical bypass прошёл геометрическую проверку. Внутренний sparse foil-модуль с потоковым LQ и обогащением прошёл полную невязку малого двухслойного купона на 10 кГц; этот путь не использует прежний dense cap 64. Автоматический planar foil и смешанный foil/volume runtime реализованы для допустимых входов. Многослойный STM32 и пространственная точность открыты. Историческая нижняя оценка fine electric enclosing ROI — 28 513 МиБ; новая редукция не подтверждает устранение этого field-бюджета. [Оператор и ограничения](../../evidence/p7-foil-reduction-2026-11-04.md)",
+        "implementationScope": "**Unverified**"
+      },
+      {
+        "id": "primary-14",
+        "sourceSection": "primary",
+        "case": "Под дорожкой меди нет совсем",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "tests/analyze-board-channel-return-selection.test.ts"
+          ],
+          "shortControls": [
+            "tests/analyze-board-channel-return-selection.test.ts"
+          ],
+          "coverageGap": "remote island geometry selected; capacitive return accuracy open"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 91,
+        "coverageGap": "При разрешимых исходных физических контактах отсутствие локального return-коридора выбирает общую область с независимыми островами. Геометрический контроль прошёл; численная точность ёмкостного/удалённого возврата ещё не принята",
+        "implementationScope": "**Unverified**"
+      },
+      {
+        "id": "primary-15",
+        "sourceSection": "primary",
+        "case": "Несколько опор / две земли",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/section_return.rs",
+            "scripts/verify-p7-shared-return-prototype.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-shared-return-prototype.ts"
+          ],
+          "coverageGap": "limited shared-return prototype only; board-wide physical joins open"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 92,
+        "coverageGap": "Независимые координаты, явные conductor-end mappings и mixed-polarity contacts реализованы. Нужна общая проверка физических соединений и восстановления токов",
+        "implementationScope": "**Unverified**"
+      },
+      {
+        "id": "primary-16",
+        "sourceSection": "primary",
+        "case": "Широкая опора (wide return)",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-wide-return-domains.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-wide-return-domains.ts"
+          ],
+          "coverageGap": "C1 coefficients only; real channel not accepted"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [
+            "C1"
+          ],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 93,
+        "coverageGap": "Приняты только совместные коэффициенты C1; реальный канал не принят",
+        "implementationScope": "**Проверяется**"
+      },
+      {
+        "id": "primary-17",
+        "sourceSection": "primary",
+        "case": "Окружающая медь",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/spatial_partition.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "ROI includes copper within stack-plus-margin; outside-window interaction not represented"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 94,
+        "coverageGap": "Внутри окна (~стек + запас) — вся медь всех слоёв; вне окна в оператор не входит",
+        "implementationScope": "**Моделируется геометрически**"
+      },
+      {
+        "id": "primary-18",
+        "sourceSection": "primary",
+        "case": "RF-сечение (BandAmp)",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-source-band.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-source-band.ts"
+          ],
+          "coverageGap": "section-only narrow band; complete RF board/via not covered"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": {
+            "sourceText": [
+              "500 МГц",
+              "1 ГГц"
+            ],
+            "status": "as-stated-in-matrix; not independently bound"
+          },
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 95,
+        "coverageGap": "500 МГц–1 ГГц, quasi-TEM, только сечение; полный RF-канал и ground-via — нет",
+        "implementationScope": "**Поддерживается** в узкой полосе"
+      },
+      {
+        "id": "primary-continuation-97",
+        "sourceSection": "primary",
+        "case": "Разрывы опоры сверху и снизу одновременно",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs"
+          ],
+          "shortControls": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs#aligned_pad_orientation_tests::inner_signal_with_split_top_and_bottom_references_stays_disconnected",
+            "native/analyze/src/extraction/local/hybrid_five_island_test.rs"
+          ],
+          "scope": "partial; structural mesh/map and small hybrid electrical split-reference control",
+          "coverageGap": "Combined TOP/BOTTOM split geometry preserves five components (1794143097287789000); small five-island hybrid electrical response, displacement current and charge/power balance pass at 1/10 kHz (1794146923747180500). Automatic full-board coupling, actual inter-plane connections and independent physical reference remain unverified."
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Не поддерживается**",
+        "coverageGap": "Требуемый кейс: нужна модель двух опор и их физических соединений",
+        "sourceLine": 97
+      },
+      {
+        "id": "primary-continuation-98",
+        "sourceSection": "primary",
+        "case": "Blind/buried via",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial; hybrid ownership and topology only",
+          "code": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs"
+          ],
+          "shortControls": [
+            "native/analyze/tests/blind_buried_via.rs"
+          ],
+          "coverageGap": "Hybrid barrel/foil ownership, physical span and contact isolation passed structural control 1794144648048884200; positive joint EM response and independent physical acceptance remain open."
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Моделируется геометрически**",
+        "coverageGap": "Span прошёл три геометрических теста и шесть отдельных DC случаев. Полная EM-проверка signal/return, antipad и stub открыта. Coax skin-transition проверяется отдельно",
+        "sourceLine": 98
+      },
+      {
+        "id": "primary-continuation-99",
+        "sourceSection": "primary",
+        "case": "Разъём/пад (connector/pad transition)",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial; finite pad to narrow track hybrid electrical control at 1 MHz",
+          "code": [
+            "native/analyze/src/extraction/local/mixed_conductor.rs"
+          ],
+          "shortControls": [
+            "native/analyze/src/extraction/local/hybrid_connector_test.rs"
+          ],
+          "coverageGap": "Two-drive positive response, KCL/KVL, copper/wave power and missing-contact refusal pass 1794147307231475200; independent physical connector reference and full connector geometry coverage remain open."
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Не поддерживается**",
+        "coverageGap": "Переход дорожки в пад/разъём; отдельный класс не реализован",
+        "sourceLine": 99
+      },
+      {
+        "id": "primary-continuation-100",
+        "sourceSection": "primary",
+        "case": "Дифференциальная пара",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial: explicit physical pair transform and complex modal loss recovery",
+          "code": [
+            "src/analyze/board-foil-mixed-mode.ts",
+            "src/analyze/board-foil-loss-grams.ts"
+          ],
+          "shortControls": [
+            "tests/analyze-board-foil-mixed-mode.test.ts",
+            "tests/analyze-board-foil-loss-grams.test.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Частично**",
+        "coverageGap": "Явное coupled-сечение принято. Layered differential подключён к joint four-port leg-to-return S50. Физическая приёмка автоматической пары и смены опоры открыта",
+        "sourceLine": 100
+      },
+      {
+        "id": "primary-continuation-101",
+        "sourceSection": "primary",
+        "case": "Смена опоры (reference swap)",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-reference-swap.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-reference-swap.ts"
+          ],
+          "coverageGap": "Partial: supervised discrete-model reference-swap control; latest audit records LOCAL_DEADLINE; no physical acceptance."
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Не поддерживается**",
+        "coverageGap": "Геометрия и независимые координаты поддерживают раздельные острова. Переход с доказанным физическим путём возврата между слоями/плоскостями ещё не принят",
+        "sourceLine": 101
+      },
+      {
+        "id": "primary-continuation-102",
+        "sourceSection": "primary",
+        "case": "Нет локальной опоры: поиск возврата по цепи",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "src/analyze/auto-foil-response.ts",
+            "src/analyze/board-channel-plan.ts",
+            "native/analyze/src/extraction/local/return_boundary.rs",
+            "native/analyze/src/extraction/local/layered_capacitance.rs"
+          ],
+          "shortControls": [
+            "tests/analyze-board-foil-cache.test.ts",
+            "tests/analyze-board-channel-plan.test.ts",
+            "scripts/verify-p7-hybrid-coupled-smoke.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Independent reference bindings and acceptance remain open."
+        },
+        "implementationScope": "Guarded automatic return search implemented",
+        "coverageGap": "Independent physical acceptance remains open",
+        "sourceLine": 102
+      },
+      {
+        "id": "primary-continuation-103",
+        "sourceSection": "primary",
+        "case": "GND/AGND/PGND с физическим соединением",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_five_island_test.rs"
+          ],
+          "shortControls": [
+            "native/analyze/src/extraction/local/hybrid_five_island_test.rs"
+          ],
+          "coverageGap": "Partial: generic disconnected reference islands and displacement current control; does not model named GND/AGND/PGND connections or verify their R/L."
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Не поддерживается**",
+        "coverageGap": "Разные острова и ориентированные контакты представимы. Автоматическое извлечение физического соединения и его R/L в этом сценарии требует проверки",
+        "sourceLine": 103
+      },
+      {
+        "id": "primary-continuation-104",
+        "sourceSection": "primary",
+        "case": "Несколько переходов опоры (AGND→PGND→GND)",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_five_island_test.rs"
+          ],
+          "shortControls": [
+            "native/analyze/src/extraction/local/hybrid_five_island_test.rs"
+          ],
+          "coverageGap": "Partial: small five-island joint AC discrete-model control; not physical acceptance of arbitrary return chains."
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Required canonical continuation row; implementation and independent reference bindings remain open."
+        },
+        "implementationScope": "**Не поддерживается**",
+        "coverageGap": "v1: до 8 переходов на канал; каждый — событие + физическое соединение; больше — отказ",
+        "sourceLine": 104
+      },
+      {
+        "id": "supplemental-19",
+        "sourceSection": "supplemental",
+        "case": "Ёмкостный/смешанный возврат через разрыв",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_section_model.rs",
+            "scripts/verify-p7-shared-return-prototype.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-shared-return-prototype.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 110,
+        "coverageGap": "AC multiport, ток смещения/баланс заряда, физические C, отдельная проверка DC-разрыва",
+        "implementationScope": "Bounded joint geometry и manufactured EQS control реализованы. Общий автоматический путь не принят"
+      },
+      {
+        "id": "supplemental-20",
+        "sourceSection": "supplemental",
+        "case": "Component bridge (R/C/ferrite)",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/board_prepare.rs",
+            "tests/analysis-dsl.test.ts"
+          ],
+          "shortControls": [
+            "tests/analysis-dsl.test.ts"
+          ],
+          "coverageGap": "explicit attachment/planner support; physical component contact/common-band validation open"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 111,
+        "coverageGap": "Извлечённые контакты + заданная модель компонента, общая полоса и отсутствие weld",
+        "implementationScope": "Явные R/C/L attachments, captured pins и DSL/planner реализованы. Поиск поддерживает до восьми рёбер и промежуточные острова"
+      },
+      {
+        "id": "supplemental-21",
+        "sourceSection": "supplemental",
+        "case": "PDN multiport",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "native/analyze/src/extraction/local/partitioned_conduction.rs",
+            "scripts/verify-p7-real-reference.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-real-reference.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": {
+            "sourceText": [
+              "100 кГц"
+            ],
+            "status": "as-stated-in-matrix; not independently bound"
+          },
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 112,
+        "coverageGap": "Полный обязательный сценарий, многопортовая композиция/наблюдения, взаимные связи, DC/AC overlap и recovery; [границы DC-пакета](../../evidence/p7-dc-endpoint-2026-11-04.md)",
+        "implementationScope": "Есть условные finite-ROI 1–100 кГц результаты. Отдельный DC endpoint сохраняет матрицу физических электродов и независимые острова; явные R/DCR и открытый C проверены на ограниченном купоне. Полный PDN-путь не принят"
+      },
+      {
+        "id": "supplemental-22",
+        "sourceSection": "supplemental",
+        "case": "Небольшая связанная группа, branch/meander",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "coverageGap": "joint preparation/geometry only; independent mutual and branch-current checks open"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [
+            "токи",
+            "mutual/crosstalk"
+          ],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 113,
+        "coverageGap": "Подтвердить независимые mutual/crosstalk и токи всех ветвей в общей полосе",
+        "implementationScope": "Реализованы N-port планирование и joint preparation списка каналов, пройдены геометрические контроли"
+      },
+      {
+        "id": "supplemental-23",
+        "sourceSection": "supplemental",
+        "case": "2/4/6/8 слоёв, асимметрия и конечные края опор",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/section_return.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "mechanisms exist; representative layer/edge matrix is not present"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 114,
+        "coverageGap": "Манифест представительных комбинаций; несколько опор не сводятся к одной без проверки",
+        "implementationScope": "Полное покрытие не подтверждено"
+      },
+      {
+        "id": "supplemental-24",
+        "sourceSection": "supplemental",
+        "case": "Адаптивная полоса по DSL",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "src/analyze/local-model-cache.ts",
+            "tests/analyze-board-foil-cache.test.ts"
+          ],
+          "shortControls": [
+            "tests/analyze-board-foil-cache.test.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": {
+            "sourceText": [
+              "10 кГц"
+            ],
+            "status": "as-stated-in-matrix; not independently bound"
+          },
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 115,
+        "coverageGap": "Все требуемые интервалы §1.1/§F плана, новые holdouts, явные непокрытые интервалы",
+        "implementationScope": "Event 5 подтвердил intrinsic local 1–10 кГц на свежем кэше с независимым replay и 12 интервалами. Segmented W6 и owner loss интегрированы и проверены TS тестами. Физическая общая и широкая полосы открыты"
+      },
+      {
+        "id": "supplemental-25",
+        "sourceSection": "supplemental",
+        "case": "Инварианты универсальности",
+        "implementation": {
+          "status": "mapped",
+          "code": [
+            "src/analyze/local-model-cache.ts",
+            "tests/analyze-board-foil-cache.test.ts"
+          ],
+          "shortControls": [
+            "tests/analyze-board-foil-cache.test.ts"
+          ]
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 116,
+        "coverageGap": "Перенос/поворот, ID/порядок терминалов, CAD-разбиение меди, gauge и сдвиг разрезов",
+        "implementationScope": "Манифест перечисляет все 42 случая, часть подготовительных артефактов привязана. Полная матрица численных проверок открыта"
+      },
+      {
+        "id": "return-topology-26",
+        "sourceSection": "return-topology",
+        "case": "Тот же net, разрыв с обходом",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_section_model.rs",
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "shortControls": [
+            "scripts/verify-p7-joint-section.ts"
+          ],
+          "coverageGap": "bounded same-net event controls; remote bypass outside local window not validated"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 128,
+        "coverageGap": "Моделируется / проверяется",
+        "implementationScope": "Возврат меняет путь, но не net"
+      },
+      {
+        "id": "return-topology-27",
+        "sourceSection": "return-topology",
+        "case": "AGND → GND через разрыв",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/board_prepare.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "physical bridge search/control and out-of-window extension/refusal not evidenced"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 129,
+        "coverageGap": "Не поддерживается",
+        "implementationScope": "Возврат идёт через точку соединения (звезда, перемычка, via)"
+      },
+      {
+        "id": "return-topology-28",
+        "sourceSection": "return-topology",
+        "case": "Несколько переходов (AGND→PGND→GND)",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/board_prepare.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "planner has bounded transitions; no multi-transition positive control linked"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 130,
+        "coverageGap": "Не поддерживается",
+        "implementationScope": "Несколько смен опоры подряд"
+      },
+      {
+        "id": "return-topology-29",
+        "sourceSection": "return-topology",
+        "case": "Смена слоя (signal via + return via)",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "tests/analysis-dsl.test.ts",
+            "native/analyze/src/extraction/local/mixed_conductor.rs"
+          ],
+          "shortControls": [
+            "tests/analysis-dsl.test.ts"
+          ],
+          "coverageGap": "via contact geometry tested; coupled signal/return transition accuracy open"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 131,
+        "coverageGap": "Моделируется / проверяется",
+        "implementationScope": "Возврат переходит на другую плоскость"
+      },
+      {
+        "id": "return-topology-30",
+        "sourceSection": "return-topology",
+        "case": "Разрыв без гальванического соединения",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/hybrid_section_model.rs"
+          ],
+          "shortControls": [
+            "native/analyze/src/extraction/local/hybrid_section_model.rs#tests::disconnected_islands_carry_ac_displacement_current"
+          ],
+          "coverageGap": "three-island discrete-model AC displacement and charge balance verified at 1/10 kHz; independent physical reference and automatic full-board split coverage remain open"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 132,
+        "coverageGap": "Не поддерживается",
+        "implementationScope": "Возврат только ёмкостный"
+      },
+      {
+        "id": "return-topology-31",
+        "sourceSection": "return-topology",
+        "case": "Смена опоры без найденного соединения",
+        "implementation": {
+          "status": "mapped",
+          "scope": "partial",
+          "code": [
+            "native/analyze/src/extraction/local/board_prepare.rs"
+          ],
+          "shortControls": [],
+          "coverageGap": "refusal/path selection implementation exists; explicit no-virtual-ground negative control not linked"
+        },
+        "acceptance": {
+          "status": "open",
+          "reference": null,
+          "observables": [],
+          "frequencyBandHz": null,
+          "finalChecks": [],
+          "unknownReason": "Canonical matrix has no row-specific final reference/observable/band binding in this closure manifest."
+        },
+        "sourceLine": 133,
+        "coverageGap": "Не поддерживается",
+        "implementationScope": "Проводящий путь не найден; проверить ёмкостный/смешанный AC-путь"
+      }
+    ],
+    "sourceSha256": "7c831234584af336a4dfe1e81b416c2675df1276ccb01e91528100deb73bb09e"
+  }
+}

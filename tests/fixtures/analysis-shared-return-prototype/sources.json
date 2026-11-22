@@ -1,0 +1,25 @@
+[
+  {
+    "url": "https://eda.sw.siemens.com/en-US/pcb/hyperlynx/3d-em/",
+    "status": "Web fetch failed: unsupported text/markdown content type; no quantitative evidence extracted"
+  },
+  {
+    "url": "https://innovationspace.ansys.com/courses/wp-content/uploads/sites/5/2021/07/HFSS_3DL_GS_2023R1_EN_LE03_Meshing_Sol.pdf",
+    "pages": "2-7",
+    "status": "Read: solver overview and volume/stackup meshing. No reproducible numeric shared-return reference furnished."
+  },
+  {
+    "url": "https://www.cadence.com/content/dam/cadence-www/global/en_US/documents/tools/ic-package-design-analysis/sigrity-resources/sigrity-modeling-structure-high-speed-long-tansmission-lines-methodology-cp.pdf",
+    "pages": "1-3",
+    "status": "Read: Yu/Chen/Shih cut-and-stitch with 2D uniform traces and 3D transitions. Architecture evidence; no machine tabulation adopted."
+  },
+  {
+    "url": "https://www.cadence.com/content/dam/cadence-www/global/en_US/documents/tools/ic-package-design-analysis/sigrity-resources/sigrity-measurement-simulation-simultaneous-switching-noise-mutli-reference-plane-package-cp.pdf",
+    "pages": "1-11",
+    "status": "Read: Rosser et al measured multi-reference-plane switching experiment. Text extraction corrupts figure dimensions. Do not invent dimensions or digitize as exact measured oracle; reproduction unavailable."
+  },
+  {
+    "url": "https://www.grc.nasa.gov/www/k-12/airplane/ohms.html",
+    "status": "Primary educational R=rho*L/A source for authored ideal DC rectangles; not PCB measurements"
+  }
+]

@@ -1,0 +1,721 @@
+{
+  "schemaVersion": 1,
+  "source": "docs/analyze/reference/p7-extraction/p7-case-matrix.md (2026-11-04)",
+  "cases": [
+    {
+      "id": "continuous-ground-line",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-segmented-coupon.json",
+      "test": "tests/analyze-board-channel-plan.test.ts",
+      "evidence": "docs/analyze/evidence/p7-segmented-channel-evidence.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Long D1 continuous and geometry/length sweep"
+      ],
+      "observables": [
+        "RLGC",
+        "delay",
+        "loaded current"
+      ],
+      "proposedReference": "Unsplit finite-length model and analytic uniform line"
+    },
+    {
+      "id": "90-degree-bend",
+      "status": "todo",
+      "scenario": null,
+      "test": "tests/analyze-board-channel-plan.test.ts",
+      "evidence": "docs/analyze/evidence/p7-segmented-channel-evidence.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Independent elbow benchmark beyond reused low-band coupon"
+      ],
+      "observables": [
+        "Complex S",
+        "delay",
+        "elbow current"
+      ],
+      "proposedReference": "Converged unsegmented 3D elbow and straight control"
+    },
+    {
+      "id": "45-degree-trace",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-local-extraction/board-integration/rotated45-end-contact-board.json",
+      "test": "tests/analyze-board-channel-plan.test.ts",
+      "evidence": "docs/analyze/evidence/p7-route-partition-results.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Full physical gate beyond conditional spatial-delay result"
+      ],
+      "observables": [
+        "Delay",
+        "complex S",
+        "rotation invariance"
+      ],
+      "proposedReference": "Matched axis-aligned and rotated independent 3D models"
+    },
+    {
+      "id": "explicit-coupled-pair",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/coupled.js",
+      "test": "tests/analyze-p7-closure-reference.test.ts",
+      "evidence": "docs/analyze/evidence/p7-completion-verification.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Geometry-matched finite-thickness coupled microstrip benchmark"
+      ],
+      "observables": [
+        "Even/odd impedance and delay",
+        "mutual RLGC",
+        "crosstalk"
+      ],
+      "proposedReference": "Independent finite-thickness 2D electrostatic and magnetic solve"
+    },
+    {
+      "id": "ground-gap-under-trace",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-joint-section/channel.js",
+      "test": "tests/analyze-p7-joint-section.test.ts",
+      "evidence": "docs/analyze/evidence/p7-d1-coupled-assembly-results.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Complete magnetic/domain and cut-shift gates"
+      ],
+      "observables": [
+        "Return detour flux",
+        "loaded magnetic energy",
+        "S"
+      ],
+      "proposedReference": "Unsplit 3D slot and continuous controls"
+    },
+    {
+      "id": "explicit-stripline",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/coupled-stripline.js",
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": "docs/analyze/evidence/p7-completion-verification.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Single-signal control and applicability beyond ideal common reference"
+      ],
+      "observables": [
+        "Capacitance",
+        "inductance",
+        "impedance",
+        "modal delay"
+      ],
+      "proposedReference": "Finite-thickness 2D Laplace reference plus homogeneous TEM identity"
+    },
+    {
+      "id": "automatic-real-board-dual-ground",
+      "status": "todo",
+      "scenario": null,
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": "docs/analyze/evidence/p7-automatic-foil-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Automatic planar foil and the mixed runtime are implemented for admitted inputs. Need a frozen positive board scenario and independent finite-domain spatial, interface and band controls."
+      ],
+      "observables": [
+        "Plane voltages and currents",
+        "port S"
+      ],
+      "proposedReference": "Finite two-plane 3D model with physical contacts"
+    },
+    {
+      "id": "dual-ground-with-gaps",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/split-reference.js",
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": "docs/analyze/evidence/p7-automatic-foil-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Automatic planar foil and the mixed runtime are implemented for admitted inputs. Need a frozen positive board scenario and independent finite-domain spatial, interface and band controls."
+      ],
+      "observables": [
+        "Detour flux",
+        "transfer impedance",
+        "S"
+      ],
+      "proposedReference": "Two-plane coupon with one-plane and both-plane slots"
+    },
+    {
+      "id": "via-fence",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/regular-fence.js",
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": "docs/analyze/evidence/p7-completion-verification.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "Individual via currents",
+        "common-mode S",
+        "leakage"
+      ],
+      "proposedReference": "Matched 3D regular and broken-fence controls"
+    },
+    {
+      "id": "nearby-return-via",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json",
+      "test": "tests/analyze-board-channel-plan.test.ts",
+      "evidence": "docs/analyze/evidence/p7-route-partition-results.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "Via current",
+        "delay",
+        "magnetic energy"
+      ],
+      "proposedReference": "Independent unsplit finite-return model with and without via"
+    },
+    {
+      "id": "signal-via-layer-change",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json",
+      "test": "tests/analyze-board-channel-plan.test.ts",
+      "evidence": "docs/analyze/evidence/p7-route-partition-results.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "Barrel current",
+        "S11",
+        "insertion loss"
+      ],
+      "proposedReference": "3D via and antipad model with matched ports"
+    },
+    {
+      "id": "branches",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/STM32G0_CAN_RS485.js",
+      "test": "tests/analyze-board-channel-plan.test.ts",
+      "evidence": "docs/analyze/evidence/p7-route-partition-results.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Joint group runtime is implemented. Need independent full-board mutual/crosstalk, per-port currents and recovery over the same verified physical band."
+      ],
+      "observables": [
+        "Branch current balance",
+        "per-port S"
+      ],
+      "proposedReference": "Unsegmented loaded T-junction and real-board witness"
+    },
+    {
+      "id": "remote-ground-connection",
+      "status": "todo",
+      "scenario": null,
+      "test": "tests/analyze-board-channel-plan.test.ts",
+      "evidence": "docs/analyze/evidence/p7-automatic-foil-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Automatic planar foil and the mixed runtime are implemented for admitted inputs. Need a frozen positive board scenario and independent finite-domain spatial, interface and band controls."
+      ],
+      "observables": [
+        "Return path length",
+        "current balance",
+        "boundary sensitivity"
+      ],
+      "proposedReference": "Unsplit board-scale loop at bounded low frequencies"
+    },
+    {
+      "id": "no-ground-under-trace",
+      "status": "todo",
+      "scenario": null,
+      "test": "tests/analyze-board-channel-plan.test.ts",
+      "evidence": "docs/analyze/evidence/p7-automatic-foil-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Automatic planar foil and the mixed runtime are implemented for admitted inputs. Need a frozen positive board scenario and independent finite-domain spatial, interface and band controls."
+      ],
+      "observables": [
+        "Return current",
+        "refusal stage",
+        "complex S where valid"
+      ],
+      "proposedReference": "Remote-return 3D benchmark and no-path control"
+    },
+    {
+      "id": "multiple-grounds",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/multiple-reference.js",
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": "docs/analyze/evidence/p7-completion-verification.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Automatic planar foil and the mixed runtime are implemented for admitted inputs. Need a frozen positive board scenario and independent finite-domain spatial, interface and band controls."
+      ],
+      "observables": [
+        "Reference potentials",
+        "transfer Z",
+        "current balance"
+      ],
+      "proposedReference": "3D multi-electrode reference with separate ground ports"
+    },
+    {
+      "id": "wide-return",
+      "status": "todo",
+      "scenario": null,
+      "test": "tests/analyze-wide-section-adapter.test.ts",
+      "evidence": "docs/analyze/evidence/p7-c1-wide-section-results.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Automatic planar foil and the mixed runtime are implemented for admitted inputs. Need a frozen positive board scenario and independent finite-domain spatial, interface and band controls."
+      ],
+      "observables": [
+        "Loaded magnetic energy",
+        "return spread",
+        "RLGC"
+      ],
+      "proposedReference": "Progressively expanded 2D/3D finite plane reference"
+    },
+    {
+      "id": "surrounding-copper",
+      "status": "todo",
+      "scenario": null,
+      "test": "tests/analyze-wide-return-domain.test.ts",
+      "evidence": "docs/analyze/evidence/p7-b2-wide-return-results.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Automatic planar foil and the mixed runtime are implemented for admitted inputs. Need a frozen positive board scenario and independent finite-domain spatial, interface and band controls."
+      ],
+      "observables": [
+        "Induced charge",
+        "mutual C",
+        "domain sensitivity"
+      ],
+      "proposedReference": "Expanded-domain reference with controlled conductor removal"
+    },
+    {
+      "id": "bandamp-rf-section",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/BandAmpV5.js",
+      "test": "tests/analyze-p7-closure-reference.test.ts",
+      "evidence": "docs/analyze/evidence/p7-completion-verification.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Common band and measured or independent physical response for section"
+      ],
+      "observables": [
+        "RLGC",
+        "impedance",
+        "delay over reported RF band"
+      ],
+      "proposedReference": "Geometry-matched 2D field reference with mesh sensitivity"
+    },
+    {
+      "id": "simultaneous-top-bottom-ground-gaps",
+      "status": "todo",
+      "scenario": null,
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": "docs/analyze/evidence/p7-automatic-foil-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Automatic planar foil and the mixed runtime are implemented for admitted inputs. Need a frozen positive board scenario and independent finite-domain spatial, interface and band controls."
+      ],
+      "observables": [
+        "Separate return currents",
+        "transfer Z",
+        "S"
+      ],
+      "proposedReference": "3D double-slot coupon and single-slot controls"
+    },
+    {
+      "id": "blind-buried-via",
+      "status": "todo",
+      "scenario": null,
+      "test": "native/analyze/tests/mixed_conductor.rs",
+      "evidence": "docs/analyze/evidence/p7-mixed-conductor-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "Barrel continuity",
+        "stub effect",
+        "S11"
+      ],
+      "proposedReference": "Cross-checked 3D via stack with through-via control"
+    },
+    {
+      "id": "connector-pad-transition",
+      "status": "todo",
+      "scenario": null,
+      "test": "native/analyze/tests/mixed_conductor.rs",
+      "evidence": "docs/analyze/evidence/p7-mixed-conductor-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "Reflection",
+        "insertion loss",
+        "transition delay"
+      ],
+      "proposedReference": "De-embedded measurement or geometry-matched 3D model"
+    },
+    {
+      "id": "differential-pair",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/coupled.js",
+      "test": "tests/analyze-p7-closure-reference.test.ts",
+      "evidence": "docs/analyze/evidence/p7-completion-verification.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Joint group runtime is implemented. Need independent full-board mutual/crosstalk, per-port currents and recovery over the same verified physical band."
+      ],
+      "observables": [
+        "Differential and common-mode S",
+        "mode conversion"
+      ],
+      "proposedReference": "Four-port unsplit 3D pair with de-embedded terminals"
+    },
+    {
+      "id": "reference-swap",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/multiple-reference.js",
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": "docs/analyze/evidence/p7-mixed-conductor-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "Reference transfer current",
+        "impedance",
+        "mode conversion"
+      ],
+      "proposedReference": "3D transition with finite physical tie and untied control"
+    },
+    {
+      "id": "return-search-without-local-reference",
+      "status": "todo",
+      "scenario": null,
+      "test": "tests/analyze-board-channel-plan.test.ts",
+      "evidence": "docs/analyze/evidence/p7-automatic-foil-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Automatic planar foil and the mixed runtime are implemented for admitted inputs. Need a frozen positive board scenario and independent finite-domain spatial, interface and band controls."
+      ],
+      "observables": [
+        "Chosen connectivity",
+        "domain sensitivity",
+        "refusal diagnostics"
+      ],
+      "proposedReference": "Exact connectivity audit and unsplit remote-return field solve"
+    },
+    {
+      "id": "physical-ground-net-bridge",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/agnd-dgnd-bridge.js",
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": "docs/analyze/evidence/p7-completion-verification.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "Bridge R/L",
+        "reference voltages",
+        "return flux"
+      ],
+      "proposedReference": "Independent bridge geometry plus open-bridge negative control"
+    },
+    {
+      "id": "multiple-reference-transitions",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/multiple-reference.js",
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": "docs/analyze/evidence/p7-mixed-conductor-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "Per-transition impedance and flux",
+        "ordering",
+        "refusal stage"
+      ],
+      "proposedReference": "Unsplit chain and per-transition low-frequency circuit model"
+    },
+    {
+      "id": "capacitive-mixed-return-gap",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/split-reference.js",
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": null,
+      "acceptance": null,
+      "missingPrerequisites": [
+        "AC displacement state and separate DC topology gate"
+      ],
+      "observables": [
+        "DC open",
+        "displacement flux",
+        "AC transfer Y"
+      ],
+      "proposedReference": "Independent electrostatic gap C plus AC field comparison"
+    },
+    {
+      "id": "component-bridge-rc-ferrite",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/agnd-dgnd-bridge.js",
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": null,
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Explicit R/C/ferrite models and automatic terminal linkage"
+      ],
+      "observables": [
+        "Component I/V",
+        "transfer Y",
+        "DC continuity by type"
+      ],
+      "proposedReference": "Measured component Z or analytic R/C with independent circuit/field assembly"
+    },
+    {
+      "id": "pdn-multiport",
+      "status": "todo",
+      "scenario": null,
+      "test": null,
+      "evidence": "docs/analyze/evidence/p7-completion-verification.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Full finite-ROI multiport with DC/AC overlap and current recovery"
+      ],
+      "observables": [
+        "Self/mutual Z",
+        "DC limit",
+        "contact flux"
+      ],
+      "proposedReference": "Independent PEEC or 3D conductive solve plus low-frequency circuit control"
+    },
+    {
+      "id": "small-coupled-branch-meander-group",
+      "status": "todo",
+      "scenario": null,
+      "test": "tests/analyze-board-channel-plan.test.ts",
+      "evidence": "docs/analyze/evidence/p7-automatic-foil-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Joint group runtime is implemented. Need independent full-board mutual/crosstalk, per-port currents and recovery over the same verified physical band."
+      ],
+      "observables": [
+        "Mutual RLGC",
+        "crosstalk",
+        "branch currents"
+      ],
+      "proposedReference": "Unsplit 3D coupled meander with independently loaded branches"
+    },
+    {
+      "id": "stackups-2-4-6-8-asymmetry-finite-edges",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/manifest.json",
+      "test": "tests/analyze-p7-closure-reference.test.ts",
+      "evidence": "docs/analyze/evidence/p7-completion-verification.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Automatic planar foil and the mixed runtime are implemented for admitted inputs. Need a frozen positive board scenario and independent finite-domain spatial, interface and band controls."
+      ],
+      "observables": [
+        "Plane flux",
+        "edge sensitivity",
+        "RLGC",
+        "S"
+      ],
+      "proposedReference": "Independent geometry-matched 2D/3D references per stackup"
+    },
+    {
+      "id": "dsl-adaptive-frequency-coverage",
+      "status": "todo",
+      "scenario": null,
+      "test": "scripts/verify-p7-source-band.ts",
+      "evidence": "docs/analyze/evidence/p7-source-spectrum-verification.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Separate DC and local low-band audit exist. The skin-depth mesh profile screens copper resolution. Need verified DC/AC overlap, independent skin transition and local HF, and physical segmented common-band coverage."
+      ],
+      "observables": [
+        "Requested versus verified intervals",
+        "overlap error",
+        "response near breakpoints"
+      ],
+      "proposedReference": "Dense independent frequency sweep with overlap and out-of-band controls"
+    },
+    {
+      "id": "universality-invariants",
+      "status": "todo",
+      "scenario": null,
+      "test": "tests/analyze-board-channel-plan.test.ts",
+      "evidence": "docs/analyze/evidence/p7-automatic-foil-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Actual-addon mixed bend cold/memory/disk exact-grid reuse passed with unchanged samples and no native solve on reuse. Frozen physical invariance controls for geometry, ports, gauge and segmentation remain required."
+      ],
+      "observables": [
+        "Copper ownership",
+        "port ordering",
+        "rotation and segmentation sensitivity"
+      ],
+      "proposedReference": "Exact geometry invariants and paired solves under physical invariance transforms"
+    },
+    {
+      "id": "same-net-gap-with-bypass",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-joint-section/channel.js",
+      "test": "tests/analyze-p7-joint-section.test.ts",
+      "evidence": "docs/analyze/evidence/p7-d1-coupled-assembly-results.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Independent bypass current and magnetic closure"
+      ],
+      "observables": [
+        "DC path",
+        "detour flux",
+        "loaded loop inductance"
+      ],
+      "proposedReference": "Unsplit finite return with slot and known copper bypass"
+    },
+    {
+      "id": "agnd-to-gnd-physical-bridge",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/agnd-dgnd-bridge.js",
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": "docs/analyze/evidence/p7-mixed-conductor-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "Bridge current",
+        "transfer R/L",
+        "contact ownership"
+      ],
+      "proposedReference": "Exact connectivity and matched independent bridge field reference"
+    },
+    {
+      "id": "multiple-agnd-pgnd-transitions",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/multiple-reference.js",
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": "docs/analyze/evidence/p7-mixed-conductor-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "Ordered events",
+        "each bridge flux",
+        "end-to-end response"
+      ],
+      "proposedReference": "Independent unsegmented model of chained finite bridges"
+    },
+    {
+      "id": "signal-and-return-via-reference-change",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json",
+      "test": "tests/analyze-board-channel-plan.test.ts",
+      "evidence": "docs/analyze/evidence/p7-route-partition-results.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "Both via currents",
+        "reference transfer impedance",
+        "S"
+      ],
+      "proposedReference": "Matched 3D two-via geometry with open-return control"
+    },
+    {
+      "id": "galvanically-open-capacitive-gap",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/split-reference.js",
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": null,
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Frequency-dependent physical gap response with DC open state"
+      ],
+      "observables": [
+        "DC conductance",
+        "gap capacitance",
+        "displacement current"
+      ],
+      "proposedReference": "Independent static capacitance and AC admittance benchmark"
+    },
+    {
+      "id": "reference-change-without-found-connection",
+      "status": "todo",
+      "scenario": "tests/fixtures/analysis-p7-closure/split-reference.js",
+      "test": "tests/analyze-p7-closure-accuracy.test.ts",
+      "evidence": null,
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Add explicit transition request with no galvanic or verified capacitive route"
+      ],
+      "observables": [
+        "Path search output",
+        "refusal stage",
+        "island distinction"
+      ],
+      "proposedReference": "Exact graph-disconnect oracle on frozen geometry"
+    },
+    {
+      "id": "short-wide-reference-bridge",
+      "status": "todo",
+      "scenario": null,
+      "test": "native/analyze/tests/mixed_conductor.rs",
+      "evidence": "docs/analyze/evidence/p7-mixed-conductor-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "R/L",
+        "return flux",
+        "lumped-versus-distributed response"
+      ],
+      "proposedReference": "Converged 3D contact model and low-frequency resistance control"
+    },
+    {
+      "id": "long-narrow-reference-bridge",
+      "status": "todo",
+      "scenario": null,
+      "test": "native/analyze/tests/mixed_conductor.rs",
+      "evidence": "docs/analyze/evidence/p7-mixed-conductor-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "Distributed RLGC",
+        "delay",
+        "return current profile"
+      ],
+      "proposedReference": "Independent 2D line parameters and finite-length 3D response"
+    },
+    {
+      "id": "board-edge-reference-connection",
+      "status": "todo",
+      "scenario": null,
+      "test": "native/analyze/tests/mixed_conductor.rs",
+      "evidence": "docs/analyze/evidence/p7-mixed-conductor-2026-11-04.md",
+      "acceptance": null,
+      "missingPrerequisites": [
+        "Mixed foil/volume runtime and compact native controls exist. Need class-specific actual-addon geometry, physical transitions, independent current/response and domain/band controls."
+      ],
+      "observables": [
+        "Edge current distribution",
+        "transfer Z",
+        "low-frequency R/L"
+      ],
+      "proposedReference": "3D finite-board reference with mesh and edge-length sensitivity"
+    }
+  ],
+  "note": "todo/ready describe preparation only. Existing evidence links are historical pointers, not acceptance. Scenario/physical setup, observables and reference uncertainty remain to be pinned per case.",
+  "statusMeaning": "Preparation status only. Linked artifacts include partial, geometry-only, refused, and historical conditional results. The case matrix records their historical scope. Proposed references are comparison targets. Acceptance is recorded separately."
+}

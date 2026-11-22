@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "fixture": "STM32G0_CAN_RS485",
+  "rules": [
+    {
+      "kind": "connectivity"
+    },
+    {
+      "kind": "clearance",
+      "minMm": 0.2
+    },
+    {
+      "kind": "edge-clearance",
+      "minMm": 0.2
+    }
+  ],
+  "expectedChecks": [
+    "unknown",
+    "fail",
+    "pass"
+  ],
+  "plotTitle": "STM32G0_CAN_RS485 geometry measurements",
+  "snapshot": {
+    "measurements": 909,
+    "violations": 2,
+    "uncertain": 63,
+    "regions": 844,
+    "measurementSha256": "0d59b1c931592b40e53a3ce99bb23cb40350620e16efceeddf8e1ff99161c0d3",
+    "violationSha256": "429b4da11d2b4bcd3d1db774f1dc1ac5090fc4d07ee99b90bdd3bdc7ae94cb3b",
+    "regionSha256": "6df175d658b6208e8aeee6dc0be7959fb8adb8210d67c06a71b0f616ee51e327",
+    "diagnosticsSha256": "1d1c1b293e1f65c31e17ad1b0fce5b462f93708e0cd69760ebd355db470c93b7",
+    "coverageSha256": "733a90ac50fdf9446cfbf1fe7fbe24dd2d8f19d1a2324e0229dda7f6d25e398c",
+    "graphSha256": "6dad08553efe67b5a0cc7f3d6108a598f713c783916c2947dda5ff558d0e4c18",
+    "fillsSha256": "9de8627ff4f59edd5827c50bcef30e8a993668e332f1f43b92f7916bbcae6b1a",
+    "excludedSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "method": "Independent smooth positive6D direct-product quadrature orders6/8, no moment or accepted near-kernel formula in reference. Existing bounded prism helper reused.",
+  "rows": [
+    {
+      "analyticRemainderM5": 3.2054596528277984e-29,
+      "direct6DM5": 9.398736211700466e-27,
+      "lastReferenceChangeM5": 3.1511054619210734e-39,
+      "momentM5": 9.398970848699405e-27,
+      "radiusRatio": 0.2995565597178612,
+      "rotationScaleReferenceM5": 3.007595587744149e-25,
+      "xM": 0.03
+    },
+    {
+      "analyticRemainderM5": 6.659640227649547e-31,
+      "direct6DM5": 5.0431252353876624e-27,
+      "lastReferenceChangeM5": 5.596225547127589e-41,
+      "momentM5": 5.043131816345327e-27,
+      "radiusRatio": 0.16183230409923283,
+      "rotationScaleReferenceM5": 1.613800075324052e-25,
+      "xM": 0.05
+    },
+    {
+      "analyticRemainderM5": 6.1214983514564235e-33,
+      "direct6DM5": 2.3410380302508336e-27,
+      "lastReferenceChangeM5": 4.2689156417191227e-41,
+      "momentM5": 2.3410381023308094e-27,
+      "radiusRatio": 0.0752914004513129,
+      "rotationScaleReferenceM5": 7.491321696802667e-26,
+      "xM": 0.1
+    }
+  ],
+  "maxRelativeMomentError": 2.4964739264277114e-05,
+  "maxRelativeReferenceChange": 3.352690607486429e-13,
+  "allAbsoluteBoundsConservative": true,
+  "closeCase": "Separated bboxes at11mm but overlapping moment balls: direct reference admitted, far refused, plan all-near.",
+  "compileSeconds": 3.2,
+  "testSeconds": 0.04,
+  "passed": 1,
+  "filteredPreviouslyGreen": 4,
+  "maxSimultaneousDirectSamples": 1024,
+  "directRuleMaxOrder": 8,
+  "sourceSha256": "ab3f12912b293bd419ce94af5e3254925b2c68d7f54c149f19f286e362dd8652",
+  "rawLogSha256": "c3fc646ebf7617fb4f28e19b82ceb7c9523c4623639922b8e8785522d750cec6"
+}

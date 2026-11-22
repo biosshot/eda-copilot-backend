@@ -1,0 +1,321 @@
+{
+  "roiMm": [
+    [
+      -0.54,
+      -1.07
+    ],
+    [
+      10.54,
+      0.6900000000000001
+    ]
+  ],
+  "stack": [
+    {
+      "name": "TOP",
+      "copper": true,
+      "thicknessM": 1e-05,
+      "conductivitySM": 58000000,
+      "epsilonR": null
+    },
+    {
+      "name": "substrate",
+      "copper": false,
+      "thicknessM": 0.0002,
+      "conductivitySM": null,
+      "epsilonR": 4
+    },
+    {
+      "name": "BOTTOM",
+      "copper": true,
+      "thicknessM": 1e-05,
+      "conductivitySM": 58000000,
+      "epsilonR": null
+    }
+  ],
+  "finishedHolePlatingM": 2.5e-05,
+  "barrelConductivitySM": 58000000,
+  "airMarginM": 0.002,
+  "maxTriangleAreaM2": 1e-06,
+  "maxVerticalStepM": 0.002,
+  "curveDeviationMm": 0.001,
+  "electrodes": [
+    {
+      "name": "terminal-0",
+      "sourcePath": "copper.fixed.tracks[0]",
+      "layer": "TOP",
+      "upper": false
+    },
+    {
+      "name": "terminal-1",
+      "sourcePath": "copper.fixed.tracks[1]",
+      "layer": "BOTTOM",
+      "upper": true
+    },
+    {
+      "name": "terminal-2",
+      "sourcePath": "copper.fixed.tracks[0]",
+      "layer": "TOP",
+      "upper": false
+    },
+    {
+      "name": "terminal-3",
+      "sourcePath": "copper.fixed.tracks[1]",
+      "layer": "BOTTOM",
+      "upper": true
+    },
+    {
+      "name": "terminal-4",
+      "sourcePath": "copper.fixed.tracks[2]",
+      "layer": "BOTTOM",
+      "upper": true
+    },
+    {
+      "name": "terminal-5",
+      "sourcePath": "copper.fixed.tracks[1]",
+      "layer": "BOTTOM",
+      "upper": true
+    },
+    {
+      "name": "terminal-6",
+      "sourcePath": "copper.fixed.tracks[2]",
+      "layer": "BOTTOM",
+      "upper": true
+    },
+    {
+      "name": "terminal-7",
+      "sourcePath": "copper.fixed.tracks[1]",
+      "layer": "BOTTOM",
+      "upper": true
+    },
+    {
+      "name": "terminal-8",
+      "sourcePath": "pads[0]",
+      "layer": "TOP",
+      "upper": false
+    },
+    {
+      "name": "terminal-9",
+      "sourcePath": "pads[2]",
+      "layer": "BOTTOM",
+      "upper": true
+    },
+    {
+      "name": "terminal-10",
+      "sourcePath": "pads[1]",
+      "layer": "BOTTOM",
+      "upper": true
+    },
+    {
+      "name": "terminal-11",
+      "sourcePath": "pads[3]",
+      "layer": "BOTTOM",
+      "upper": true
+    }
+  ],
+  "ports": [
+    [
+      "terminal-0",
+      "terminal-1"
+    ],
+    [
+      "terminal-2",
+      "terminal-3"
+    ],
+    [
+      "terminal-4",
+      "terminal-5"
+    ],
+    [
+      "terminal-6",
+      "terminal-7"
+    ],
+    [
+      "terminal-8",
+      "terminal-9"
+    ],
+    [
+      "terminal-10",
+      "terminal-11"
+    ]
+  ],
+  "acceptUnknownFillFreshness": true,
+  "allowInsulatedCopperCuts": true,
+  "minTriangleAngleDeg": 0,
+  "airEdgeDivisions": 1,
+  "domainPolygonMm": [
+    [
+      10.54,
+      -0.4899999999999999
+    ],
+    [
+      10.54,
+      0.6900000000000001
+    ],
+    [
+      9.318748109787702,
+      0.6900000000000001
+    ],
+    [
+      9.318748109787702,
+      -0.4899999999999999
+    ],
+    [
+      5.831251896172763,
+      -0.48999999999999994
+    ],
+    [
+      5.831251896172763,
+      0.49
+    ],
+    [
+      4.168748103827237,
+      0.49
+    ],
+    [
+      4.1687481038272365,
+      -0.49
+    ],
+    [
+      3.153333333333334,
+      -0.49000000000000005
+    ],
+    [
+      0.6812518902122975,
+      -0.49000000000000005
+    ],
+    [
+      0.6812518902122977,
+      0.49000000000000005
+    ],
+    [
+      -0.54,
+      0.49000000000000005
+    ],
+    [
+      -0.54,
+      -0.4900000000000001
+    ],
+    [
+      -0.54,
+      -1.07
+    ],
+    [
+      10.54,
+      -1.07
+    ]
+  ],
+  "cutPlanes": {
+    "terminal-0": {
+      "originMm": [
+        4.168748103827237,
+        0
+      ],
+      "normalXY": [
+        -1,
+        9.06304509898087e-16
+      ],
+      "spanMm": [
+        -0.050000011920928955,
+        0.050000011920928955
+      ]
+    },
+    "terminal-1": {
+      "originMm": [
+        4.168748103827237,
+        0
+      ],
+      "normalXY": [
+        -1,
+        9.06304509898087e-16
+      ],
+      "spanMm": [
+        0.33000001311302185,
+        0.4300000071525574
+      ]
+    },
+    "terminal-2": {
+      "originMm": [
+        0.6812518902122976,
+        0
+      ],
+      "normalXY": [
+        1,
+        -2.265761274745217e-16
+      ],
+      "spanMm": [
+        -0.050000011920928955,
+        0.050000011920928955
+      ]
+    },
+    "terminal-3": {
+      "originMm": [
+        0.6812518902122976,
+        0
+      ],
+      "normalXY": [
+        1,
+        -2.265761274745217e-16
+      ],
+      "spanMm": [
+        -0.4300000071525574,
+        -0.33000001311302185
+      ]
+    },
+    "terminal-4": {
+      "originMm": [
+        9.318748109787702,
+        1.1102230246251565e-16
+      ],
+      "normalXY": [
+        -1,
+        0
+      ],
+      "spanMm": [
+        -0.050000011920928844,
+        0.050000011920929066
+      ]
+    },
+    "terminal-5": {
+      "originMm": [
+        9.318748109787702,
+        1.1102230246251565e-16
+      ],
+      "normalXY": [
+        -1,
+        0
+      ],
+      "spanMm": [
+        0.33000001311302196,
+        0.4300000071525575
+      ]
+    },
+    "terminal-6": {
+      "originMm": [
+        5.831251896172763,
+        5.551115123125783e-17
+      ],
+      "normalXY": [
+        1,
+        0
+      ],
+      "spanMm": [
+        -0.05000001192092901,
+        0.0500000119209289
+      ]
+    },
+    "terminal-7": {
+      "originMm": [
+        5.831251896172763,
+        5.551115123125783e-17
+      ],
+      "normalXY": [
+        1,
+        0
+      ],
+      "spanMm": [
+        -0.43000000715255743,
+        -0.3300000131130219
+      ]
+    }
+  }
+}

@@ -3,7 +3,8 @@
 /.artifacts/
 /debugging/
 /native/pcb-board-packer/target/
-/native/pcb-board-packer/*.node
+/native/node-addon/*.node
+/native/node-addon/eda_copilot_node.pdb
 .env
 .env.*
 /native/pcb-board-packer/pcb_board_packer.pdb

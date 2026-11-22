@@ -1,0 +1,22 @@
+{
+  "fixture": "TPS63060DSCR",
+  "component": "U1",
+  "powerW": 1.5,
+  "cases": [
+    "steady-coarse",
+    "steady-fine",
+    "time",
+    "time-refined"
+  ],
+  "timeS": [
+    0,
+    15,
+    30,
+    45,
+    60
+  ],
+  "conditional": true,
+  "heatsink": false,
+  "maxSpatialRelativeChange": 0.02,
+  "maxTemporalRelativeChange": 0.001
+}

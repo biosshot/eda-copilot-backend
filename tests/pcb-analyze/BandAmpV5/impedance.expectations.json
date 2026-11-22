@@ -1,0 +1,38 @@
+{
+  "tracks": [
+    "dcc17162579803b7"
+  ],
+  "segment": [
+    [
+      [
+        -15.8299,
+        0
+      ],
+      [
+        -5.2,
+        0
+      ]
+    ]
+  ],
+  "net": [
+    "RF_IN_PORT"
+  ],
+  "layer": "TOP",
+  "widthMm": 0.6736,
+  "lengthMm": 10.6299,
+  "dielectricHeightMm": 0.4,
+  "epsilon": 4.2,
+  "copperThicknessMm": 0.035,
+  "conditional": true,
+  "source": "Explicit selected straight section; stackup/epsilon/PEC/lossless are hypotheses, not verified CAD material/reference",
+  "expectedChecks": [
+    "fail",
+    "pass"
+  ],
+  "frequencyHz": [
+    1000000.0,
+    1000000000.0,
+    41
+  ],
+  "kind": "microstrip"
+}

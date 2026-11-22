@@ -1,0 +1,123 @@
+{
+  "name": "ESPower",
+  "project": {
+    "name": "ESPower",
+    "uuid": "cc0fe31ad3fd4d1d8ca92eef5c9a6cd6"
+  },
+  "pcb": {
+    "name": "PCB1_2",
+    "uuid": "1cb65cc402f64074"
+  },
+  "capturedAt": "2026-10-21T14:28:49.186Z",
+  "versions": {
+    "editor": "3.2.206",
+    "extension": "1.3.2",
+    "mcp": "1.3.2",
+    "revisions": {
+      "backend": "832dca321367d1e292afa1db2141420f8d13166a",
+      "copilot": "3654a69166deab037f9c7d1a4a51511d9899754f"
+    },
+    "backendRoutingBoardV2Sha256": "9b7be233eae5ff446e9eb7833300ca68fb482cb0e13198182c8e750c96cd396b"
+  },
+  "export": {
+    "status": "exported",
+    "diagnostics": [
+      {
+        "code": "EASYEDA_V2_SEQUENTIAL_CAPTURE",
+        "severity": "warning",
+        "message": "CAD reads are sequential, not atomic. Do not edit the PCB during export; native pour freshness is unknown."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "9a9ba671fb863ba8: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      },
+      {
+        "code": "EASYEDA_V2_STROKE_JOINS_UNVERIFIED",
+        "severity": "warning",
+        "message": "0e1210f37a448541: stroke expansion uses round joins/caps; verify against CAD copper in the pilot audit."
+      }
+    ],
+    "inventory": {
+      "layers": 2,
+      "components": 53,
+      "pads": 172,
+      "padDrills": 17,
+      "independentHoles": 0,
+      "tracks": 326,
+      "vias": 74,
+      "pours": 2,
+      "fills": 0
+    }
+  },
+  "nativeSummary": {
+    "components": 53,
+    "pads": 172,
+    "tracks": 325,
+    "arcs": 1,
+    "vias": 74,
+    "pours": 2,
+    "fillFragments": 140,
+    "layers": [
+      "TOP",
+      "BOTTOM"
+    ],
+    "viaTypes": {
+      "0": 41,
+      "2": 33
+    },
+    "padDrills": 17,
+    "slottedPadDrills": 6
+  },
+  "verification": {
+    "sourceRecordsUnchanged": true,
+    "sourceRecordCount": 1012,
+    "audit": "Captured and inventoried; physical completeness has not yet been accepted as an analysis reference",
+    "v2InventoryVerified": true,
+    "v2ReplayMatchesLiveExport": true,
+    "archiveComparison": {
+      "projectArchiveContainsSelectedPcb": true,
+      "archiveCrcVerified": true,
+      "nativeRecordCount": 1011,
+      "archiveRecordCount": 2051,
+      "archiveRecordsMatchSelectedSource": false,
+      "mismatch": {
+        "CANVAS": 1,
+        "LAYER": 30,
+        "SILK_OPTS": 2,
+        "RULE": 10,
+        "POURED": 8,
+        "ELE_PLACEHOLDER": 170,
+        "PAD_NET": 863,
+        "ATTR": 15,
+        "COMPONENT": 10,
+        "META": 1,
+        "RULE_TEMPLATE": 1,
+        "RULE_SELECTOR": 30
+      },
+      "note": "Project archive and editor-selected source are distinct native representations. Record equality and physical equivalence are not assumed; V2 uses the captured editor input."
+    }
+  },
+  "files": {
+    "source.epro2": {
+      "bytes": 1999256,
+      "sha256": "84f27563158a8b20e210cbeb89683b69809f828432aab6791a43843fe5ee4530",
+      "normalization": "binary"
+    },
+    "source-pcb.txt": {
+      "bytes": 327317,
+      "sha256": "6c7c38da82f1b180004b477faed0f57af8fabc15300cd27dd8697a4e5105d9db",
+      "normalization": "lf"
+    },
+    "export-evidence.json": {
+      "bytes": 639850,
+      "sha256": "7b3d51c5b3f0154312e51bb35b28e168ffa3d5a080b88d50d95008c59ce3daa5",
+      "normalization": "lf"
+    },
+    "ESPower.json": {
+      "bytes": 1244953,
+      "sha256": "894e0924f8165792bc994b0644ac206a6ea55144bccaab68f29268c9525bbf43",
+      "normalization": "lf"
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "fixture": "BandAmpV5",
+  "binding": {
+    "input": {
+      "positive": [
+        "U1",
+        "6",
+        "RF_IN_MMIC"
+      ],
+      "negative": [
+        "U1",
+        "2",
+        "GND"
+      ]
+    },
+    "output": {
+      "positive": [
+        "U1",
+        "3",
+        "RF_OUT_MMIC"
+      ],
+      "negative": [
+        "U1",
+        "4",
+        "GND"
+      ]
+    },
+    "assumptions": "U1 RF path contacts verified in saved PCB. All RF blocks here are synthetic demonstration hypotheses, not U1 parameters or measured/extracted board behavior."
+  },
+  "cases": [
+    "Attenuator Pad",
+    "reflecting cascade",
+    "cascade reference 75",
+    "active nonreciprocal",
+    "coupled with explicit load"
+  ],
+  "boardSection": {
+    "resourceId": "BandAmpV5-explicit-section-hypothesis",
+    "frequenciesHz": [
+      1000000.0,
+      5000000.0,
+      10000000.0
+    ],
+    "matrixOhm": [
+      [
+        100,
+        10
+      ],
+      [
+        10,
+        75
+      ]
+    ]
+  }
+}

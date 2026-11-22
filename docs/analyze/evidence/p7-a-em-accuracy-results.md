@@ -1,0 +1,37 @@
+# P7-A independent EM accuracy, 2026-10-31
+
+Small genuine coupled AC now passes independent absolute C/L/Z and complex four-port response checks. Whole P7 remains open. Production/native code and addon were unchanged; no commits.
+
+## Independent physical reference
+
+New `tests/fixtures/analysis-p7-closure/independent-stripline-fd.py` independently assembles Cartesian five-point Laplace and discrete Dirichlet cross energy, using existing SciPy1.12 sparse solve without producer imports. Reference geometry exactly matches finite35um copper: width/gap0.3mm, conductor y0.3..0.335mm, grounded planes y0/0.635mm, er4, PEC/lossless. Independent absolute C is used for homogeneous Maxwell L=er/c^2 inverse(C), modal Z and independent lossless ABCD propagation. This checks absolute coupling magnitude rather than TEM velocity identity alone. No thickness mismatch remains.
+
+Reference JSON SHA256 `217ebc00ac2bca90ab0358c9a66cdf1b3a50bccb7ff2d078b348ab1eb519054f`. Grid5 to2.5um changes C0.348516%; side-wall halfwidth1.5 to2mm changes C0.0011904%. Native uses distant Neumann sides; reference uses grounded sides. A2% engineering uncertainty allowance was assigned before execution and included additively inside total8% tolerance. Both sensitivities must be below1%. This is an engineering numerical estimate, not a rigorous error bound or measured reference. Residuals are retained separately. Offline reference generation47.108s, sequenced before native window; this is not native resource evidence. No dependency was added. SciPy sparse solver documentation: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html .
+
+## New supervised DSL evidence
+
+Packet `debugging/p7-closure/1793432658079920300`, executed by sibling under existing supervisor, contains `comparison.json`: status pass, comparisonPassed true, physicalValidation validated. Every C/L entry, both modal Z/delay and every complex four-port S at1/10/100MHz over20mm pass. Maximum relative error0.07053065%; with2% allowance2.07053065%<8%. Fixed floors1fF/m,1pH/m,0.01Ohm,0.1ps/m and1e-4 complex S remain unchanged. Nonzero far-end transfer magnitude is approximately7.06e-6 to7.05e-4, compared against the independently extracted absolute mutual coupling.
+
+Cold full DSL7.282s; sampled tree RSS975761408B, private1037230080B,20ms lower-bound peaks. Initial headroom21498720256B, cap1610612736B, reserve1073741824B; default threads and isolated cold cache. Stable addon `f0cd8d66a2a190ee32918cc8b73c7669b35a5e9b568640713d9afc166258cc85`. Separate sibling direct-DSL regression packet1793432695731351000 is workflow evidence. Earlier straight/bend numerical cross-references remain reused, not new independent measurements.
+
+## Captured copper and future coupons
+
+`capturedBoardGeometry` confirms both signal endpoints and both return endpoints share reliable physical islands on all five full real selections: STM32, NanoScope, ThunderF722, TPS, BandAmp. Exact pad/island mappings, source hashes and diagnostics are hash-bound in `geometry-audit-summary.json` and manifest. Reports remain partial because CAD fill freshness and drill diagnostics remain; captured connectivity is not manufacturing certification or EM response validation. Original boards/endpoints unchanged.
+
+Five complete new JSON boards and direct DSL inputs cover split-reference, multiple-reference, AGND/DGND component bridge, regular11-via fence and broken8-via fence. They have two physical signal strips and finite1.5mm reference copper. Correct round-cap separation and board margins were verified by native geometry; all five coupon reports complete. Split and AGND/DGND return islands remain physically separate. Bridge pads and explicit0.01Ohm benchmark component model are manifest data; no component bridge EM assembly is claimed by DSL. All future coupons remain unsupported with missing independent EM references, never successful acceptance.
+
+Five focused accuracy tests pass: finite-geometry positive guard; thin mismatch rejection; unknown/nonfinite/excessive uncertainty rejection; unresolved reference sensitivity rejection; hash-bound future-coupon geometry/status coverage. Commands: `python tests/fixtures/analysis-p7-closure/independent-stripline-fd.py`; `python scripts/verify-p7-closure-supervised.py`; `node --import tsx --test tests/analyze-p7-closure-accuracy.test.ts`; `node --import tsx tests/fixtures/analysis-p7-closure/audit-geometry.ts`; `python scripts/verify-p7-closure-plots.py`. Fixture generator now preserves sibling-owned supplemental DSL/reference and coupon manifest fields.
+
+Inspected `debugging/p7-closure/real-copper-audit.png` (all captured copper, reference regions, branches and contacts) and `independent-ac-error.png` (response and errors). Actual/reference curves overlap and comparison errors lie below the preassigned limit.
+
+Remaining P7 gates: measured real-channel references and whole-channel EM admission; split/multiple-reference/bridge/fence response accuracy; losses and full-wave applicability. Positive small coupled absolute AC accuracy does not close these gates or imply P8/P11 readiness. Stop for review.
+
+## R1 review correction: physical placement guard
+
+Review found a real applicability defect: the old guard compared total ground separation and accepted top/bottom0.1/0.5mm against symmetric0.3/0.3mm. Fixed only benchmark validation and tests, without changing physical inputs, reference, production/native or addon.
+
+The existing reference convention is now explicit in the validator: coordinates in mm, lower grounded plane y=0, increasing y toward upper ground. Check both conductor faces, their thickness, lower dielectric clearance and upper dielectric clearance independently. Width, gap, finite copper thickness, positive finite material permittivities and zero loss tangents must match. Missing/nonfinite/nonpositive geometry, malformed/reversed coordinate pairs and unresolved/nonfinite/negative sensitivity are rejected with field-specific diagnostics. Comparison uses32*Number.EPSILON*max(1,abs(a),abs(b)), solely a floating representation allowance (about7e-15mm at this geometry), never the8% response allowance.
+
+`node --import tsx --test tests/analyze-p7-closure-accuracy.test.ts`:9/9 pass, including the original negative controls, asymmetric0.1/0.5 reproduction, moved conductor faces, incorrect ground origin/separation/order, missing/nonfinite dimensions/materials/coordinates, and representation-only tolerance.
+
+Performed comparison-only replay of `debugging/p7-closure/1793432658079920300/comparison.json` using `node --import tsx --input-type=module -e`: imported validatePhysicalReference plus existing verifyHash/validateControl; verified both current manifest and original packet embedded DSL/reference hashes; required unchanged line geometry; revalidated native ports/axis/matrices; required every stored finite comparison error plus reference uncertainty <= manifest tolerance. Result: replay true, physicalValidation validated, comparisonPassed true,60 metrics, maxError0.00070530649913737 (0.07053065%). This replay uses saved numerical output and original hash-bound inputs; it is not a new cold run or solve. No FEM/FD run was needed. The accepted physical scope remains the same small homogeneous PEC coupled stripline; whole real-channel and future-coupon P7 gates remain open. Shared typecheck/build is owned by the DSL sibling.

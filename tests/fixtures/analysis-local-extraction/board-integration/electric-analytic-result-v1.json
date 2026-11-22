@@ -1,0 +1,64 @@
+{
+  "kind": "production-direct-FEM-coax-analytic-v1",
+  "run": {
+    "methodThreads": 1,
+    "command": [
+      "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\native\\analyze\\target\\release\\deps\\volume_field_refinement-b05b714666a15a1c.exe",
+      "--nocapture"
+    ],
+    "wallSeconds": 0.14514629999757744,
+    "peakRssBytes": 11821056,
+    "exitCode": 0,
+    "refusal": null,
+    "capSeconds": 300,
+    "capBytes": 2147483648,
+    "hashes": {
+      "native\\analyze\\target\\release\\deps\\volume_field_refinement-b05b714666a15a1c.exe": "be4a4ca16ea7115fc39fe58de15813ff08fbe114398a621585b660228f546b8e",
+      "tests\\pcb-analyze\\STM32G0_CAN_RS485\\STM32G0_CAN_RS485.json": "0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3",
+      "tests\\fixtures\\analysis-local-extraction\\board-integration\\single-method-via-request.json": "a00da08408f35bdf4ca0eb7ff174e51699238010f9fd8510522c36943a97be6b"
+    }
+  },
+  "results": [
+    {
+      "angular": 32.0,
+      "radial": 8.0,
+      "exact": 2.0065183965493415e-13,
+      "charge": 2.0179480001764227e-13,
+      "energy": 2.0179480001764212e-13,
+      "error": 0.005696236648882413,
+      "balance": 1.2509514102873518e-16,
+      "reaction": 1.0007611282298814e-15
+    },
+    {
+      "angular": 64.0,
+      "radial": 16.0,
+      "exact": 2.0065183965493415e-13,
+      "charge": 2.0093768233414048e-13,
+      "energy": 2.0093768233414025e-13,
+      "error": 0.0014245704385162927,
+      "balance": 2.512574911170194e-16,
+      "reaction": 6.281437277925487e-16
+    }
+  ],
+  "conditions": {
+    "innerRadiusM": 0.001,
+    "outerRadiusM": 0.004,
+    "lengthM": 0.002,
+    "epsilonR": 2.5,
+    "angularPolygonSegments": [
+      32,
+      64
+    ],
+    "logRadialIntervals": [
+      8,
+      16
+    ],
+    "axialIntervals": 1,
+    "ends": "natural zero normal displacement flux",
+    "outer": "explicit grounded conductor trace",
+    "inner": "1 V conductor trace",
+    "formula": "2*pi*EPS0*epsilonR*length/ln(b/a)",
+    "limitation": "polygon walls approximate circles; finite open cylinder is not this boundary problem"
+  },
+  "tests": "8 volume_field_refinement tests pass"
+}

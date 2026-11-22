@@ -1,0 +1,20 @@
+{
+  "command": [
+    "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\native\\analyze\\target\\release\\examples\\board_volume.exe",
+    "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\tests\\pcb-analyze\\STM32G0_CAN_RS485\\STM32G0_CAN_RS485.json",
+    "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\eda-copilot-backend\\debugging\\p7-board-integration\\STM32-rs485-three-terminal-air2-request.json",
+    "entity:6:8:16:3",
+    "train"
+  ],
+  "wallSeconds": 220.23732070000187,
+  "peakRssBytes": 1025572864,
+  "exitCode": 1,
+  "refusal": null,
+  "capSeconds": 300,
+  "capBytes": 2147483648,
+  "hashes": {
+    "native\\analyze\\target\\release\\examples\\board_volume.exe": "f19c61bf1789fe19b13b94a8230d9054975637ae744b78caf52b1140b03287e4",
+    "tests\\pcb-analyze\\STM32G0_CAN_RS485\\STM32G0_CAN_RS485.json": "0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3",
+    "debugging\\p7-board-integration\\STM32-rs485-three-terminal-air2-request.json": "a00da08408f35bdf4ca0eb7ff174e51699238010f9fd8510522c36943a97be6b"
+  }
+}

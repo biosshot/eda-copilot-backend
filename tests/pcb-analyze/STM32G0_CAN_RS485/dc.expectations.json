@@ -1,0 +1,113 @@
+{
+  "cases": [
+    {
+      "id": "mesh-1/load-1",
+      "maxAreaMm2": 1,
+      "loadScale": 1
+    },
+    {
+      "id": "mesh-1/load-2",
+      "maxAreaMm2": 1,
+      "loadScale": 2
+    },
+    {
+      "id": "mesh-0.5/load-1",
+      "maxAreaMm2": 0.5,
+      "loadScale": 1
+    },
+    {
+      "id": "mesh-0.5/load-2",
+      "maxAreaMm2": 0.5,
+      "loadScale": 2
+    }
+  ],
+  "measurements": [
+    "MCU",
+    "CAN logic",
+    "RS485"
+  ],
+  "convergence": {
+    "relative": 0.02,
+    "voltageFloorV": 1e-09,
+    "lossFloorW": 1e-09
+  },
+  "checks": [
+    {
+      "name": "mesh-1/load-1/MCU/drop",
+      "status": "fail",
+      "max": 0.003
+    },
+    {
+      "name": "mesh-1/load-1/CAN logic/drop",
+      "status": "pass",
+      "max": 0.003
+    },
+    {
+      "name": "mesh-1/load-1/RS485/drop",
+      "status": "pass",
+      "max": 0.003
+    },
+    {
+      "name": "mesh-1/load-1/copper-loss",
+      "status": "pass"
+    },
+    {
+      "name": "mesh-1/load-2/MCU/drop",
+      "status": "fail",
+      "max": 0.003
+    },
+    {
+      "name": "mesh-1/load-2/CAN logic/drop",
+      "status": "fail",
+      "max": 0.003
+    },
+    {
+      "name": "mesh-1/load-2/RS485/drop",
+      "status": "fail",
+      "max": 0.003
+    },
+    {
+      "name": "mesh-1/load-2/copper-loss",
+      "status": "pass"
+    },
+    {
+      "name": "mesh-0.5/load-1/MCU/drop",
+      "status": "fail",
+      "max": 0.003
+    },
+    {
+      "name": "mesh-0.5/load-1/CAN logic/drop",
+      "status": "pass",
+      "max": 0.003
+    },
+    {
+      "name": "mesh-0.5/load-1/RS485/drop",
+      "status": "pass",
+      "max": 0.003
+    },
+    {
+      "name": "mesh-0.5/load-1/copper-loss",
+      "status": "pass"
+    },
+    {
+      "name": "mesh-0.5/load-2/MCU/drop",
+      "status": "fail",
+      "max": 0.003
+    },
+    {
+      "name": "mesh-0.5/load-2/CAN logic/drop",
+      "status": "fail",
+      "max": 0.003
+    },
+    {
+      "name": "mesh-0.5/load-2/RS485/drop",
+      "status": "fail",
+      "max": 0.003
+    },
+    {
+      "name": "mesh-0.5/load-2/copper-loss",
+      "status": "pass"
+    }
+  ],
+  "requireBarrelCurrent": false
+}

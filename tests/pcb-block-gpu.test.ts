@@ -8,7 +8,7 @@ import { addOrdinaryBus, minimalProblem } from './helpers/native-board-problem.t
 import type { NativeBlockSolveProblemV4, NativeBlockSolveSolutionV4 } from '../src/pcb-layout/pcb-auto-place-v2/native/contract.ts';
 
 const require = createRequire(import.meta.url);
-const addon = resolve('native/pcb-board-packer', require('../native/pcb-board-packer/platform.cjs').nativeFilename());
+const addon = resolve('native/node-addon', require('../native/node-addon/platform.cjs').nativeFilename());
 const gpuEnabled = process.env.PCB_BLOCK_GPU_TESTS === '1';
 
 test('USB half-grid bounds retain actual placement origins in CPU/GPU search', { skip: !gpuEnabled }, () => {

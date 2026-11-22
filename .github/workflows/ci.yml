@@ -36,13 +36,15 @@ jobs:
           test -d "$sdk_root/macOS"
           echo "VULKAN_SDK=$sdk_root/macOS" >> "$GITHUB_ENV"
       - run: npm run native:build
+      - run: cargo test --locked --manifest-path native/pcb-board-packer/Cargo.toml
+      - run: cargo test --locked --manifest-path native/analyze/Cargo.toml
       - name: Check native runtime dependencies
         shell: bash
         run: |
           if [[ "$RUNNER_OS" == Linux ]]; then
-            dependencies=$(ldd native/pcb-board-packer/*.node)
+            dependencies=$(ldd native/node-addon/*.node)
           elif [[ "$RUNNER_OS" == macOS ]]; then
-            dependencies=$(otool -L native/pcb-board-packer/*.node)
+            dependencies=$(otool -L native/node-addon/*.node)
           else
             exit 0
           fi
@@ -57,7 +59,7 @@ jobs:
         if: matrix.node == 24
         with:
           name: native-${{ matrix.os }}
-          path: native/pcb-board-packer/*.node
+          path: native/node-addon/*.node
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:

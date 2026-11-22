@@ -65,7 +65,7 @@ const hypothesisSummary=(results[1].hypotheses??[]).map((h,i)=>{
 const changed=results[1].placements.filter(p=>['x','y','rotate','layer'].some(k=>p[k]!==results[0].placements.find(q=>q.designator===p.designator)[k])).length;
 const validation={validChange:addon.validatePlacementChange(encodeNativePostPlaceRefineProblem(input,results[0].placements,1),results[1].placements),
     hardHintsNoWorse:alignmentHardHintsNoWorse(createPlacementReport(input,results[0].placements),createPlacementReport(input,results[1].placements))};
-const output={baseline:source,inputSha256:createHash('sha256').update(inputRaw).digest('hex'),nativeSha256:createHash('sha256').update(readFileSync('native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node')).digest('hex'),
+const output={baseline:source,inputSha256:createHash('sha256').update(inputRaw).digest('hex'),nativeSha256:createHash('sha256').update(readFileSync('native/node-addon/eda-copilot-node.win32-x64-msvc.node')).digest('hex'),
     policy,ms:results[1].ms,results:summary,diagnostics,validation,changed,probe,hypothesisSummary};
 writeFileSync(`${dir}/summary.json`,JSON.stringify(output,null,2));
 const pair=scope=>`<div class="pair">${['before','after'].map(tag=>`<figure><figcaption>${tag==='before'?'До':'После'}</figcaption><a href="${tag}-${scope}.svg"><img class="${scope}" data-tag="${tag}" src="${tag}-${scope}.svg"></a></figure>`).join('')}</div>`;

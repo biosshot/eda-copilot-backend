@@ -1,0 +1,1796 @@
+[
+  {
+    "id": "STM32G0_CAN_RS485",
+    "status": "partial",
+    "contacts": [
+      [
+        {
+          "id": "343f3feaf5557346e25",
+          "net": "RS485_B",
+          "islands": [
+            "island-000052"
+          ]
+        },
+        {
+          "id": "343f3feaf5557346e23",
+          "net": "GND",
+          "islands": [
+            "island-000001"
+          ]
+        }
+      ],
+      [
+        {
+          "id": "8ba29b17e9a54657e14",
+          "net": "RS485_B",
+          "islands": [
+            "island-000052"
+          ]
+        },
+        {
+          "id": "8ba29b17e9a54657e15",
+          "net": "GND",
+          "islands": [
+            "island-000001"
+          ]
+        }
+      ]
+    ],
+    "signalConnected": true,
+    "returnConnected": true,
+    "findings": [],
+    "diagnostics": [
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[0].filledPolygons[0]",
+        "source_id": "19f71e31df4eb6cd"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[1].filledPolygons[0]",
+        "source_id": "02001a4003c12075"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[2].filledPolygons[0]",
+        "source_id": "a316cd009d12e9ca"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[3].filledPolygons[0]",
+        "source_id": "2116cd2ab65bc6f7"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[4].filledPolygons[0]",
+        "source_id": "5b2b34bdc5e3e353"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[5].filledPolygons[0]",
+        "source_id": "f5479c38019c5460"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "pads[0]",
+        "source_id": "6a18e45b5c898f91"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "pads[0]",
+        "source_id": "6a18e45b5c898f91"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "pads[1]",
+        "source_id": "19c5cb481b2872f4"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "pads[1]",
+        "source_id": "19c5cb481b2872f4"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "pads[2]",
+        "source_id": "5e9d88b022faee69"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "pads[2]",
+        "source_id": "5e9d88b022faee69"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "pads[3]",
+        "source_id": "666fa1ff55072dda"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "pads[3]",
+        "source_id": "666fa1ff55072dda"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "copper.fixed.tracks[415]",
+        "source_id": "9e2aa177b8a3fedf"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "copper.fixed.tracks[418]",
+        "source_id": "8f4f29c75196f3ba"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "copper.fixed.tracks[460]",
+        "source_id": "209faac2ef5e5a2c"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000025 and region-000600: uncertain; not a reliable conduction path",
+        "path": "pads[158]",
+        "source_id": "16344fabf9da9061e117"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000027 and region-000534: uncertain; not a reliable conduction path",
+        "path": "pads[160]",
+        "source_id": "16344fabf9da9061e119"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000058 and region-000267: uncertain; not a reliable conduction path",
+        "path": "pads[191]",
+        "source_id": "16344fabf9da9061e150"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000077 and region-000545: uncertain; not a reliable conduction path",
+        "path": "pads[202]",
+        "source_id": "343f3feaf5557346e24"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000079 and region-000442: uncertain; not a reliable conduction path",
+        "path": "pads[204]",
+        "source_id": "343f3feaf5557346e26"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000103 and region-000366: uncertain; not a reliable conduction path",
+        "path": "pads[193]",
+        "source_id": "3f778668945e47f4e23"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000103 and region-000585: uncertain; not a reliable conduction path",
+        "path": "pads[193]",
+        "source_id": "3f778668945e47f4e23"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000168 and region-000360: uncertain; not a reliable conduction path",
+        "path": "pads[142]",
+        "source_id": "9f882d088caab23fe15"
+      },
+      {
+        "category": "limitation",
+        "code": "point_contact",
+        "message": "region-000260 and region-000326: point; not a reliable conduction path",
+        "path": "copper.fixed.tracks[97]",
+        "source_id": "0af53b47f0e95d84"
+      },
+      {
+        "category": "limitation",
+        "code": "point_contact",
+        "message": "region-000269 and region-000533: point; not a reliable conduction path",
+        "path": "copper.fixed.tracks[49]",
+        "source_id": "0ece656f8ef37ce9"
+      },
+      {
+        "category": "limitation",
+        "code": "point_contact",
+        "message": "region-000301 and region-000422: point; not a reliable conduction path",
+        "path": "copper.fixed.tracks[284]",
+        "source_id": "1b861e30c9beb986"
+      },
+      {
+        "category": "limitation",
+        "code": "point_contact",
+        "message": "region-000383 and region-000513: point; not a reliable conduction path",
+        "path": "copper.fixed.tracks[153]",
+        "source_id": "4aa8feebe7fd9223"
+      },
+      {
+        "category": "limitation",
+        "code": "point_contact",
+        "message": "region-000403 and region-000474: point; not a reliable conduction path",
+        "path": "copper.fixed.tracks[31]",
+        "source_id": "5708d73c6dbc94ab"
+      },
+      {
+        "category": "limitation",
+        "code": "point_contact",
+        "message": "region-000403 and region-000609: point; not a reliable conduction path",
+        "path": "copper.fixed.tracks[31]",
+        "source_id": "5708d73c6dbc94ab"
+      },
+      {
+        "category": "limitation",
+        "code": "point_contact",
+        "message": "region-000422 and region-000613: point; not a reliable conduction path",
+        "path": "copper.fixed.tracks[280]",
+        "source_id": "5ff3f2845c577b5b"
+      },
+      {
+        "category": "limitation",
+        "code": "point_contact",
+        "message": "region-000480 and region-000686: point; not a reliable conduction path",
+        "path": "copper.fixed.tracks[53]",
+        "source_id": "86ded670ece799c3"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000661 and region-000718: uncertain; not a reliable conduction path",
+        "path": "copper.fixed.tracks[163]",
+        "source_id": "e4d1d910f857270d"
+      },
+      {
+        "category": "limitation",
+        "code": "union_boundary_decomposed",
+        "message": "Overlay boundary decomposed at exact vertex touches; coordinates, area and voids retained",
+        "path": "layers.TOP",
+        "source_id": null
+      }
+    ]
+  },
+  {
+    "id": "NanoScope",
+    "status": "partial",
+    "contacts": [
+      [
+        {
+          "id": "e1494e182",
+          "net": "QSPI_SCLK",
+          "islands": [
+            "island-000027"
+          ]
+        },
+        {
+          "id": "e1494e187",
+          "net": "GND",
+          "islands": [
+            "island-000009"
+          ]
+        }
+      ],
+      [
+        {
+          "id": "e35e9",
+          "net": "QSPI_SCLK",
+          "islands": [
+            "island-000027"
+          ]
+        },
+        {
+          "id": "e35e6",
+          "net": "GND",
+          "islands": [
+            "island-000009"
+          ]
+        }
+      ]
+    ],
+    "signalConnected": true,
+    "returnConnected": true,
+    "findings": [
+      {
+        "code": "net_islands",
+        "message": "Net label occurs in 2 separate reliable components; geometry diagnostics must be consulted; this is not a confirmed open",
+        "nets": [
+          "AGND"
+        ],
+        "region_ids": [
+          "region-000034",
+          "region-000036",
+          "region-000047",
+          "region-000048",
+          "region-000051",
+          "region-000052",
+          "region-000055",
+          "region-000056",
+          "region-000058",
+          "region-000059",
+          "region-000065",
+          "region-000067",
+          "region-000071",
+          "region-000082",
+          "region-000084",
+          "region-000087",
+          "region-000089",
+          "region-000100",
+          "region-000168",
+          "region-000174",
+          "region-000176",
+          "region-000184",
+          "region-000190",
+          "region-000192",
+          "region-000194",
+          "region-000195",
+          "region-000206",
+          "region-000208",
+          "region-000216",
+          "region-000222",
+          "region-000224",
+          "region-000226",
+          "region-000227",
+          "region-000237",
+          "region-000238",
+          "region-000239",
+          "region-000240",
+          "region-000253",
+          "region-000254",
+          "region-000255",
+          "region-000256",
+          "region-000265",
+          "region-000300",
+          "region-000304",
+          "region-000306",
+          "region-000310",
+          "region-000316",
+          "region-000320",
+          "region-000322",
+          "region-000326",
+          "region-000363",
+          "region-000414",
+          "region-000420",
+          "region-000424",
+          "region-000426",
+          "region-000436",
+          "region-000439",
+          "region-000444",
+          "region-000445",
+          "region-000446",
+          "region-000447",
+          "region-000451",
+          "region-000457",
+          "region-000462",
+          "region-000465",
+          "region-000466",
+          "region-000470",
+          "region-000509",
+          "region-000510",
+          "region-000514",
+          "region-000531",
+          "region-000534",
+          "region-000535",
+          "region-000538",
+          "region-000539",
+          "region-000542",
+          "region-000543",
+          "region-000546",
+          "region-000547",
+          "region-000550",
+          "region-000551",
+          "region-000554",
+          "region-000559",
+          "region-000560",
+          "region-000561",
+          "region-000562",
+          "region-000563",
+          "region-000564",
+          "region-000565",
+          "region-000566",
+          "region-000567",
+          "region-000568",
+          "region-000569",
+          "region-000570",
+          "region-000571",
+          "region-000574",
+          "region-000576",
+          "region-000596",
+          "region-000600",
+          "region-000608",
+          "region-000616",
+          "region-000643",
+          "region-000657",
+          "region-000663",
+          "region-000669",
+          "region-000685",
+          "region-000709",
+          "region-000711",
+          "region-000715",
+          "region-000718",
+          "region-000722",
+          "region-000729",
+          "region-000730",
+          "region-000733",
+          "region-000743",
+          "region-000745",
+          "region-000747",
+          "region-000749",
+          "region-000751",
+          "region-000753",
+          "region-000755",
+          "region-000756",
+          "region-000757",
+          "region-000758",
+          "region-000759",
+          "region-000761",
+          "region-000763",
+          "region-000784",
+          "region-000794",
+          "region-000795",
+          "region-000796",
+          "region-000797",
+          "region-000802",
+          "region-000803",
+          "region-000804",
+          "region-000805",
+          "region-000859",
+          "region-000860",
+          "region-000861",
+          "region-000863",
+          "region-000866",
+          "region-000867",
+          "region-000868",
+          "region-000869",
+          "region-000870",
+          "region-000871",
+          "region-000872",
+          "region-000873",
+          "region-000874",
+          "region-000875",
+          "region-000876",
+          "region-000877",
+          "region-000878",
+          "region-000879",
+          "region-000880",
+          "region-000881",
+          "region-000882",
+          "region-000883",
+          "region-000884",
+          "region-000886",
+          "region-000887",
+          "region-000888",
+          "region-000889",
+          "region-000890",
+          "region-000891",
+          "region-000892",
+          "region-000917",
+          "region-000918",
+          "region-000919",
+          "region-001299",
+          "region-001300",
+          "region-001800",
+          "region-001801",
+          "region-001802",
+          "region-001803",
+          "region-001834",
+          "region-002031",
+          "region-002032",
+          "region-002033",
+          "region-002034",
+          "region-002039",
+          "region-002040",
+          "region-002041",
+          "region-002042",
+          "region-002043",
+          "region-002044",
+          "region-002045",
+          "region-002046",
+          "region-002047",
+          "region-002048",
+          "region-002049",
+          "region-002050",
+          "region-002059",
+          "region-002060",
+          "region-002061",
+          "region-002062",
+          "region-002067",
+          "region-002068",
+          "region-002069",
+          "region-002070",
+          "region-002079",
+          "region-002080",
+          "region-002081",
+          "region-002082",
+          "region-002087",
+          "region-002088",
+          "region-002089",
+          "region-002090",
+          "region-002091",
+          "region-002092",
+          "region-002093",
+          "region-002094",
+          "region-002099",
+          "region-002100",
+          "region-002101",
+          "region-002102",
+          "region-002107",
+          "region-002108",
+          "region-002109",
+          "region-002110",
+          "region-002111",
+          "region-002112",
+          "region-002113",
+          "region-002114",
+          "region-002115",
+          "region-002116",
+          "region-002117",
+          "region-002118",
+          "region-002147",
+          "region-002148",
+          "region-002149",
+          "region-002150",
+          "region-002151",
+          "region-002152",
+          "region-002153",
+          "region-002154",
+          "region-002187",
+          "region-002188",
+          "region-002189",
+          "region-002190",
+          "region-002195",
+          "region-002196",
+          "region-002197",
+          "region-002198",
+          "region-002199",
+          "region-002200",
+          "region-002201",
+          "region-002202",
+          "region-002215",
+          "region-002216",
+          "region-002217",
+          "region-002218",
+          "region-002231",
+          "region-002232",
+          "region-002233",
+          "region-002234",
+          "region-002271",
+          "region-002272",
+          "region-002273",
+          "region-002274",
+          "region-002283",
+          "region-002284",
+          "region-002285",
+          "region-002286",
+          "region-002291",
+          "region-002292",
+          "region-002293",
+          "region-002294",
+          "region-002327",
+          "region-002328",
+          "region-002329",
+          "region-002330",
+          "region-002331",
+          "region-002332",
+          "region-002333",
+          "region-002334",
+          "region-002363",
+          "region-002364",
+          "region-002365",
+          "region-002366",
+          "region-002371",
+          "region-002372",
+          "region-002373",
+          "region-002374",
+          "region-002387",
+          "region-002388",
+          "region-002389",
+          "region-002390",
+          "region-002399",
+          "region-002400",
+          "region-002401",
+          "region-002402",
+          "region-002411",
+          "region-002412",
+          "region-002413",
+          "region-002414",
+          "region-002415",
+          "region-002416",
+          "region-002417",
+          "region-002418",
+          "region-002471",
+          "region-002472",
+          "region-002473",
+          "region-002474",
+          "region-002479",
+          "region-002480",
+          "region-002481",
+          "region-002482",
+          "region-002499",
+          "region-002500",
+          "region-002501",
+          "region-002502",
+          "region-002503",
+          "region-002504",
+          "region-002505",
+          "region-002506",
+          "region-002507",
+          "region-002508",
+          "region-002509",
+          "region-002510",
+          "region-002511",
+          "region-002512",
+          "region-002513",
+          "region-002514",
+          "region-002515",
+          "region-002516",
+          "region-002517",
+          "region-002518",
+          "region-002519",
+          "region-002520",
+          "region-002521",
+          "region-002522",
+          "region-002531",
+          "region-002532",
+          "region-002533",
+          "region-002534",
+          "region-002539",
+          "region-002540",
+          "region-002541",
+          "region-002542",
+          "region-002551",
+          "region-002552",
+          "region-002553",
+          "region-002554",
+          "region-002555",
+          "region-002556",
+          "region-002557",
+          "region-002558",
+          "region-002571",
+          "region-002572",
+          "region-002573",
+          "region-002574",
+          "region-002575",
+          "region-002576",
+          "region-002577",
+          "region-002578",
+          "region-002579",
+          "region-002580",
+          "region-002581",
+          "region-002582",
+          "region-002587",
+          "region-002588",
+          "region-002589",
+          "region-002590",
+          "region-002595",
+          "region-002596",
+          "region-002597",
+          "region-002598",
+          "region-002599",
+          "region-002600",
+          "region-002601",
+          "region-002602",
+          "region-002607",
+          "region-002608",
+          "region-002609",
+          "region-002610",
+          "region-002611",
+          "region-002612",
+          "region-002613",
+          "region-002614",
+          "region-002615",
+          "region-002616",
+          "region-002617",
+          "region-002618",
+          "region-002627",
+          "region-002628",
+          "region-002629",
+          "region-002630",
+          "region-002631",
+          "region-002632",
+          "region-002633",
+          "region-002634",
+          "region-002635",
+          "region-002636",
+          "region-002637",
+          "region-002638",
+          "region-002639",
+          "region-002640",
+          "region-002641",
+          "region-002642",
+          "region-002643",
+          "region-002644",
+          "region-002645",
+          "region-002646",
+          "region-002647",
+          "region-002648",
+          "region-002649",
+          "region-002650",
+          "region-002659",
+          "region-002660",
+          "region-002661",
+          "region-002662",
+          "region-002663",
+          "region-002664",
+          "region-002665",
+          "region-002666",
+          "region-002667",
+          "region-002668",
+          "region-002669",
+          "region-002670",
+          "region-002671",
+          "region-002672",
+          "region-002673",
+          "region-002674",
+          "region-002683",
+          "region-002684",
+          "region-002685",
+          "region-002686",
+          "region-002687",
+          "region-002688",
+          "region-002689",
+          "region-002690",
+          "region-002691",
+          "region-002692",
+          "region-002693",
+          "region-002694",
+          "region-002695",
+          "region-002696",
+          "region-002697",
+          "region-002698",
+          "region-002703",
+          "region-002704",
+          "region-002705",
+          "region-002706",
+          "region-002707",
+          "region-002708",
+          "region-002709",
+          "region-002710",
+          "region-002735",
+          "region-002736",
+          "region-002737",
+          "region-002738",
+          "region-002739",
+          "region-002740",
+          "region-002741",
+          "region-002742",
+          "region-002743",
+          "region-002744",
+          "region-002745",
+          "region-002746",
+          "region-002751",
+          "region-002752",
+          "region-002753",
+          "region-002754",
+          "region-002755",
+          "region-002756",
+          "region-002757",
+          "region-002758",
+          "region-002759",
+          "region-002760",
+          "region-002761",
+          "region-002762",
+          "region-002763",
+          "region-002764",
+          "region-002765",
+          "region-002766",
+          "region-002815",
+          "region-002816",
+          "region-002817",
+          "region-002818",
+          "region-002819",
+          "region-002820",
+          "region-002821",
+          "region-002822",
+          "region-002859",
+          "region-002860",
+          "region-002861",
+          "region-002862",
+          "region-002871",
+          "region-002872",
+          "region-002873",
+          "region-002874",
+          "region-002875",
+          "region-002876",
+          "region-002877",
+          "region-002878",
+          "region-002887",
+          "region-002888",
+          "region-002889",
+          "region-002890",
+          "region-002891",
+          "region-002892",
+          "region-002893",
+          "region-002894",
+          "region-002895",
+          "region-002896",
+          "region-002897",
+          "region-002898",
+          "region-002899",
+          "region-002900",
+          "region-002901",
+          "region-002902",
+          "region-002903",
+          "region-002904",
+          "region-002905",
+          "region-002906",
+          "region-002907",
+          "region-002908",
+          "region-002909",
+          "region-002910",
+          "region-002911",
+          "region-002912",
+          "region-002913",
+          "region-002914",
+          "region-002935",
+          "region-002936",
+          "region-002937",
+          "region-002938",
+          "region-002939",
+          "region-002940",
+          "region-002941",
+          "region-002942",
+          "region-002943",
+          "region-002944",
+          "region-002945",
+          "region-002946",
+          "region-002947",
+          "region-002948",
+          "region-002949",
+          "region-002950",
+          "region-002951",
+          "region-002952",
+          "region-002953",
+          "region-002954",
+          "region-002963",
+          "region-002964",
+          "region-002965",
+          "region-002966",
+          "region-002967",
+          "region-002968",
+          "region-002969",
+          "region-002970",
+          "region-002975",
+          "region-002976",
+          "region-002977",
+          "region-002978",
+          "region-002979",
+          "region-002980",
+          "region-002981",
+          "region-002982",
+          "region-002983",
+          "region-002984",
+          "region-002985",
+          "region-002986",
+          "region-002995",
+          "region-002996",
+          "region-002997",
+          "region-002998",
+          "region-003007",
+          "region-003008",
+          "region-003009",
+          "region-003010",
+          "region-000885"
+        ],
+        "source_ids": []
+      }
+    ],
+    "diagnostics": [
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[0].filledPolygons[0]",
+        "source_id": "e2412"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[1].filledPolygons[0]",
+        "source_id": "e7176"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[2].filledPolygons[0]",
+        "source_id": "e8180"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[3].filledPolygons[0]",
+        "source_id": "e7718"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[4].filledPolygons[0]",
+        "source_id": "e7719"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[5].filledPolygons[0]",
+        "source_id": "e7177"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[6].filledPolygons[0]",
+        "source_id": "e8181"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[7].filledPolygons[0]",
+        "source_id": "e8736"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[8].filledPolygons[0]",
+        "source_id": "e3475"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[9].filledPolygons[0]",
+        "source_id": "e5486"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000068 and region-001787: uncertain; not a reliable conduction path",
+        "path": "pads[250]",
+        "source_id": "e1479e119"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000100 and region-001801: uncertain; not a reliable conduction path",
+        "path": "pads[282]",
+        "source_id": "e1479e151"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000180 and region-001601: uncertain; not a reliable conduction path",
+        "path": "pads[354]",
+        "source_id": "e1507e53"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000219 and region-001959: uncertain; not a reliable conduction path",
+        "path": "pads[393]",
+        "source_id": "e1546e44"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000346 and region-001660: uncertain; not a reliable conduction path",
+        "path": "pads[439]",
+        "source_id": "e1662e43"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000359 and region-001553: uncertain; not a reliable conduction path",
+        "path": "pads[452]",
+        "source_id": "e1662e56"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000476 and region-001514: uncertain; not a reliable conduction path",
+        "path": "pads[474]",
+        "source_id": "e2494e14"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000477 and region-001820: uncertain; not a reliable conduction path",
+        "path": "pads[475]",
+        "source_id": "e2494e15"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000828 and region-001382: uncertain; not a reliable conduction path",
+        "path": "pads[22]",
+        "source_id": "e9e22"
+      },
+      {
+        "category": "limitation",
+        "code": "point_contact",
+        "message": "region-001171 and region-001173: point; not a reliable conduction path",
+        "path": "copper.fixed.tracks[756]",
+        "source_id": "e15052"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-001482 and region-001498: uncertain; not a reliable conduction path",
+        "path": "copper.fixed.tracks[89]",
+        "source_id": "e241"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-001658 and region-001659: uncertain; not a reliable conduction path",
+        "path": "copper.fixed.tracks[1039]",
+        "source_id": "e31755"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-001659 and region-002619: uncertain; not a reliable conduction path",
+        "path": "copper.fixed.tracks[1040]",
+        "source_id": "e31756"
+      },
+      {
+        "category": "limitation",
+        "code": "point_contact",
+        "message": "region-001457 and region-001458: point; not a reliable conduction path",
+        "path": "copper.fixed.tracks[933]",
+        "source_id": "e22656"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-001813 and region-001844: uncertain; not a reliable conduction path",
+        "path": "copper.fixed.tracks[18]",
+        "source_id": "e52"
+      }
+    ]
+  },
+  {
+    "id": "ThunderF722",
+    "status": "partial",
+    "contacts": [
+      [
+        {
+          "id": "e795e181",
+          "net": "SPI2_SCK",
+          "islands": [
+            "island-000074"
+          ]
+        },
+        {
+          "id": "e795e184",
+          "net": "GND",
+          "islands": [
+            "island-000015"
+          ]
+        }
+      ],
+      [
+        {
+          "id": "e785e13",
+          "net": "SPI2_SCK",
+          "islands": [
+            "island-000074"
+          ]
+        },
+        {
+          "id": "e785e16",
+          "net": "GND",
+          "islands": [
+            "island-000015"
+          ]
+        }
+      ]
+    ],
+    "signalConnected": true,
+    "returnConnected": true,
+    "findings": [],
+    "diagnostics": [
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[0].filledPolygons[0]",
+        "source_id": "e678"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[1].filledPolygons[0]",
+        "source_id": "e649"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[2].filledPolygons[0]",
+        "source_id": "e652"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[3].filledPolygons[0]",
+        "source_id": "e654"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[4].filledPolygons[0]",
+        "source_id": "e680"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[5].filledPolygons[0]",
+        "source_id": "e660"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[6].filledPolygons[0]",
+        "source_id": "e656"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[7].filledPolygons[0]",
+        "source_id": "e662"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[8].filledPolygons[0]",
+        "source_id": "e682"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[9].filledPolygons[0]",
+        "source_id": "e658"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[10].filledPolygons[0]",
+        "source_id": "e664"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[11].filledPolygons[0]",
+        "source_id": "e684"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[12].filledPolygons[0]",
+        "source_id": "e666"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[13].filledPolygons[0]",
+        "source_id": "e686"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[14].filledPolygons[0]",
+        "source_id": "e688"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[15].filledPolygons[0]",
+        "source_id": "e668"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[16].filledPolygons[0]",
+        "source_id": "e670"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[17].filledPolygons[0]",
+        "source_id": "e690"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[18].filledPolygons[0]",
+        "source_id": "e639"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[19].filledPolygons[0]",
+        "source_id": "e692"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[20].filledPolygons[0]",
+        "source_id": "e672"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[21].filledPolygons[0]",
+        "source_id": "e696"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[22].filledPolygons[0]",
+        "source_id": "e694"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[23].filledPolygons[0]",
+        "source_id": "e698"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[24].filledPolygons[0]",
+        "source_id": "e700"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[25].filledPolygons[0]",
+        "source_id": "e702"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[26].filledPolygons[0]",
+        "source_id": "e704"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[27].filledPolygons[0]",
+        "source_id": "e706"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[28].filledPolygons[0]",
+        "source_id": "e708"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[29].filledPolygons[0]",
+        "source_id": "e710"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[30].filledPolygons[0]",
+        "source_id": "e712"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "copper.fixed.tracks[315]",
+        "source_id": "e452"
+      },
+      {
+        "category": "limitation",
+        "code": "barrel_contact_uncertain",
+        "message": "hole:via:e103: boundary match below boolean representation accuracy; no vertical edge asserted",
+        "path": "copper.fixed.tracks[215]",
+        "source_id": "e352"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000726 and region-000729: uncertain; not a reliable conduction path",
+        "path": "copper.fixed.tracks[140]",
+        "source_id": "e277"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000747 and region-001271: uncertain; not a reliable conduction path",
+        "path": "copper.fixed.tracks[161]",
+        "source_id": "e298"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000757 and region-001241: uncertain; not a reliable conduction path",
+        "path": "copper.fixed.tracks[171]",
+        "source_id": "e308"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000932 and region-001071: uncertain; not a reliable conduction path",
+        "path": "copper.fixed.tracks[347]",
+        "source_id": "e484"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000992 and region-001811: uncertain; not a reliable conduction path",
+        "path": "copper.fixed.tracks[407]",
+        "source_id": "e544"
+      },
+      {
+        "category": "limitation",
+        "code": "point_contact",
+        "message": "region-001065 and region-001068: point; not a reliable conduction path",
+        "path": "copper.fixed.tracks[480]",
+        "source_id": "e617"
+      }
+    ]
+  },
+  {
+    "id": "TPS63060DSCR",
+    "status": "partial",
+    "contacts": [
+      [
+        {
+          "id": "cd8747d128aec8e3e15",
+          "net": "VIN",
+          "islands": [
+            "island-000001"
+          ]
+        },
+        {
+          "id": "cd8747d128aec8e3e16",
+          "net": "GND",
+          "islands": [
+            "island-000000"
+          ]
+        }
+      ],
+      [
+        {
+          "id": "387993583cdeb7cce31",
+          "net": "VIN",
+          "islands": [
+            "island-000001"
+          ]
+        },
+        {
+          "id": "387993583cdeb7cce30",
+          "net": "GND",
+          "islands": [
+            "island-000000"
+          ]
+        }
+      ]
+    ],
+    "signalConnected": true,
+    "returnConnected": true,
+    "findings": [],
+    "diagnostics": [
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[0].filledPolygons[0]",
+        "source_id": "42da3f6bb34ed3c0"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[1].filledPolygons[0]",
+        "source_id": "545e4771d7d5f549"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[2].filledPolygons[0]",
+        "source_id": "7ea991a6c4ecaab1"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[3].filledPolygons[0]",
+        "source_id": "2b35636f0c4e2419"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[4].filledPolygons[0]",
+        "source_id": "9d9a35c1d13f0460"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[5].filledPolygons[0]",
+        "source_id": "83871c2423781d84"
+      }
+    ]
+  },
+  {
+    "id": "BandAmpV5",
+    "status": "partial",
+    "contacts": [
+      [
+        {
+          "id": "be6bc021c94e874ce14",
+          "net": "RF_IN_PORT",
+          "islands": [
+            "island-000001"
+          ]
+        },
+        {
+          "id": "be6bc021c94e874ce15",
+          "net": "GND",
+          "islands": [
+            "island-000004"
+          ]
+        }
+      ],
+      [
+        {
+          "id": "1ef61450f2f63c6ee15",
+          "net": "RF_IN_PORT",
+          "islands": [
+            "island-000001"
+          ]
+        },
+        {
+          "id": "dbc6321021dda95ae8",
+          "net": "GND",
+          "islands": [
+            "island-000004"
+          ]
+        }
+      ]
+    ],
+    "signalConnected": true,
+    "returnConnected": true,
+    "findings": [],
+    "diagnostics": [
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[0].filledPolygons[0]",
+        "source_id": "81e4a91d2893b069"
+      },
+      {
+        "category": "limitation",
+        "code": "fill_freshness",
+        "message": "CAD fill freshness is unknown; snapshot is not a claim of current CAD copper",
+        "path": "copper.fixed.zones[1].filledPolygons[0]",
+        "source_id": "492c44dea9c90d31"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "pads[0]",
+        "source_id": "2f0f346e43eca4b3"
+      },
+      {
+        "category": "limitation",
+        "code": "drill_topology_uncertain",
+        "message": "Drill approximation changes the source's component count; retained copper uses enclosing drills. A split/absent region is not a confirmed open; tighten local geometry tolerance to resolve",
+        "path": "pads[0]",
+        "source_id": "2f0f346e43eca4b3"
+      },
+      {
+        "category": "limitation",
+        "code": "contact_uncertain",
+        "message": "region-000021 and region-000033: uncertain; not a reliable conduction path",
+        "path": "pads[23]",
+        "source_id": "dbc6321021dda95ae7"
+      }
+    ]
+  },
+  {
+    "id": "split-reference",
+    "status": "complete",
+    "contacts": [
+      [
+        {
+          "id": "s0",
+          "net": "SIGNAL",
+          "islands": [
+            "island-000002"
+          ]
+        },
+        {
+          "id": "r0",
+          "net": "RETURN",
+          "islands": [
+            "island-000000"
+          ]
+        }
+      ],
+      [
+        {
+          "id": "s1",
+          "net": "SIGNAL",
+          "islands": [
+            "island-000002"
+          ]
+        },
+        {
+          "id": "r1",
+          "net": "RETURN",
+          "islands": [
+            "island-000001"
+          ]
+        }
+      ]
+    ],
+    "signalConnected": true,
+    "returnConnected": false,
+    "findings": [
+      {
+        "code": "net_islands",
+        "message": "Net label occurs in 2 separate reliable components; geometry diagnostics must be consulted; this is not a confirmed open",
+        "nets": [
+          "RETURN"
+        ],
+        "region_ids": [
+          "region-000000",
+          "region-000004",
+          "region-000001",
+          "region-000005"
+        ],
+        "source_ids": []
+      }
+    ],
+    "diagnostics": []
+  },
+  {
+    "id": "multiple-reference",
+    "status": "complete",
+    "contacts": [
+      [
+        {
+          "id": "s0",
+          "net": "SIGNAL",
+          "islands": [
+            "island-000001"
+          ]
+        },
+        {
+          "id": "r0",
+          "net": "RETURN",
+          "islands": [
+            "island-000000"
+          ]
+        }
+      ],
+      [
+        {
+          "id": "s1",
+          "net": "SIGNAL",
+          "islands": [
+            "island-000001"
+          ]
+        },
+        {
+          "id": "r1",
+          "net": "RETURN",
+          "islands": [
+            "island-000000"
+          ]
+        }
+      ]
+    ],
+    "signalConnected": true,
+    "returnConnected": true,
+    "findings": [],
+    "diagnostics": []
+  },
+  {
+    "id": "agnd-dgnd-bridge",
+    "status": "complete",
+    "contacts": [
+      [
+        {
+          "id": "s0",
+          "net": "SIGNAL",
+          "islands": [
+            "island-000002"
+          ]
+        },
+        {
+          "id": "r0",
+          "net": "AGND",
+          "islands": [
+            "island-000000"
+          ]
+        }
+      ],
+      [
+        {
+          "id": "s1",
+          "net": "SIGNAL",
+          "islands": [
+            "island-000002"
+          ]
+        },
+        {
+          "id": "r1",
+          "net": "DGND",
+          "islands": [
+            "island-000001"
+          ]
+        }
+      ]
+    ],
+    "signalConnected": true,
+    "returnConnected": false,
+    "findings": [],
+    "diagnostics": []
+  },
+  {
+    "id": "regular-fence",
+    "status": "complete",
+    "contacts": [
+      [
+        {
+          "id": "s0",
+          "net": "SIGNAL",
+          "islands": [
+            "island-000001"
+          ]
+        },
+        {
+          "id": "r0",
+          "net": "RETURN",
+          "islands": [
+            "island-000000"
+          ]
+        }
+      ],
+      [
+        {
+          "id": "s1",
+          "net": "SIGNAL",
+          "islands": [
+            "island-000001"
+          ]
+        },
+        {
+          "id": "r1",
+          "net": "RETURN",
+          "islands": [
+            "island-000000"
+          ]
+        }
+      ]
+    ],
+    "signalConnected": true,
+    "returnConnected": true,
+    "findings": [],
+    "diagnostics": []
+  },
+  {
+    "id": "broken-fence",
+    "status": "complete",
+    "contacts": [
+      [
+        {
+          "id": "s0",
+          "net": "SIGNAL",
+          "islands": [
+            "island-000001"
+          ]
+        },
+        {
+          "id": "r0",
+          "net": "RETURN",
+          "islands": [
+            "island-000000"
+          ]
+        }
+      ],
+      [
+        {
+          "id": "s1",
+          "net": "SIGNAL",
+          "islands": [
+            "island-000001"
+          ]
+        },
+        {
+          "id": "r1",
+          "net": "RETURN",
+          "islands": [
+            "island-000000"
+          ]
+        }
+      ]
+    ],
+    "signalConnected": true,
+    "returnConnected": true,
+    "findings": [],
+    "diagnostics": []
+  }
+]

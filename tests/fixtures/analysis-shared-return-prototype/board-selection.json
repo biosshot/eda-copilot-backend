@@ -1,0 +1,98 @@
+[
+  {
+    "name": "STM32G0_CAN_RS485",
+    "layers": 2,
+    "inventory": {
+      "layers": 2,
+      "components": 68,
+      "pads": 213,
+      "padDrills": 27,
+      "independentHoles": 0,
+      "tracks": 472,
+      "vias": 66,
+      "pours": 6,
+      "fills": 0
+    },
+    "board_path": "tests\\pcb-analyze\\STM32G0_CAN_RS485\\STM32G0_CAN_RS485.json",
+    "sha256": "0159c43d43b59df4f59fb943d59f0d841d17ca38d6d5a7d5576920a4aee3cce3",
+    "geometry_keys": [
+      "outline",
+      "cutouts",
+      "layers",
+      "nets",
+      "components",
+      "pads",
+      "keepouts",
+      "rules",
+      "copper",
+      "holes"
+    ],
+    "selection": "Full captured board, no extraction or truncation",
+    "channel": "U5.7/U5.5 -> J5.2/J5.3; local-extraction-complete-channel.js",
+    "comparison_status": "unavailable: no exact graph export preserving finite copper, physical contacts, stack and all channels; full-board solve not run"
+  },
+  {
+    "name": "NanoScope",
+    "layers": 4,
+    "inventory": {
+      "layers": 4,
+      "components": 203,
+      "pads": 724,
+      "padDrills": 36,
+      "independentHoles": 0,
+      "tracks": 1135,
+      "vias": 249,
+      "pours": 8,
+      "fills": 2
+    },
+    "board_path": "tests\\pcb-analyze\\NanoScope\\NanoScope.json",
+    "sha256": "8515e761f131df0731c3cc84fa293457f526e0d6ea91eff8fe73aa8a587b65e6",
+    "geometry_keys": [
+      "outline",
+      "cutouts",
+      "layers",
+      "nets",
+      "components",
+      "pads",
+      "keepouts",
+      "rules",
+      "copper",
+      "holes"
+    ],
+    "selection": "Full captured board, no extraction or truncation",
+    "channel": "U14.2/U14.1 PDN source; dc.js; whole-channel endpoints not selected",
+    "comparison_status": "unavailable: no exact graph export preserving finite copper, physical contacts, stack and all channels; full-board solve not run"
+  },
+  {
+    "name": "ThunderF722",
+    "layers": 6,
+    "inventory": {
+      "layers": 6,
+      "components": 116,
+      "pads": 340,
+      "padDrills": 42,
+      "independentHoles": 0,
+      "tracks": 494,
+      "vias": 136,
+      "pours": 31,
+      "fills": 0
+    },
+    "board_path": "tests\\pcb-analyze\\ThunderF722\\ThunderF722.json",
+    "sha256": "3911d02ef76af2a490c2db055a863a2b336b16d52e112162593865490e88683c",
+    "geometry_keys": [
+      "outline",
+      "cutouts",
+      "layers",
+      "nets",
+      "components",
+      "pads",
+      "keepouts",
+      "rules",
+      "copper",
+      "holes"
+    ],
+    "selection": "Full captured board, no extraction or truncation",
+    "channel": "UART5_RX e216 is existing 8.0009 mm fragment only; impedance.js; whole-channel endpoints unavailable",
+    "comparison_status": "unavailable: no exact graph export preserving finite copper, physical contacts, stack and all channels; full-board solve not run"
+  }
+]

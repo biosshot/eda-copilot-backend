@@ -1,0 +1,2674 @@
+{
+  "selection": "Before all new measurements: min deterministic index hash per nonempty primary/false-near cohort; explicit axial controls, per-family worst-aspect self and known STM telemetry witnesses. Duplicates reused. No time-based reselection.",
+  "fixedOrders": [
+    [
+      12,
+      8
+    ],
+    [
+      24,
+      16
+    ]
+  ],
+  "maxSamples": 48,
+  "samples": [
+    {
+      "fixture": "BandAmpV5",
+      "family": "axialSubprisms",
+      "indices": [
+        26,
+        26
+      ],
+      "cohorts": [
+        {
+          "label": "axial_self",
+          "populationCount": 768
+        },
+        {
+          "label": "self",
+          "populationCount": 3730
+        }
+      ],
+      "cells": [
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              3.7153175382889,
+              -0.03644145524347745
+            ],
+            [
+              3.7222566520531837,
+              0.003354887660091274
+            ],
+            [
+              3.6991596637404016,
+              -0.006212198149035973
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 1.9136046911555926,
+          "shapeBin": 0,
+          "sectorId": "856a6903da6d1b01:13"
+        },
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              3.7153175382889,
+              -0.03644145524347745
+            ],
+            [
+              3.7222566520531837,
+              0.003354887660091274
+            ],
+            [
+              3.6991596637404016,
+              -0.006212198149035973
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 1.9136046911555926,
+          "shapeBin": 0,
+          "sectorId": "856a6903da6d1b01:13"
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "sectorId": "856a6903da6d1b01:13"
+          }
+        ],
+        [
+          {
+            "sectorId": "856a6903da6d1b01:13"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "BandAmpV5",
+      "family": "axialSubprisms",
+      "indices": [
+        136,
+        486
+      ],
+      "cohorts": [
+        {
+          "label": "axial_close",
+          "populationCount": 57955
+        },
+        {
+          "label": "close_disjoint",
+          "populationCount": 70188
+        }
+      ],
+      "cells": [
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              2.723637620690468,
+              0.576362379309532
+            ],
+            [
+              2.6832521994179874,
+              0.5754042785964635
+            ],
+            [
+              2.6971414552434774,
+              0.5546175382888999
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 1.9136046911555946,
+          "shapeBin": 0,
+          "sectorId": "0de5af822fec562d:4"
+        },
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              2.9939175382889,
+              0.1578414552434774
+            ],
+            [
+              3.0333400488391957,
+              0.16665995116080415
+            ],
+            [
+              3.015662379309532,
+              0.18433762069046783
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 1.9136046911555815,
+          "shapeBin": 0,
+          "sectorId": "325062ff3ee513e1:19"
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "sectorId": "0de5af822fec562d:4"
+          }
+        ],
+        [
+          {
+            "sectorId": "325062ff3ee513e1:19"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "BandAmpV5",
+      "family": "axialSubprisms",
+      "indices": [
+        743,
+        743
+      ],
+      "cohorts": [
+        {
+          "label": "axialSubprisms_worst_aspect_self",
+          "populationCount": 1
+        }
+      ],
+      "cells": [
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              0.3546175382888999,
+              4.597141455243477
+            ],
+            [
+              0.3754042785964635,
+              4.583252199417988
+            ],
+            [
+              0.39404004883919586,
+              4.605959951160804
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 2.232858059716816,
+          "shapeBin": 0,
+          "sectorId": "3c9b64fbf03c782d:19"
+        },
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              0.3546175382888999,
+              4.597141455243477
+            ],
+            [
+              0.3754042785964635,
+              4.583252199417988
+            ],
+            [
+              0.39404004883919586,
+              4.605959951160804
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 2.232858059716816,
+          "shapeBin": 0,
+          "sectorId": "3c9b64fbf03c782d:19"
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "sectorId": "3c9b64fbf03c782d:19"
+          }
+        ],
+        [
+          {
+            "sectorId": "3c9b64fbf03c782d:19"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "BandAmpV5",
+      "family": "foil",
+      "indices": [
+        266,
+        1107
+      ],
+      "cohorts": [
+        {
+          "label": "shared_face",
+          "populationCount": 4509
+        }
+      ],
+      "cells": [
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              2.56588845719548,
+              -2.4714903062785045
+            ],
+            [
+              2.6,
+              -2.47485
+            ],
+            [
+              2.588338568470213,
+              -2.4494933769413056
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 1.4227668904851336,
+          "shapeBin": 0
+        },
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              2.6,
+              -2.47485
+            ],
+            [
+              2.56588845719548,
+              -2.4714903062785045
+            ],
+            [
+              2.4987026911928134,
+              -2.5263500000000003
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 6.157820231974745,
+          "shapeBin": 0
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "492c44dea9c90d31"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[1].filledPolygons[0].polygons[0]",
+            "source_id": "492c44dea9c90d31"
+          },
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[3]",
+            "source_id": "9f74f0413c175ded"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "492c44dea9c90d31"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[1].filledPolygons[0].polygons[0]",
+            "source_id": "492c44dea9c90d31"
+          },
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[3]",
+            "source_id": "9f74f0413c175ded"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "BandAmpV5",
+      "family": "foil",
+      "indices": [
+        268,
+        1107
+      ],
+      "cohorts": [
+        {
+          "label": "shared_edge",
+          "populationCount": 11650
+        }
+      ],
+      "cells": [
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              2.6,
+              -2.47485
+            ],
+            [
+              2.5999999940395355,
+              -2.4508073031902313
+            ],
+            [
+              2.588338568470213,
+              -2.4494933769413056
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 2.778262481577176,
+          "shapeBin": 0
+        },
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              2.6,
+              -2.47485
+            ],
+            [
+              2.56588845719548,
+              -2.4714903062785045
+            ],
+            [
+              2.4987026911928134,
+              -2.5263500000000003
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 6.157820231974745,
+          "shapeBin": 0
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "492c44dea9c90d31"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[1].filledPolygons[0].polygons[0]",
+            "source_id": "492c44dea9c90d31"
+          },
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[3]",
+            "source_id": "9f74f0413c175ded"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "492c44dea9c90d31"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[1].filledPolygons[0].polygons[0]",
+            "source_id": "492c44dea9c90d31"
+          },
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[3]",
+            "source_id": "9f74f0413c175ded"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "BandAmpV5",
+      "family": "foil",
+      "indices": [
+        453,
+        1703
+      ],
+      "cohorts": [
+        {
+          "label": "leaf_coarsening_only",
+          "populationCount": 979438
+        },
+        {
+          "label": "separated_disjoint",
+          "populationCount": 1692232
+        }
+      ],
+      "cells": [
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              0.23754429240065775,
+              1.0866583273685897
+            ],
+            [
+              0.21520969372149515,
+              1.10611154280452
+            ],
+            [
+              0.21184999999999998,
+              1.072
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 1.4202733896823867,
+          "shapeBin": 0
+        },
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              -1.6156623793095322,
+              2.184337620690468
+            ],
+            [
+              -1.6421585447565228,
+              2.2060824617111003
+            ],
+            [
+              -1.6452731788158417,
+              2.1786058843135834
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 1.4764475993115445,
+          "shapeBin": 0
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "492c44dea9c90d31"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[1].filledPolygons[0].polygons[0]",
+            "source_id": "492c44dea9c90d31"
+          },
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[10]",
+            "source_id": "1ebce77595cb47c5"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[6]",
+            "source_id": "b44e020be66bcf43"
+          },
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "81e4a91d2893b069"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "81e4a91d2893b069"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "BandAmpV5",
+      "family": "foil",
+      "indices": [
+        741,
+        2851
+      ],
+      "cohorts": [
+        {
+          "label": "ball_overestimate",
+          "populationCount": 41830
+        }
+      ],
+      "cells": [
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              1.9008403362595985,
+              -2.1276121981490363
+            ],
+            [
+              2.42515,
+              -2.3
+            ],
+            [
+              2.4285096937214954,
+              -2.2658884571954796
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 16.497789167848584,
+          "shapeBin": 1
+        },
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              1.423700988292694,
+              -1.2999539971351624
+            ],
+            [
+              1.6421585447565226,
+              -1.9153175382889
+            ],
+            [
+              1.672387801850964,
+              -1.8991596637404018
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 19.266220396447974,
+          "shapeBin": 1
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "492c44dea9c90d31"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[1].filledPolygons[0].polygons[0]",
+            "source_id": "492c44dea9c90d31"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "81e4a91d2893b069"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "81e4a91d2893b069"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "STM32G0_CAN_RS485",
+      "family": "axialSubprisms",
+      "indices": [
+        9,
+        25
+      ],
+      "cohorts": [
+        {
+          "label": "axial_close",
+          "populationCount": 8498
+        }
+      ],
+      "cells": [
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -6.968362379309532,
+              12.468362379309532
+            ],
+            [
+              -6.986040048839196,
+              12.486040048839197
+            ],
+            [
+              -7.008747800582012,
+              12.467404278596463
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 2.2328580597165795,
+          "shapeBin": 0,
+          "sectorId": "d93ec0fcd0f3aec1:4"
+        },
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -7.215637620690467,
+              12.468362379309532
+            ],
+            [
+              -7.1979599511608034,
+              12.486040048839197
+            ],
+            [
+              -7.216595721403536,
+              12.508747800582013
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 2.2328580597167376,
+          "shapeBin": 0,
+          "sectorId": "d93ec0fcd0f3aec1:12"
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "sectorId": "d93ec0fcd0f3aec1:4"
+          }
+        ],
+        [
+          {
+            "sectorId": "d93ec0fcd0f3aec1:12"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "STM32G0_CAN_RS485",
+      "family": "axialSubprisms",
+      "indices": [
+        12,
+        12
+      ],
+      "cohorts": [
+        {
+          "label": "axial_self",
+          "populationCount": 192
+        },
+        {
+          "label": "self",
+          "populationCount": 1194
+        }
+      ],
+      "cells": [
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -7.0250878018509635,
+              12.430459663740402
+            ],
+            [
+              -7.062765715245883,
+              12.445029325731577
+            ],
+            [
+              -7.05788845719548,
+              12.420509693721495
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 1.9136046911555318,
+          "shapeBin": 0,
+          "sectorId": "d93ec0fcd0f3aec1:6"
+        },
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -7.0250878018509635,
+              12.430459663740402
+            ],
+            [
+              -7.062765715245883,
+              12.445029325731577
+            ],
+            [
+              -7.05788845719548,
+              12.420509693721495
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 1.9136046911555318,
+          "shapeBin": 0,
+          "sectorId": "d93ec0fcd0f3aec1:6"
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "sectorId": "d93ec0fcd0f3aec1:6"
+          }
+        ],
+        [
+          {
+            "sectorId": "d93ec0fcd0f3aec1:6"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "STM32G0_CAN_RS485",
+      "family": "axialSubprisms",
+      "indices": [
+        12,
+        13
+      ],
+      "cohorts": [
+        {
+          "label": "shared_face",
+          "populationCount": 1379
+        }
+      ],
+      "cells": [
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -7.0250878018509635,
+              12.430459663740402
+            ],
+            [
+              -7.062765715245883,
+              12.445029325731577
+            ],
+            [
+              -7.05788845719548,
+              12.420509693721495
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 1.9136046911555318,
+          "shapeBin": 0,
+          "sectorId": "d93ec0fcd0f3aec1:6"
+        },
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -7.0250878018509635,
+              12.430459663740402
+            ],
+            [
+              -7.034654887660091,
+              12.453556652053184
+            ],
+            [
+              -7.062765715245883,
+              12.445029325731577
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 2.232858059716828,
+          "shapeBin": 0,
+          "sectorId": "d93ec0fcd0f3aec1:6"
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "sectorId": "d93ec0fcd0f3aec1:6"
+          }
+        ],
+        [
+          {
+            "sectorId": "d93ec0fcd0f3aec1:6"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "STM32G0_CAN_RS485",
+      "family": "axialSubprisms",
+      "indices": [
+        133,
+        133
+      ],
+      "cohorts": [
+        {
+          "label": "axialSubprisms_worst_aspect_self",
+          "populationCount": 1
+        }
+      ],
+      "cells": [
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -2.6354596637404017,
+              10.063087801850966
+            ],
+            [
+              -2.658556652053184,
+              10.072654887660091
+            ],
+            [
+              -2.672404278596464,
+              10.046747800582013
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 2.232858059716897,
+          "shapeBin": 0,
+          "sectorId": "647f293c73a2fee7:2"
+        },
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -2.6354596637404017,
+              10.063087801850966
+            ],
+            [
+              -2.658556652053184,
+              10.072654887660091
+            ],
+            [
+              -2.672404278596464,
+              10.046747800582013
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 2.232858059716897,
+          "shapeBin": 0,
+          "sectorId": "647f293c73a2fee7:2"
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "sectorId": "647f293c73a2fee7:2"
+          }
+        ],
+        [
+          {
+            "sectorId": "647f293c73a2fee7:2"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "STM32G0_CAN_RS485",
+      "family": "foil",
+      "indices": [
+        3,
+        47
+      ],
+      "cohorts": [
+        {
+          "label": "shared_edge",
+          "populationCount": 3365
+        }
+      ],
+      "cells": [
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              -7.0920000076293945,
+              12.44118744134903
+            ],
+            [
+              -7.092,
+              12.417150000000001
+            ],
+            [
+              -7.05788845719548,
+              12.420509693721495
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 1.940556011298366,
+          "shapeBin": 0
+        },
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              -7.0920000076293945,
+              12.44118744134903
+            ],
+            [
+              -7.125558972358704,
+              12.44496864080429
+            ],
+            [
+              -7.126111542804519,
+              12.420509693721495
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 1.933593213843875,
+          "shapeBin": 0
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[31]",
+            "source_id": "d93ec0fcd0f3aec1"
+          },
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "19f71e31df4eb6cd"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "19f71e31df4eb6cd"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[31]",
+            "source_id": "d93ec0fcd0f3aec1"
+          },
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "19f71e31df4eb6cd"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "19f71e31df4eb6cd"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "STM32G0_CAN_RS485",
+      "family": "foil",
+      "indices": [
+        6,
+        28
+      ],
+      "cohorts": [
+        {
+          "label": "ball_overestimate",
+          "populationCount": 5235
+        }
+      ],
+      "cells": [
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              -7.22787743806839,
+              12.52656489610672
+            ],
+            [
+              -7.253540336259598,
+              12.525087801850965
+            ],
+            [
+              -7.2373824617111,
+              12.494858544756523
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 1.4692727070328941,
+          "shapeBin": 0
+        },
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              -7.227877442080527,
+              12.657435127355159
+            ],
+            [
+              -7.253540336259598,
+              12.658912198149036
+            ],
+            [
+              -7.239031396627426,
+              12.625558956813068
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 1.5852992550454637,
+          "shapeBin": 0
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[31]",
+            "source_id": "d93ec0fcd0f3aec1"
+          },
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "19f71e31df4eb6cd"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "19f71e31df4eb6cd"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[31]",
+            "source_id": "d93ec0fcd0f3aec1"
+          },
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "19f71e31df4eb6cd"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "19f71e31df4eb6cd"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "STM32G0_CAN_RS485",
+      "family": "foil",
+      "indices": [
+        63,
+        262
+      ],
+      "cohorts": [
+        {
+          "label": "close_disjoint",
+          "populationCount": 11754
+        }
+      ],
+      "cells": [
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              -6.944968640804291,
+              12.558441042900085
+            ],
+            [
+              -6.956122577190399,
+              12.52656489610672
+            ],
+            [
+              -6.930459663740401,
+              12.525087801850965
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 1.585300078374436,
+          "shapeBin": 0
+        },
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              -6.9205096937214945,
+              12.55788845719548
+            ],
+            [
+              -6.10811154280452,
+              11.701490306278505
+            ],
+            [
+              -6.074,
+              11.704849999999999
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 45.21419974835717,
+          "shapeBin": 1
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[31]",
+            "source_id": "d93ec0fcd0f3aec1"
+          },
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "19f71e31df4eb6cd"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "19f71e31df4eb6cd"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "19f71e31df4eb6cd"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "19f71e31df4eb6cd"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "STM32G0_CAN_RS485",
+      "family": "foil",
+      "indices": [
+        184,
+        682
+      ],
+      "cohorts": [
+        {
+          "label": "leaf_coarsening_only",
+          "populationCount": 178844
+        },
+        {
+          "label": "separated_disjoint",
+          "populationCount": 268921
+        }
+      ],
+      "cells": [
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              -2.710132421726129,
+              10.252410540870976
+            ],
+            [
+              -2.7029699087142944,
+              10.247910022735596
+            ],
+            [
+              -2.699858544756523,
+              10.2753824617111
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 3.626698982402697,
+          "shapeBin": 0
+        },
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              -4.887276947480438,
+              9.72945
+            ],
+            [
+              -4.201373268462717,
+              9.044626732468606
+            ],
+            [
+              -4.065673052877187,
+              9.251500000357629
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 4.000611356725204,
+          "shapeBin": 0
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[36]",
+            "source_id": "647f293c73a2fee7"
+          },
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "19f71e31df4eb6cd"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "19f71e31df4eb6cd"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[292]",
+            "source_id": "355cddfcf678aa6b"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "STM32G0_CAN_RS485",
+      "family": "foil",
+      "indices": [
+        556,
+        556
+      ],
+      "cohorts": [
+        {
+          "label": "known_stm_witness",
+          "populationCount": null
+        }
+      ],
+      "cells": [
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              -3.4541,
+              12.425000004121769
+            ],
+            [
+              -3.4541,
+              12.424999995878233
+            ],
+            [
+              -3.454099999639392,
+              12.425
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 22.860102682579306,
+          "shapeBin": 1
+        },
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              -3.4541,
+              12.425000004121769
+            ],
+            [
+              -3.4541,
+              12.424999995878233
+            ],
+            [
+              -3.454099999639392,
+              12.425
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 22.860102682579306,
+          "shapeBin": 1
+        }
+      ],
+      "reusePriorTiming": true,
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[280]",
+            "source_id": "5ff3f2845c577b5b"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[280]",
+            "source_id": "5ff3f2845c577b5b"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "TPS63060DSCR",
+      "family": "axialSubprisms",
+      "indices": [
+        42,
+        58
+      ],
+      "cohorts": [
+        {
+          "label": "axial_close",
+          "populationCount": 46312
+        },
+        {
+          "label": "close_disjoint",
+          "populationCount": 55580
+        }
+      ],
+      "cells": [
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -0.49755815933767744,
+              -0.4524972907775284
+            ],
+            [
+              -0.4573209550924398,
+              -0.4592007592452799
+            ],
+            [
+              -0.46688804090156705,
+              -0.43610377093249775
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 1.923162163727586,
+          "shapeBin": 0,
+          "sectorId": "a3766dece689d18c:21"
+        },
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -0.25149729077752847,
+              -0.5014418406623226
+            ],
+            [
+              -0.25820075924527996,
+              -0.5416790449075602
+            ],
+            [
+              -0.2351037709324978,
+              -0.5321119590984329
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 1.92316216372759,
+          "shapeBin": 0,
+          "sectorId": "a3766dece689d18c:29"
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "sectorId": "a3766dece689d18c:21"
+          }
+        ],
+        [
+          {
+            "sectorId": "a3766dece689d18c:29"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "TPS63060DSCR",
+      "family": "axialSubprisms",
+      "indices": [
+        46,
+        47
+      ],
+      "cohorts": [
+        {
+          "label": "shared_face",
+          "populationCount": 3336
+        }
+      ],
+      "cells": [
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -0.43360902312566124,
+              -0.4260086912564669
+            ],
+            [
+              -0.3990000000000001,
+              -0.4476
+            ],
+            [
+              -0.3990000000000001,
+              -0.4226
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 1.9231621637275884,
+          "shapeBin": 0,
+          "sectorId": "a3766dece689d18c:23"
+        },
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -0.43360902312566124,
+              -0.4260086912564669
+            ],
+            [
+              -0.428731765075258,
+              -0.4505283232665477
+            ],
+            [
+              -0.3990000000000001,
+              -0.4476
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 2.2386415212944515,
+          "shapeBin": 0,
+          "sectorId": "a3766dece689d18c:23"
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "sectorId": "a3766dece689d18c:23"
+          }
+        ],
+        [
+          {
+            "sectorId": "a3766dece689d18c:23"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "TPS63060DSCR",
+      "family": "axialSubprisms",
+      "indices": [
+        47,
+        47
+      ],
+      "cohorts": [
+        {
+          "label": "axial_self",
+          "populationCount": 576
+        },
+        {
+          "label": "self",
+          "populationCount": 2754
+        }
+      ],
+      "cells": [
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -0.43360902312566124,
+              -0.4260086912564669
+            ],
+            [
+              -0.428731765075258,
+              -0.4505283232665477
+            ],
+            [
+              -0.3990000000000001,
+              -0.4476
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 2.2386415212944515,
+          "shapeBin": 0,
+          "sectorId": "a3766dece689d18c:23"
+        },
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -0.43360902312566124,
+              -0.4260086912564669
+            ],
+            [
+              -0.428731765075258,
+              -0.4505283232665477
+            ],
+            [
+              -0.3990000000000001,
+              -0.4476
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 2.2386415212944515,
+          "shapeBin": 0,
+          "sectorId": "a3766dece689d18c:23"
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "sectorId": "a3766dece689d18c:23"
+          }
+        ],
+        [
+          {
+            "sectorId": "a3766dece689d18c:23"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "TPS63060DSCR",
+      "family": "axialSubprisms",
+      "indices": [
+        325,
+        325
+      ],
+      "cohorts": [
+        {
+          "label": "axialSubprisms_worst_aspect_self",
+          "populationCount": 1
+        }
+      ],
+      "cells": [
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -2.6300037709324977,
+              -4.266988040901566
+            ],
+            [
+              -2.6531007592452798,
+              -4.25742095509244
+            ],
+            [
+              -2.667184031085092,
+              -4.283768903512187
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 2.2386415212945168,
+          "shapeBin": 0,
+          "sectorId": "f8ab2e1cca13ecf2:2"
+        },
+        {
+          "kind": "AXIAL",
+          "triangleMm": [
+            [
+              -2.6300037709324977,
+              -4.266988040901566
+            ],
+            [
+              -2.6531007592452798,
+              -4.25742095509244
+            ],
+            [
+              -2.667184031085092,
+              -4.283768903512187
+            ]
+          ],
+          "zRangeMm": [
+            0.035,
+            1.565
+          ],
+          "aspectProxy": 2.2386415212945168,
+          "shapeBin": 0,
+          "sectorId": "f8ab2e1cca13ecf2:2"
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "sectorId": "f8ab2e1cca13ecf2:2"
+          }
+        ],
+        [
+          {
+            "sectorId": "f8ab2e1cca13ecf2:2"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "TPS63060DSCR",
+      "family": "foil",
+      "indices": [
+        208,
+        759
+      ],
+      "cohorts": [
+        {
+          "label": "shared_edge",
+          "populationCount": 8761
+        }
+      ],
+      "cells": [
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              0.2810889482498169,
+              -1.3043741285800934
+            ],
+            [
+              0.2755592570175065,
+              -1.2745592570175064
+            ],
+            [
+              0.2534972907775285,
+              -1.3014418406623225
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 1.4997061636063471,
+          "shapeBin": 0
+        },
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              -0.2735592570175065,
+              -0.7254407429824935
+            ],
+            [
+              0.2755592570175065,
+              -1.2745592570175064
+            ],
+            [
+              0.2755592570175065,
+              -0.7254407429824935
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 2.0,
+          "shapeBin": 0
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "42da3f6bb34ed3c0"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "42da3f6bb34ed3c0"
+          },
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[3]",
+            "source_id": "6e95ce80874cd4cb"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "42da3f6bb34ed3c0"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "42da3f6bb34ed3c0"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "TPS63060DSCR",
+      "family": "foil",
+      "indices": [
+        273,
+        953
+      ],
+      "cohorts": [
+        {
+          "label": "ball_overestimate",
+          "populationCount": 27950
+        }
+      ],
+      "cells": [
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              -0.26508339770659806,
+              -3.092354382698983
+            ],
+            [
+              -0.27440270922247156,
+              -3.0603418406623226
+            ],
+            [
+              -0.2907962290675023,
+              -3.091011959098433
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 1.4919441073946582,
+          "shapeBin": 0
+        },
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              1.0,
+              1.5
+            ],
+            [
+              0.4995581593376774,
+              -0.4524972907775284
+            ],
+            [
+              0.5264407429824935,
+              -0.47455925701750645
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 64.90183919821484,
+          "shapeBin": 1
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "42da3f6bb34ed3c0"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "42da3f6bb34ed3c0"
+          },
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[4]",
+            "source_id": "26e1bceae72d5a8d"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "42da3f6bb34ed3c0"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "42da3f6bb34ed3c0"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "TPS63060DSCR",
+      "family": "foil",
+      "indices": [
+        396,
+        1378
+      ],
+      "cohorts": [
+        {
+          "label": "leaf_coarsening_only",
+          "populationCount": 500817
+        },
+        {
+          "label": "separated_disjoint",
+          "populationCount": 968181
+        }
+      ],
+      "cells": [
+        {
+          "kind": "BOTTOM",
+          "triangleMm": [
+            [
+              -2.7592909768743388,
+              -4.373091308743533
+            ],
+            [
+              -2.7597715258598328,
+              -4.348626643419266
+            ],
+            [
+              -2.764464485168161,
+              -4.349155414348938
+            ]
+          ],
+          "zRangeMm": [
+            0.0,
+            0.035
+          ],
+          "aspectProxy": 5.2117339555173325,
+          "shapeBin": 0
+        },
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              -2.913811057806015,
+              -4.294725865125656
+            ],
+            [
+              -2.9262768316294836,
+              -4.274886714114758
+            ],
+            [
+              -2.9414027092224715,
+              -4.2976581593376775
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 1.3184345872303154,
+          "shapeBin": 0
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[5]",
+            "source_id": "f8ab2e1cca13ecf2"
+          },
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "42da3f6bb34ed3c0"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "42da3f6bb34ed3c0"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "via",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.vias[5]",
+            "source_id": "f8ab2e1cca13ecf2"
+          },
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "83871c2423781d84"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[5].filledPolygons[0].polygons[0]",
+            "source_id": "83871c2423781d84"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "BandAmpV5",
+      "family": "foil",
+      "indices": [
+        1756,
+        1756
+      ],
+      "cohorts": [
+        {
+          "label": "foil_worst_aspect_self",
+          "populationCount": 1
+        }
+      ],
+      "cells": [
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              0.35314223170280457,
+              0.9249737560749054
+            ],
+            [
+              0.3732132468817715,
+              0.9227122874385344
+            ],
+            [
+              0.3732132911682129,
+              0.9227122962474823
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 1473014.7227742558,
+          "shapeBin": 3
+        },
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              0.35314223170280457,
+              0.9249737560749054
+            ],
+            [
+              0.3732132468817715,
+              0.9227122874385344
+            ],
+            [
+              0.3732132911682129,
+              0.9227122962474823
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 1473014.7227742558,
+          "shapeBin": 3
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "81e4a91d2893b069"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "81e4a91d2893b069"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "pour",
+            "native_fill_ids": [
+              "81e4a91d2893b069"
+            ],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.zones[0].filledPolygons[0].polygons[0]",
+            "source_id": "81e4a91d2893b069"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "STM32G0_CAN_RS485",
+      "family": "foil",
+      "indices": [
+        556,
+        668
+      ],
+      "cohorts": [
+        {
+          "label": "known_stm_witness",
+          "populationCount": null
+        }
+      ],
+      "cells": [
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              -3.4541,
+              12.425000004121769
+            ],
+            [
+              -3.4541,
+              12.424999995878233
+            ],
+            [
+              -3.454099999639392,
+              12.425
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 22.860102682579306,
+          "shapeBin": 1
+        },
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              -3.4541,
+              12.424999995878233
+            ],
+            [
+              -3.4541,
+              12.425000004121769
+            ],
+            [
+              -3.9541,
+              12.175
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 75816983.39531447,
+          "shapeBin": 3
+        }
+      ],
+      "reusePriorTiming": true,
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[280]",
+            "source_id": "5ff3f2845c577b5b"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[277]",
+            "source_id": "bef1aae594813e2c"
+          },
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[276]",
+            "source_id": "54abddda771675b4"
+          },
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[280]",
+            "source_id": "5ff3f2845c577b5b"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "STM32G0_CAN_RS485",
+      "family": "foil",
+      "indices": [
+        613,
+        613
+      ],
+      "cohorts": [
+        {
+          "label": "foil_worst_aspect_self",
+          "populationCount": 1
+        }
+      ],
+      "cells": [
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              -3.040245988950133,
+              9.224992524944247
+            ],
+            [
+              -3.040245988950135,
+              9.224992524944248
+            ],
+            [
+              -3.0429492531005464,
+              9.226691098458947
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 9892349377207.904,
+          "shapeBin": 4
+        },
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              -3.040245988950133,
+              9.224992524944247
+            ],
+            [
+              -3.040245988950135,
+              9.224992524944248
+            ],
+            [
+              -3.0429492531005464,
+              9.226691098458947
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 9892349377207.904,
+          "shapeBin": 4
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[293]",
+            "source_id": "88d9932c804b2bb2"
+          },
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[294]",
+            "source_id": "ddd0394190d6ae65"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[293]",
+            "source_id": "88d9932c804b2bb2"
+          },
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[294]",
+            "source_id": "ddd0394190d6ae65"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "STM32G0_CAN_RS485",
+      "family": "foil",
+      "indices": [
+        668,
+        668
+      ],
+      "cohorts": [
+        {
+          "label": "known_stm_witness",
+          "populationCount": null
+        }
+      ],
+      "cells": [
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              -3.4541,
+              12.424999995878233
+            ],
+            [
+              -3.4541,
+              12.425000004121769
+            ],
+            [
+              -3.9541,
+              12.175
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 75816983.39531447,
+          "shapeBin": 3
+        },
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              -3.4541,
+              12.424999995878233
+            ],
+            [
+              -3.4541,
+              12.425000004121769
+            ],
+            [
+              -3.9541,
+              12.175
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 75816983.39531447,
+          "shapeBin": 3
+        }
+      ],
+      "reusePriorTiming": true,
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[277]",
+            "source_id": "bef1aae594813e2c"
+          },
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[276]",
+            "source_id": "54abddda771675b4"
+          },
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[280]",
+            "source_id": "5ff3f2845c577b5b"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[277]",
+            "source_id": "bef1aae594813e2c"
+          },
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[276]",
+            "source_id": "54abddda771675b4"
+          },
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "+3V3",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[280]",
+            "source_id": "5ff3f2845c577b5b"
+          }
+        ]
+      ]
+    },
+    {
+      "fixture": "TPS63060DSCR",
+      "family": "foil",
+      "indices": [
+        1279,
+        1279
+      ],
+      "cohorts": [
+        {
+          "label": "foil_worst_aspect_self",
+          "populationCount": 1
+        }
+      ],
+      "cells": [
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              0.005944686576950008,
+              -3.083857874456567
+            ],
+            [
+              -0.006988941625319434,
+              -3.063274121948145
+            ],
+            [
+              0.005944686542637634,
+              -3.0838578744908793
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 513858366.5147785,
+          "shapeBin": 4
+        },
+        {
+          "kind": "TOP",
+          "triangleMm": [
+            [
+              0.005944686576950008,
+              -3.083857874456567
+            ],
+            [
+              -0.006988941625319434,
+              -3.063274121948145
+            ],
+            [
+              0.005944686542637634,
+              -3.0838578744908793
+            ]
+          ],
+          "zRangeMm": [
+            1.565,
+            1.6
+          ],
+          "aspectProxy": 513858366.5147785,
+          "shapeBin": 4
+        }
+      ],
+      "sourceOwners": [
+        [
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[24]",
+            "source_id": "a039dd13f2f9de36"
+          }
+        ],
+        [
+          {
+            "component_id": null,
+            "kind": "track",
+            "native_fill_ids": [],
+            "net": "GND",
+            "ownership": "fixed",
+            "pad_number": null,
+            "path": "copper.fixed.tracks[24]",
+            "source_id": "a039dd13f2f9de36"
+          }
+        ]
+      ]
+    }
+  ],
+  "capSeconds": 120,
+  "capBytes": 536870912,
+  "maximumPointQueriesActualPlusTelemetry": 1161216,
+  "sourceKernelUnchanged": true,
+  "noLargeROIOperator": true
+}

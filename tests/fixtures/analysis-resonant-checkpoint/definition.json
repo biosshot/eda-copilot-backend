@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "precision": "CPU binary64; dimensionless frequency z=s/(2*pi*1e6)",
+  "frequencyHz": [10000, 100000000],
+  "trainingCounts": [257, 1025, 2049],
+  "orders": [2, 4, 8],
+  "gates": {
+    "matrixRelative": 0.005, "matrixAbsoluteNormalized": 1e-8,
+    "orderRelative": 0.001, "orderAbsoluteNormalized": 1e-8,
+    "transientFractionOfScale": 0.01, "transientAbsoluteSI": 1e-12,
+    "energyBalanceRelative": 1e-6, "energyAbsoluteJ": 1e-20,
+    "energyReferenceFractionOfScale": 1e-4,
+    "conditionMaximum": 1e10, "closureRelative": 0.0005,
+    "closureAbsoluteNormalized": 1e-10,
+    "minimumSamplesPerLinewidth": 8
+  },
+  "time": {"endSeconds": 2e-5, "sampleSeconds": 1e-8,
+    "stepsSeconds": [2e-9, 1e-9], "riseSeconds": 2e-7,
+    "minimumRiseOverMaxFrequency": 10},
+  "cases": [
+    {"name":"series", "parameter":"Y", "normalizingR":50,
+     "modes":[{"R":50,"L":1e-5,"C":1e-9}], "angle":0,
+     "sourceSI":[1], "delaySeconds":[0], "load":25,
+     "outputScaleSI":0.02,"energyScaleJ":1e-9},
+    {"name":"parallel", "parameter":"Z", "normalizingR":1000,
+     "modes":[{"R":1000,"L":1e-5,"C":1e-9}], "angle":0,
+     "sourceSI":[0.001], "delaySeconds":[0], "load":0.0001,
+     "outputScaleSI":0.1,"energyScaleJ":1e-11},
+    {"name":"mutual", "parameter":"Y", "normalizingR":50,
+     "modes":[{"R":50,"L":1e-5,"C":1e-9},{"R":70,"L":2.5e-5,"C":2.5e-10}], "angle":0.37,
+     "sourceSI":[1,0.4], "delaySeconds":[0,1.5e-7], "load":25,
+     "outputScaleSI":0.02,"energyScaleJ":2e-9}
+  ],
+  "negativeFixtures": {
+    "active": "negate series admittance without changing poles",
+    "hidden": {"base":"series","branchRelativeK":1e-7,"Q":10000000,"logCellFraction":0.31873},
+    "missingClosure": "remove authored closure",
+    "conditioning": "32 frequencies 1e6*(1+linspace(-1e-12,1e-12))",
+    "sourceBand": {"riseSeconds":1e-9}
+  },
+  "scope": "One resonant section per constant real orthonormal mode. Authored family and closures; no arbitrary unknown sampled-data certification."
+}

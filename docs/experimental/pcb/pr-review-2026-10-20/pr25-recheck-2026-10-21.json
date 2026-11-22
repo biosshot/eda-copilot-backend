@@ -1,0 +1,258 @@
+{
+  "date": "2026-10-21",
+  "head": "2c27ea1bee2a300df0b80d30c2d22e2d35838923",
+  "base": "607c043ef58573ac315983fa64c7a1e730b85cf7",
+  "build": "npm run native:build; default GPU-enabled release, Windows x64 MSVC",
+  "boardMedianMs": {
+    "main": 53405.663499999995,
+    "pr25": 57511.85995
+  },
+  "boardChangePercent": 7.6886910130795405,
+  "routeMedianMs": {
+    "main": 13.037242499999998,
+    "pr25": 12.958156249999984
+  },
+  "routeChangePercent": -0.6066179255315163,
+  "allBoardResponsesEqual": true,
+  "board": [
+    {
+      "tag": "main",
+      "ms": 53760.2258,
+      "inputHash": "d2ce9a9f2ef50cbc79e68e1226cd2fe50c3fc5d7054aeb9603619aa3fdb2ca6a",
+      "nativeHash": "1fcae5a069b132542c548100e920768177ec9455dc64aa69c8a5d8222fc73065",
+      "solutionHash": "421f1acfa4b2e3676b9409e6493070a507d5b0e37cb0fe7b9d77870552653452",
+      "matchesCaptured": true,
+      "index": 0,
+      "warmup": true
+    },
+    {
+      "tag": "pr25",
+      "ms": 59181.5476,
+      "inputHash": "d2ce9a9f2ef50cbc79e68e1226cd2fe50c3fc5d7054aeb9603619aa3fdb2ca6a",
+      "nativeHash": "f6e812c402d1fa35ccf105392e05343cf29e08b7bcbb0c9eb42c92a504bd4542",
+      "solutionHash": "421f1acfa4b2e3676b9409e6493070a507d5b0e37cb0fe7b9d77870552653452",
+      "matchesCaptured": true,
+      "index": 1,
+      "warmup": true
+    },
+    {
+      "tag": "main",
+      "ms": 58965.2327,
+      "inputHash": "d2ce9a9f2ef50cbc79e68e1226cd2fe50c3fc5d7054aeb9603619aa3fdb2ca6a",
+      "nativeHash": "1fcae5a069b132542c548100e920768177ec9455dc64aa69c8a5d8222fc73065",
+      "solutionHash": "421f1acfa4b2e3676b9409e6493070a507d5b0e37cb0fe7b9d77870552653452",
+      "matchesCaptured": true,
+      "index": 2,
+      "warmup": false
+    },
+    {
+      "tag": "pr25",
+      "ms": 59564.3015,
+      "inputHash": "d2ce9a9f2ef50cbc79e68e1226cd2fe50c3fc5d7054aeb9603619aa3fdb2ca6a",
+      "nativeHash": "f6e812c402d1fa35ccf105392e05343cf29e08b7bcbb0c9eb42c92a504bd4542",
+      "solutionHash": "421f1acfa4b2e3676b9409e6493070a507d5b0e37cb0fe7b9d77870552653452",
+      "matchesCaptured": true,
+      "index": 3,
+      "warmup": false
+    },
+    {
+      "tag": "pr25",
+      "ms": 58792.9375,
+      "inputHash": "d2ce9a9f2ef50cbc79e68e1226cd2fe50c3fc5d7054aeb9603619aa3fdb2ca6a",
+      "nativeHash": "f6e812c402d1fa35ccf105392e05343cf29e08b7bcbb0c9eb42c92a504bd4542",
+      "solutionHash": "421f1acfa4b2e3676b9409e6493070a507d5b0e37cb0fe7b9d77870552653452",
+      "matchesCaptured": true,
+      "index": 4,
+      "warmup": false
+    },
+    {
+      "tag": "main",
+      "ms": 54910.3402,
+      "inputHash": "d2ce9a9f2ef50cbc79e68e1226cd2fe50c3fc5d7054aeb9603619aa3fdb2ca6a",
+      "nativeHash": "1fcae5a069b132542c548100e920768177ec9455dc64aa69c8a5d8222fc73065",
+      "solutionHash": "421f1acfa4b2e3676b9409e6493070a507d5b0e37cb0fe7b9d77870552653452",
+      "matchesCaptured": true,
+      "index": 5,
+      "warmup": false
+    },
+    {
+      "tag": "main",
+      "ms": 51780.6324,
+      "inputHash": "d2ce9a9f2ef50cbc79e68e1226cd2fe50c3fc5d7054aeb9603619aa3fdb2ca6a",
+      "nativeHash": "1fcae5a069b132542c548100e920768177ec9455dc64aa69c8a5d8222fc73065",
+      "solutionHash": "421f1acfa4b2e3676b9409e6493070a507d5b0e37cb0fe7b9d77870552653452",
+      "matchesCaptured": true,
+      "index": 6,
+      "warmup": false
+    },
+    {
+      "tag": "pr25",
+      "ms": 56230.782400000004,
+      "inputHash": "d2ce9a9f2ef50cbc79e68e1226cd2fe50c3fc5d7054aeb9603619aa3fdb2ca6a",
+      "nativeHash": "f6e812c402d1fa35ccf105392e05343cf29e08b7bcbb0c9eb42c92a504bd4542",
+      "solutionHash": "421f1acfa4b2e3676b9409e6493070a507d5b0e37cb0fe7b9d77870552653452",
+      "matchesCaptured": true,
+      "index": 7,
+      "warmup": false
+    },
+    {
+      "tag": "pr25",
+      "ms": 54019.9108,
+      "inputHash": "d2ce9a9f2ef50cbc79e68e1226cd2fe50c3fc5d7054aeb9603619aa3fdb2ca6a",
+      "nativeHash": "f6e812c402d1fa35ccf105392e05343cf29e08b7bcbb0c9eb42c92a504bd4542",
+      "solutionHash": "421f1acfa4b2e3676b9409e6493070a507d5b0e37cb0fe7b9d77870552653452",
+      "matchesCaptured": true,
+      "index": 8,
+      "warmup": false
+    },
+    {
+      "tag": "main",
+      "ms": 51900.9868,
+      "inputHash": "d2ce9a9f2ef50cbc79e68e1226cd2fe50c3fc5d7054aeb9603619aa3fdb2ca6a",
+      "nativeHash": "1fcae5a069b132542c548100e920768177ec9455dc64aa69c8a5d8222fc73065",
+      "solutionHash": "421f1acfa4b2e3676b9409e6493070a507d5b0e37cb0fe7b9d77870552653452",
+      "matchesCaptured": true,
+      "index": 9,
+      "warmup": false
+    }
+  ],
+  "routeBatches": [
+    {
+      "batch": 0,
+      "sums": {
+        "main": {
+          "ms": 552.8295000000005,
+          "cpuUs": 587000,
+          "count": 40
+        },
+        "pr25": {
+          "ms": 538.5503,
+          "cpuUs": 554000,
+          "count": 40
+        }
+      }
+    },
+    {
+      "batch": 1,
+      "sums": {
+        "main": {
+          "ms": 534.2692,
+          "cpuUs": 486000,
+          "count": 40
+        },
+        "pr25": {
+          "ms": 524.9223000000002,
+          "cpuUs": 560000,
+          "count": 40
+        }
+      }
+    },
+    {
+      "batch": 2,
+      "sums": {
+        "main": {
+          "ms": 521.5456999999988,
+          "cpuUs": 531000,
+          "count": 40
+        },
+        "pr25": {
+          "ms": 517.2892999999995,
+          "cpuUs": 500000,
+          "count": 40
+        }
+      }
+    },
+    {
+      "batch": 3,
+      "sums": {
+        "main": {
+          "ms": 521.433700000001,
+          "cpuUs": 449000,
+          "count": 40
+        },
+        "pr25": {
+          "ms": 519.3631999999993,
+          "cpuUs": 567000,
+          "count": 40
+        }
+      }
+    },
+    {
+      "batch": 4,
+      "sums": {
+        "main": {
+          "ms": 520.8935000000047,
+          "cpuUs": 487000,
+          "count": 40
+        },
+        "pr25": {
+          "ms": 516.714500000001,
+          "cpuUs": 560000,
+          "count": 40
+        }
+      }
+    },
+    {
+      "batch": 5,
+      "sums": {
+        "main": {
+          "ms": 529.7662999999975,
+          "cpuUs": 470000,
+          "count": 40
+        },
+        "pr25": {
+          "ms": 523.7160000000003,
+          "cpuUs": 577000,
+          "count": 40
+        }
+      }
+    },
+    {
+      "batch": 6,
+      "sums": {
+        "main": {
+          "ms": 517.6116000000038,
+          "cpuUs": 485000,
+          "count": 40
+        },
+        "pr25": {
+          "ms": 514.3296,
+          "cpuUs": 531000,
+          "count": 40
+        }
+      }
+    },
+    {
+      "batch": 7,
+      "sums": {
+        "main": {
+          "ms": 515.7701999999963,
+          "cpuUs": 471000,
+          "count": 40
+        },
+        "pr25": {
+          "ms": 514.6085999999923,
+          "cpuUs": 559000,
+          "count": 40
+        }
+      }
+    }
+  ],
+  "validation": {
+    "typecheck": true,
+    "reproductionThreads": [
+      1,
+      4
+    ],
+    "alignmentTestsPassed": 22,
+    "gpuTestsPassed": 5,
+    "variantCasesPerThreadCount": 108,
+    "variantThreadCounts": [
+      1,
+      4
+    ],
+    "variantMismatches": 0,
+    "routeScoreComparisons": 320,
+    "routeScoreMismatches": 0
+  }
+}

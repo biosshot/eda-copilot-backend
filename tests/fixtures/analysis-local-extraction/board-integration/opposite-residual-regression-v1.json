@@ -1,0 +1,26 @@
+{
+  "kind": "actual-opposite-residual-regression-v1",
+  "frequencyHz": 1000,
+  "driveA": [
+    1,
+    -1
+  ],
+  "numericalGuard": 1e-08,
+  "internalLocalRefinementTarget": 1e-09,
+  "beforeNormalizedKvl": 1.2482831421062513e-07,
+  "afterNormalizedKvl": 2.5472799779320795e-10,
+  "afterNormalizedKcl": 3.952773021587171e-21,
+  "scaledRelativeResidual": 2.8449344088355413e-18,
+  "relativeComplexPowerError": 1.6398113985374103e-15,
+  "iterations": 5,
+  "correctionRestarts": 2,
+  "initialControlSeconds": 37.666,
+  "finalFeatureReplaySeconds": 112.429,
+  "physicalAdmission": false,
+  "meaning": "Existing defect refinement now checks weak constitutive rows as well as the global norm; not physical error acceptance",
+  "hashes": {
+    "opposite-fix-v1.stderr.txt": "c893a9eb05714b4984e692d67122f3cac101656d0a865df65d3bc64ec025af3a",
+    "opposite-fix-v2.stderr.txt": "4bb53ddb41730649d2539fa8d1e526467021887626d1bef44ee97a01e608e2ce",
+    "opposite-final.stderr.txt": "501f18c7a9bf598aea3d7a4bf1980c9c7826a53eef5486a3b691d5f085c6c8ee"
+  }
+}

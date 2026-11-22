@@ -1,0 +1,1604 @@
+{
+  "reference": {
+    "matrixH": [
+      [
+        3.396171820030934e-10,
+        -2.380891703155439e-11,
+        -2.414114920718942e-13,
+        -1.5032802481715582e-13
+      ],
+      [
+        -2.3808917031554376e-11,
+        3.396171820030934e-10,
+        -4.2506475260442554e-13,
+        -2.414114920718946e-13
+      ],
+      [
+        -2.414114920718946e-13,
+        -4.2506475260442433e-13,
+        3.396171820030934e-10,
+        -2.380891703155439e-11
+      ],
+      [
+        -1.5032802481715623e-13,
+        -2.4141149207189664e-13,
+        -2.3808917031554376e-11,
+        3.396171820030934e-10
+      ]
+    ],
+    "eigenvaluesH": [
+      3.1527876479022115e-10,
+      3.163369725149356e-10,
+      3.6338020643854404e-10,
+      3.634727842686729e-10
+    ],
+    "inheritedSelfUncertainty": 0.004009630856233075,
+    "twiceCrossLastChange": 3.2438380087076173e-15,
+    "workingUncertainty": 0.004009630857236319,
+    "nature": "Empirical/statistical, not certified continuum enclosure."
+  },
+  "dense": {
+    "matrixH": [
+      [
+        3.3948667654573634e-10,
+        -2.3770429248922222e-11,
+        -2.414114920718995e-13,
+        -1.503280248171194e-13
+      ],
+      [
+        -2.377042926777213e-11,
+        3.3948667654573624e-10,
+        -4.250647526043074e-13,
+        -2.414114920719032e-13
+      ],
+      [
+        -2.414114920719548e-13,
+        -4.2506475260446926e-13,
+        3.394866765457363e-10,
+        -2.377042924892225e-11
+      ],
+      [
+        -1.5032802481719788e-13,
+        -2.4141149207194067e-13,
+        -2.3770429267772098e-11,
+        3.394866765457366e-10
+      ]
+    ],
+    "fullError": 0.0004650596943715708,
+    "rawReciprocity": 5.552473608958413e-11,
+    "kernelEvaluations": 576,
+    "kernelSeconds": 3.430733800000001,
+    "meanOrderedPairSeconds": 0.005956135069444446
+  },
+  "policies": [
+    {
+      "theta": 0.7,
+      "plan": {
+        "blocks": 157,
+        "constructionSeconds": 7.99e-05,
+        "farPairs": 162,
+        "maxFarRatio": 0.699199891164829,
+        "nearCacheUpperBytes": 4416,
+        "nearPairs": 138,
+        "nodes": 47,
+        "plannedBytes": 235680,
+        "supports": 24
+      },
+      "matrixH": [
+        [
+          3.3948667654573634e-10,
+          -2.3769800440442444e-11,
+          -2.4139058156713817e-13,
+          -1.5032285502264158e-13
+        ],
+        [
+          -2.3769800459292413e-11,
+          3.3948667654573624e-10,
+          -4.2495615505584023e-13,
+          -2.413905815671384e-13
+        ],
+        [
+          -2.413905815671378e-13,
+          -4.2495615505584053e-13,
+          3.394866765457363e-10,
+          -2.3769800440442486e-11
+        ],
+        [
+          -1.503228550226427e-13,
+          -2.413905815671387e-13,
+          -2.3769800459292384e-11,
+          3.394866765457366e-10
+        ]
+      ],
+      "analyticBoundMatrixH": [
+        [
+          1.5047486737323778e-11,
+          -9.707085826521839e-14,
+          0.0,
+          0.0
+        ],
+        [
+          -9.707085826521839e-14,
+          1.567385253670844e-11,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.5673852536708492e-11,
+          -9.707085826521854e-14
+        ],
+        [
+          0.0,
+          0.0,
+          -9.707085826521854e-14,
+          1.5047486737323884e-11
+        ]
+      ],
+      "signedEnergyErrorEigenvalues": [
+        -0.0004667700283434062,
+        -0.0004666909443810125,
+        -0.0002896197773575666,
+        -0.0002891427806749315
+      ],
+      "physicalEigenvaluesH": [
+        3.151874533650955e-10,
+        3.1624550548174984e-10,
+        3.6321062071629876e-10,
+        3.6330312661980145e-10
+      ],
+      "fullError": 0.00046677002834340616,
+      "referenceWorkingUncertainty": 0.004009630857236319,
+      "fullScreen": 0.004476400885579725,
+      "fullGatePass": true,
+      "aggregateFarBudget": 0.04856124196702967,
+      "aggregateFarBudgetPass": false,
+      "farVsDenseError": 2.2472871425401307e-06,
+      "conditionalFarRelativeCertificate": 0.05105556743925839,
+      "conditionalCertificateMeaning": "Analytic truncation only, conditional exact near integrals/moments and F64 arithmetic; near/reference uncertainties remain separate.",
+      "reciprocity": 5.552491692823062e-11,
+      "reciprocityPass": true,
+      "psdPass": true,
+      "boundMinusDeltaMinH": 1.503258767694325e-11,
+      "rowsMonotone": true,
+      "actions": [
+        {
+          "q": [
+            1.0,
+            -0.5,
+            0.2,
+            0.8
+          ],
+          "energyJ": 3.356568904673915e-10,
+          "denseEnergyJ": 3.3565711516829484e-10,
+          "observedAbsoluteChangeJ": 2.247009033495481e-16,
+          "analyticTruncationBoundJ": 1.464465183423843e-11,
+          "absoluteBoundScreen": true,
+          "fieldBoundScreen": true,
+          "fieldExcessMax": 0.0,
+          "matrixActionResidual": 1.2924697071141057e-26,
+          "nearZero": false
+        },
+        {
+          "q": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "energyJ": 6.303756920185252e-10,
+          "denseEnergyJ": 6.303742788132131e-10,
+          "observedAbsoluteChangeJ": 1.4132053121295797e-15,
+          "analyticTruncationBoundJ": 3.052719755750186e-11,
+          "absoluteBoundScreen": true,
+          "fieldBoundScreen": true,
+          "fieldExcessMax": 0.0,
+          "matrixActionResidual": 5.169878828456423e-26,
+          "nearZero": false
+        },
+        {
+          "q": [
+            1.0,
+            -1.0,
+            1.0,
+            -1.0
+          ],
+          "energyJ": 7.266054518381519e-10,
+          "denseEnergyJ": 7.266067814014448e-10,
+          "observedAbsoluteChangeJ": 1.3295632929217898e-15,
+          "analyticTruncationBoundJ": 3.091548099056274e-11,
+          "absoluteBoundScreen": true,
+          "fieldBoundScreen": true,
+          "fieldExcessMax": 0.0,
+          "matrixActionResidual": 1.0339757656912846e-25,
+          "nearZero": false
+        },
+        {
+          "q": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "energyJ": 0.0,
+          "denseEnergyJ": 0.0,
+          "observedAbsoluteChangeJ": 0.0,
+          "analyticTruncationBoundJ": 0.0,
+          "absoluteBoundScreen": true,
+          "fieldBoundScreen": true,
+          "fieldExcessMax": 0.0,
+          "matrixActionResidual": 0.0,
+          "nearZero": true
+        }
+      ],
+      "matrixDifference": [
+        [
+          -1.3050545735705727e-13,
+          3.9116591111945525e-14,
+          2.091050475605471e-17,
+          5.1697945142455665e-18
+        ],
+        [
+          3.9116572261963087e-14,
+          -1.3050545735716067e-13,
+          1.0859754858531432e-16,
+          2.0910504756206172e-17
+        ],
+        [
+          2.0910504756812017e-17,
+          1.085975485837997e-16,
+          -1.3050545735710897e-13,
+          3.911659111190352e-14
+        ],
+        [
+          5.169794513538747e-18,
+          2.0910504757922734e-17,
+          3.911657226199217e-14,
+          -1.3050545735679878e-13
+        ]
+      ],
+      "farPreparationSeconds": 4.72e-05
+    },
+    {
+      "theta": 0.4,
+      "plan": {
+        "blocks": 201,
+        "constructionSeconds": 6.77e-05,
+        "farPairs": 141,
+        "maxFarRatio": 0.39937357702280746,
+        "nearCacheUpperBytes": 5088,
+        "nearPairs": 159,
+        "nodes": 47,
+        "plannedBytes": 235680,
+        "supports": 24
+      },
+      "matrixH": [
+        [
+          3.3948667654573634e-10,
+          -2.3770429248922222e-11,
+          -2.4139058156713817e-13,
+          -1.5032285502264158e-13
+        ],
+        [
+          -2.377042926777213e-11,
+          3.3948667654573624e-10,
+          -4.25031291000095e-13,
+          -2.413905815671384e-13
+        ],
+        [
+          -2.413905815671378e-13,
+          -4.25031291000086e-13,
+          3.394866765457363e-10,
+          -2.377042924892225e-11
+        ],
+        [
+          -1.503228550226427e-13,
+          -2.413905815671387e-13,
+          -2.3770429267772098e-11,
+          3.394866765457366e-10
+        ]
+      ],
+      "analyticBoundMatrixH": [
+        [
+          2.4391614708075056e-13,
+          -9.707085826521839e-14,
+          0.0,
+          0.0
+        ],
+        [
+          -9.707085826521839e-14,
+          7.502139865388549e-13,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          7.50213986538855e-13,
+          -9.707085826521854e-14
+        ],
+        [
+          0.0,
+          0.0,
+          -9.707085826521854e-14,
+          2.439161470807512e-13
+        ]
+      ],
+      "signedEnergyErrorEigenvalues": [
+        -0.0004650640020886589,
+        -0.0004649367824470239,
+        -0.0002917333582090664,
+        -0.00029101177319030327
+      ],
+      "physicalEigenvaluesH": [
+        3.151867867840597e-10,
+        3.162449140326759e-10,
+        3.632112121613904e-10,
+        3.633037932048197e-10
+      ],
+      "fullError": 0.00046506400208865895,
+      "referenceWorkingUncertainty": 0.004009630857236319,
+      "fullScreen": 0.004474694859324979,
+      "fullGatePass": true,
+      "aggregateFarBudget": 0.002222749053513506,
+      "aggregateFarBudgetPass": true,
+      "farVsDenseError": 1.3974067944110324e-07,
+      "conditionalFarRelativeCertificate": 0.0022285921245819196,
+      "conditionalCertificateMeaning": "Analytic truncation only, conditional exact near integrals/moments and F64 arithmetic; near/reference uncertainties remain separate.",
+      "reciprocity": 5.552473608958413e-11,
+      "reciprocityPass": true,
+      "psdPass": true,
+      "boundMinusDeltaMinH": 2.259294932395381e-13,
+      "rowsMonotone": true,
+      "actions": [
+        {
+          "q": [
+            1.0,
+            -0.5,
+            0.2,
+            0.8
+          ],
+          "energyJ": 3.35657111775869e-10,
+          "denseEnergyJ": 3.3565711516829484e-10,
+          "observedAbsoluteChangeJ": 3.392425838673329e-18,
+          "analyticTruncationBoundJ": 3.417963604645239e-13,
+          "absoluteBoundScreen": true,
+          "fieldBoundScreen": true,
+          "fieldExcessMax": 0.0,
+          "matrixActionResidual": 2.5849394142282115e-26,
+          "nearZero": false
+        },
+        {
+          "q": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "energyJ": 6.303743592656216e-10,
+          "denseEnergyJ": 6.303742788132131e-10,
+          "observedAbsoluteChangeJ": 8.045240849103877e-17,
+          "analyticTruncationBoundJ": 7.999884170891689e-13,
+          "absoluteBoundScreen": true,
+          "fieldBoundScreen": true,
+          "fieldExcessMax": 0.0,
+          "matrixActionResidual": 1.0339757656912846e-25,
+          "nearZero": false
+        },
+        {
+          "q": [
+            1.0,
+            -1.0,
+            1.0,
+            -1.0
+          ],
+          "energyJ": 7.266067845910557e-10,
+          "denseEnergyJ": 7.266067814014448e-10,
+          "observedAbsoluteChangeJ": 3.1896109235463124e-18,
+          "analyticTruncationBoundJ": 1.1882718501500428e-12,
+          "absoluteBoundScreen": true,
+          "fieldBoundScreen": true,
+          "fieldExcessMax": 0.0,
+          "matrixActionResidual": 1.0339757656912846e-25,
+          "nearZero": false
+        },
+        {
+          "q": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "energyJ": 0.0,
+          "denseEnergyJ": 0.0,
+          "observedAbsoluteChangeJ": 0.0,
+          "analyticTruncationBoundJ": 0.0,
+          "absoluteBoundScreen": true,
+          "fieldBoundScreen": true,
+          "fieldExcessMax": 0.0,
+          "matrixActionResidual": 0.0,
+          "nearZero": true
+        }
+      ],
+      "matrixDifference": [
+        [
+          -1.3050545735705727e-13,
+          3.8487782632167006e-14,
+          2.091050475605471e-17,
+          5.1697945142455665e-18
+        ],
+        [
+          3.848776378224596e-14,
+          -1.3050545735716067e-13,
+          3.3461604330539565e-17,
+          2.0910504756206172e-17
+        ],
+        [
+          2.0910504756812017e-17,
+          3.346160433831458e-17,
+          -1.3050545735710897e-13,
+          3.8487782632137925e-14
+        ],
+        [
+          5.169794513538747e-18,
+          2.0910504757922734e-17,
+          3.848776378227827e-14,
+          -1.3050545735679878e-13
+        ]
+      ],
+      "farPreparationSeconds": 3.62e-05
+    },
+    {
+      "theta": 0.2,
+      "plan": {
+        "blocks": 300,
+        "constructionSeconds": 6.27e-05,
+        "farPairs": 16,
+        "maxFarRatio": 0.1944712230736875,
+        "nearCacheUpperBytes": 9088,
+        "nearPairs": 284,
+        "nodes": 47,
+        "plannedBytes": 235680,
+        "supports": 24
+      },
+      "matrixH": [
+        [
+          3.3948667654573634e-10,
+          -2.3770429248922222e-11,
+          -2.414114920718995e-13,
+          -1.5032729483795082e-13
+        ],
+        [
+          -2.377042926777213e-11,
+          3.3948667654573624e-10,
+          -4.250647526043074e-13,
+          -2.414114920719032e-13
+        ],
+        [
+          -2.414114920719548e-13,
+          -4.2506475260446926e-13,
+          3.394866765457363e-10,
+          -2.377042924892225e-11
+        ],
+        [
+          -1.503272948379102e-13,
+          -2.4141149207194067e-13,
+          -2.3770429267772098e-11,
+          3.394866765457366e-10
+        ]
+      ],
+      "analyticBoundMatrixH": [
+        [
+          7.362479882169282e-15,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          7.362479882169303e-15
+        ]
+      ],
+      "signedEnergyErrorEigenvalues": [
+        -0.00046505869229733325,
+        -0.00046494225685138216,
+        -0.00029185974107027237,
+        -0.0002908857167537299
+      ],
+      "physicalEigenvaluesH": [
+        3.1518674684017784e-10,
+        3.162449538088215e-10,
+        3.6321121420385253e-10,
+        3.633037913300936e-10
+      ],
+      "fullError": 0.0004650586922973332,
+      "referenceWorkingUncertainty": 0.004009630857236319,
+      "fullScreen": 0.0044746895495336525,
+      "fullGatePass": true,
+      "aggregateFarBudget": 2.179786126891582e-05,
+      "aggregateFarBudgetPass": true,
+      "farVsDenseError": 2.1612264072077e-09,
+      "conditionalFarRelativeCertificate": 2.180645235593603e-05,
+      "conditionalCertificateMeaning": "Analytic truncation only, conditional exact near integrals/moments and F64 arithmetic; near/reference uncertainties remain separate.",
+      "reciprocity": 5.552473608958413e-11,
+      "reciprocityPass": true,
+      "psdPass": true,
+      "boundMinusDeltaMinH": 0.0,
+      "rowsMonotone": true,
+      "actions": [
+        {
+          "q": [
+            1.0,
+            -0.5,
+            0.2,
+            0.8
+          ],
+          "energyJ": 3.3565711575227825e-10,
+          "denseEnergyJ": 3.3565711516829484e-10,
+          "observedAbsoluteChangeJ": 5.8398341200542e-19,
+          "analyticTruncationBoundJ": 6.037233503378819e-15,
+          "absoluteBoundScreen": true,
+          "fieldBoundScreen": true,
+          "fieldExcessMax": 1.925929944387236e-34,
+          "matrixActionResidual": 5.169878828456423e-26,
+          "nearZero": false
+        },
+        {
+          "q": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "energyJ": 6.303742795431921e-10,
+          "denseEnergyJ": 6.303742788132131e-10,
+          "observedAbsoluteChangeJ": 7.299790323622277e-19,
+          "analyticTruncationBoundJ": 7.362479882169293e-15,
+          "absoluteBoundScreen": true,
+          "fieldBoundScreen": true,
+          "fieldExcessMax": 3.851859888774472e-34,
+          "matrixActionResidual": 5.169878828456423e-26,
+          "nearZero": false
+        },
+        {
+          "q": [
+            1.0,
+            -1.0,
+            1.0,
+            -1.0
+          ],
+          "energyJ": 7.266067806714655e-10,
+          "denseEnergyJ": 7.266067814014448e-10,
+          "observedAbsoluteChangeJ": 7.299793425549574e-19,
+          "analyticTruncationBoundJ": 7.362479882169293e-15,
+          "absoluteBoundScreen": true,
+          "fieldBoundScreen": true,
+          "fieldExcessMax": 1.925929944387236e-34,
+          "matrixActionResidual": 5.169878828456423e-26,
+          "nearZero": false
+        },
+        {
+          "q": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "energyJ": 0.0,
+          "denseEnergyJ": 0.0,
+          "observedAbsoluteChangeJ": 0.0,
+          "analyticTruncationBoundJ": 0.0,
+          "absoluteBoundScreen": true,
+          "fieldBoundScreen": true,
+          "fieldExcessMax": 0.0,
+          "matrixActionResidual": 0.0,
+          "nearZero": true
+        }
+      ],
+      "matrixDifference": [
+        [
+          -1.3050545735705727e-13,
+          3.8487782632167006e-14,
+          -5.301145283085199e-27,
+          7.299792050028591e-19
+        ],
+        [
+          3.848776378224596e-14,
+          -1.3050545735716067e-13,
+          1.1813980916589873e-25,
+          -8.582806648804608e-27
+        ],
+        [
+          -6.018062073750055e-26,
+          -4.493351716138883e-26,
+          -1.3050545735710897e-13,
+          3.8487782632137925e-14
+        ],
+        [
+          7.299792460236261e-19,
+          -4.4024749398574227e-26,
+          3.848776378227827e-14,
+          -1.3050545735679878e-13
+        ]
+      ],
+      "farPreparationSeconds": 4.5e-06
+    }
+  ],
+  "weakModes": [
+    {
+      "action": {
+        "absoluteFarPotentialBounds": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "absoluteTruncationEnergyBoundJ": 0.0,
+        "coefficients": [
+          1.0,
+          -1.0
+        ],
+        "dense": {
+          "energyJ": 0.0,
+          "integratedPotential": [
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "response": [
+            0.0,
+            0.0
+          ]
+        },
+        "energyJ": 0.0,
+        "integratedPotential": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "response": [
+          0.0,
+          0.0
+        ]
+      },
+      "epsilon": 0.0,
+      "relativeCertificateAvailable": false
+    },
+    {
+      "action": {
+        "absoluteFarPotentialBounds": [
+          [
+            5.693851800224364e-32,
+            3.8947320096972346e-32,
+            0.0
+          ],
+          [
+            3.8947320096972346e-32,
+            2.0592818936008562e-32,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            3.8947320096972297e-32,
+            6.468918810008359e-32,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            9.217846854053674e-34,
+            1.1091961082143898e-33,
+            0.0
+          ],
+          [
+            1.589739451171164e-33,
+            2.0022553346719545e-33,
+            0.0
+          ],
+          [
+            2.6555651254736733e-34,
+            3.0163770191699126e-34,
+            0.0
+          ],
+          [
+            4.071805446490952e-34,
+            4.733739800248164e-34,
+            0.0
+          ],
+          [
+            9.508388286885913e-35,
+            1.0430794485010454e-34,
+            0.0
+          ],
+          [
+            1.351649271754083e-34,
+            1.5027189022981208e-34,
+            0.0
+          ],
+          [
+            9.895025364514634e-34,
+            1.216919334781366e-33,
+            0.0
+          ],
+          [
+            1.5527335270342283e-33,
+            1.9666809287351938e-33,
+            0.0
+          ],
+          [
+            2.780176497849366e-34,
+            3.186017228475394e-34,
+            0.0
+          ],
+          [
+            3.9957711612023875e-34,
+            4.649878835005244e-34,
+            0.0
+          ],
+          [
+            9.815662192907443e-35,
+            1.0813347672695376e-34,
+            0.0
+          ],
+          [
+            1.3314127024808214e-34,
+            1.4802107005085223e-34,
+            0.0
+          ]
+        ],
+        "absoluteTruncationEnergyBoundJ": 7.836931527856186e-36,
+        "coefficients": [
+          1.0,
+          -1.0
+        ],
+        "dense": {
+          "energyJ": 1.697479368690305e-34,
+          "integratedPotential": [
+            [
+              -8.838323128960251e-32,
+              2.8535265092855137e-31,
+              0.0
+            ],
+            [
+              -1.1797374462474364e-32,
+              1.870645371486476e-31,
+              0.0
+            ],
+            [
+              -7.805457423467519e-31,
+              1.3428984238402217e-31,
+              0.0
+            ],
+            [
+              -1.3425453503459812e-31,
+              7.8060915582358646e-31,
+              0.0
+            ],
+            [
+              -3.387440698422869e-31,
+              -3.387271155903028e-31,
+              0.0
+            ],
+            [
+              -7.047084672434458e-31,
+              -7.046832363065719e-31,
+              0.0
+            ],
+            [
+              8.798573237253522e-32,
+              2.328859465408024e-31,
+              0.0
+            ],
+            [
+              5.85546525519985e-32,
+              1.2192507996362255e-31,
+              0.0
+            ],
+            [
+              7.047084674073548e-31,
+              7.047718804253394e-31,
+              0.0
+            ],
+            [
+              3.3874407000951413e-31,
+              3.3877937775201617e-31,
+              0.0
+            ],
+            [
+              1.3425453476760168e-31,
+              -7.80524619782665e-31,
+              0.0
+            ],
+            [
+              7.805457422117506e-31,
+              -1.3422650214174456e-31,
+              0.0
+            ],
+            [
+              -3.09723553006411e-33,
+              -1.9611587073575448e-32,
+              0.0
+            ],
+            [
+              -2.1933714653233077e-33,
+              -2.3352837963908885e-32,
+              0.0
+            ],
+            [
+              -1.7170921778968142e-33,
+              -1.3415730151906658e-32,
+              0.0
+            ],
+            [
+              -1.13875680430269e-33,
+              -1.5414467431754095e-32,
+              0.0
+            ],
+            [
+              -1.047076395677709e-33,
+              -9.73823841542055e-33,
+              0.0
+            ],
+            [
+              -6.639539356341068e-34,
+              -1.0926841482749472e-32,
+              0.0
+            ],
+            [
+              1.1347110321931831e-33,
+              -2.0332792015381974e-32,
+              0.0
+            ],
+            [
+              3.1600861428791723e-33,
+              -2.3101372648443932e-32,
+              0.0
+            ],
+            [
+              6.627798569030739e-34,
+              -1.3727141295898162e-32,
+              0.0
+            ],
+            [
+              1.7362640530522684e-33,
+              -1.527592018695226e-32,
+              0.0
+            ],
+            [
+              4.1956989220760695e-34,
+              -9.893191339546682e-33,
+              0.0
+            ],
+            [
+              1.054177232917676e-33,
+              -1.0847010001850964e-32,
+              0.0
+            ]
+          ],
+          "response": [
+            2.3775027648755765e-23,
+            2.3775027648416276e-23
+          ]
+        },
+        "energyJ": 1.697479368690305e-34,
+        "integratedPotential": [
+          [
+            -8.835933524984086e-32,
+            2.853626258363837e-31,
+            0.0
+          ],
+          [
+            -1.1807349370306941e-32,
+            1.8709943733680517e-31,
+            0.0
+          ],
+          [
+            -7.805457423467519e-31,
+            1.3428984238402217e-31,
+            0.0
+          ],
+          [
+            -1.3425453503459812e-31,
+            7.8060915582358646e-31,
+            0.0
+          ],
+          [
+            -3.387440698422869e-31,
+            -3.387271155903028e-31,
+            0.0
+          ],
+          [
+            -7.047084672434458e-31,
+            -7.046832363065719e-31,
+            0.0
+          ],
+          [
+            8.798573237253522e-32,
+            2.328859465408024e-31,
+            0.0
+          ],
+          [
+            5.855705304064924e-32,
+            1.21904570963002e-31,
+            0.0
+          ],
+          [
+            7.047084674073548e-31,
+            7.047718804253394e-31,
+            0.0
+          ],
+          [
+            3.3874407000951413e-31,
+            3.3877937775201617e-31,
+            0.0
+          ],
+          [
+            1.3425453476760168e-31,
+            -7.80524619782665e-31,
+            0.0
+          ],
+          [
+            7.805457422117506e-31,
+            -1.3422650214174456e-31,
+            0.0
+          ],
+          [
+            -3.097288151017286e-33,
+            -1.9611841985414644e-32,
+            0.0
+          ],
+          [
+            -2.193802027766093e-33,
+            -2.3351842501404973e-32,
+            0.0
+          ],
+          [
+            -1.7170703020116675e-33,
+            -1.3415793452868724e-32,
+            0.0
+          ],
+          [
+            -1.1388693899076959e-33,
+            -1.5414254090307547e-32,
+            0.0
+          ],
+          [
+            -1.0470618516944406e-33,
+            -9.738258229029001e-33,
+            0.0
+          ],
+          [
+            -6.639902585073243e-34,
+            -1.0926783012576131e-32,
+            0.0
+          ],
+          [
+            1.1355362461159445e-33,
+            -2.0332486008566463e-32,
+            0.0
+          ],
+          [
+            3.1596830234207583e-33,
+            -2.310163454256912e-32,
+            0.0
+          ],
+          [
+            6.629727873750636e-34,
+            -1.3727082513812084e-32,
+            0.0
+          ],
+          [
+            1.7361447291413965e-33,
+            -1.5275953461899263e-32,
+            0.0
+          ],
+          [
+            4.196276140937309e-34,
+            -9.893177016921753e-33,
+            0.0
+          ],
+          [
+            1.0541364546132268e-33,
+            -1.0847014670031713e-32,
+            0.0
+          ]
+        ],
+        "response": [
+          2.3774398840275995e-23,
+          2.3774398839936506e-23
+        ]
+      },
+      "epsilon": 1e-12,
+      "relativeCertificateAvailable": false
+    }
+  ],
+  "rois": [
+    {
+      "roi": "BandAmpV5-supports",
+      "theta": 0.7,
+      "supports": 3730,
+      "nearPairs": 955306,
+      "farPairs": 3728193,
+      "blocks": 40008,
+      "nodes": 1278,
+      "constructionSeconds": 0.010397499999999999,
+      "simultaneousPlansUpperBytes": 42763600,
+      "nearCacheUpperBytes": 30569792,
+      "farPlanStorageBytes": 1600320,
+      "oneDirectionNearOptimisticSeconds": 5689.931568650696,
+      "bothDirectionsNearPlusFarSeconds": 11358.603920773216,
+      "densePackedSameMeasuredSeconds": 27895.552641607996,
+      "historicalRefinedPackedSeconds": 18376.886519217187,
+      "measuredMomentPairSeconds": 2.567375886524823e-07,
+      "physicalRelativeBound": "Unavailable: no ROI physical current-space operator built or accepted."
+    },
+    {
+      "roi": "BandAmpV5-supports",
+      "theta": 0.4,
+      "supports": 3730,
+      "nearPairs": 1782309,
+      "farPairs": 2901190,
+      "blocks": 67542,
+      "nodes": 1278,
+      "constructionSeconds": 0.0130213,
+      "simultaneousPlansUpperBytes": 42763600,
+      "nearCacheUpperBytes": 57033888,
+      "farPlanStorageBytes": 2701680,
+      "oneDirectionNearOptimisticSeconds": 10615.673139486462,
+      "bothDirectionsNearPlusFarSeconds": 21209.87473968872,
+      "densePackedSameMeasuredSeconds": 27895.552641607996,
+      "historicalRefinedPackedSeconds": 18376.886519217187,
+      "measuredMomentPairSeconds": 2.567375886524823e-07,
+      "physicalRelativeBound": "Unavailable: no ROI physical current-space operator built or accepted."
+    },
+    {
+      "roi": "BandAmpV5-supports",
+      "theta": 0.2,
+      "supports": 3730,
+      "nearPairs": 2769296,
+      "farPairs": 1914203,
+      "blocks": 97666,
+      "nodes": 1278,
+      "constructionSeconds": 0.0161387,
+      "simultaneousPlansUpperBytes": 42763600,
+      "nearCacheUpperBytes": 88617472,
+      "farPlanStorageBytes": 3906640,
+      "oneDirectionNearOptimisticSeconds": 16494.301023272226,
+      "bothDirectionsNearPlusFarSeconds": 32966.87711059784,
+      "densePackedSameMeasuredSeconds": 27895.552641607996,
+      "historicalRefinedPackedSeconds": 18376.886519217187,
+      "measuredMomentPairSeconds": 2.567375886524823e-07,
+      "physicalRelativeBound": "Unavailable: no ROI physical current-space operator built or accepted."
+    },
+    {
+      "roi": "STM32G0_CAN_RS485-supports",
+      "theta": 0.7,
+      "supports": 1194,
+      "nearPairs": 211192,
+      "farPairs": 309839,
+      "blocks": 4637,
+      "nodes": 318,
+      "constructionSeconds": 0.0024798999999999997,
+      "simultaneousPlansUpperBytes": 15869200,
+      "nearCacheUpperBytes": 6758144,
+      "farPlanStorageBytes": 185480,
+      "oneDirectionNearOptimisticSeconds": 1257.8880775861114,
+      "bothDirectionsNearPlusFarSeconds": 2508.7440772170366,
+      "densePackedSameMeasuredSeconds": 3103.3310113677094,
+      "historicalRefinedPackedSeconds": 2044.3962003609377,
+      "measuredMomentPairSeconds": 2.567375886524823e-07,
+      "physicalRelativeBound": "Unavailable: no ROI physical current-space operator built or accepted."
+    },
+    {
+      "roi": "STM32G0_CAN_RS485-supports",
+      "theta": 0.4,
+      "supports": 1194,
+      "nearPairs": 286613,
+      "farPairs": 234418,
+      "blocks": 6063,
+      "nodes": 318,
+      "constructionSeconds": 0.002634,
+      "simultaneousPlansUpperBytes": 15869200,
+      "nearCacheUpperBytes": 9171616,
+      "farPlanStorageBytes": 242520,
+      "oneDirectionNearOptimisticSeconds": 1707.105740658681,
+      "bothDirectionsNearPlusFarSeconds": 3407.1600399565023,
+      "densePackedSameMeasuredSeconds": 3103.3310113677094,
+      "historicalRefinedPackedSeconds": 2044.3962003609377,
+      "measuredMomentPairSeconds": 2.567375886524823e-07,
+      "physicalRelativeBound": "Unavailable: no ROI physical current-space operator built or accepted."
+    },
+    {
+      "roi": "STM32G0_CAN_RS485-supports",
+      "theta": 0.2,
+      "supports": 1194,
+      "nearPairs": 383984,
+      "farPairs": 137047,
+      "blocks": 7617,
+      "nodes": 318,
+      "constructionSeconds": 0.0027543000000000003,
+      "simultaneousPlansUpperBytes": 15869200,
+      "nearCacheUpperBytes": 12287488,
+      "farPlanStorageBytes": 304680,
+      "oneDirectionNearOptimisticSeconds": 2287.060568505556,
+      "bothDirectionsNearPlusFarSeconds": 4567.044696854508,
+      "densePackedSameMeasuredSeconds": 3103.3310113677094,
+      "historicalRefinedPackedSeconds": 2044.3962003609377,
+      "measuredMomentPairSeconds": 2.567375886524823e-07,
+      "physicalRelativeBound": "Unavailable: no ROI physical current-space operator built or accepted."
+    },
+    {
+      "roi": "TPS63060DSCR-supports",
+      "theta": 0.7,
+      "supports": 2754,
+      "nearPairs": 654250,
+      "farPairs": 1884857,
+      "blocks": 26509,
+      "nodes": 1026,
+      "constructionSeconds": 0.0074617,
+      "simultaneousPlansUpperBytes": 33667280,
+      "nearCacheUpperBytes": 20936000,
+      "farPlanStorageBytes": 1060360,
+      "oneDirectionNearOptimisticSeconds": 3896.8013691840288,
+      "bothDirectionsNearPlusFarSeconds": 7777.683456027943,
+      "densePackedSameMeasuredSeconds": 15123.26424777188,
+      "historicalRefinedPackedSeconds": 9962.825058604689,
+      "measuredMomentPairSeconds": 2.567375886524823e-07,
+      "physicalRelativeBound": "Unavailable: no ROI physical current-space operator built or accepted."
+    },
+    {
+      "roi": "TPS63060DSCR-supports",
+      "theta": 0.4,
+      "supports": 2754,
+      "nearPairs": 1038612,
+      "farPairs": 1500495,
+      "blocks": 40632,
+      "nodes": 1026,
+      "constructionSeconds": 0.0087615,
+      "simultaneousPlansUpperBytes": 33667280,
+      "nearCacheUpperBytes": 33235584,
+      "farPlanStorageBytes": 1625280,
+      "oneDirectionNearOptimisticSeconds": 6186.1133567458355,
+      "bothDirectionsNearPlusFarSeconds": 12356.208750978505,
+      "densePackedSameMeasuredSeconds": 15123.26424777188,
+      "historicalRefinedPackedSeconds": 9962.825058604689,
+      "measuredMomentPairSeconds": 2.567375886524823e-07,
+      "physicalRelativeBound": "Unavailable: no ROI physical current-space operator built or accepted."
+    },
+    {
+      "roi": "TPS63060DSCR-supports",
+      "theta": 0.2,
+      "supports": 2754,
+      "nearPairs": 1553315,
+      "farPairs": 985792,
+      "blocks": 57406,
+      "nodes": 1026,
+      "constructionSeconds": 0.0103579,
+      "simultaneousPlansUpperBytes": 33667280,
+      "nearCacheUpperBytes": 49706080,
+      "farPlanStorageBytes": 2296240,
+      "oneDirectionNearOptimisticSeconds": 9251.7539453941,
+      "bothDirectionsNearPlusFarSeconds": 18487.35778466794,
+      "densePackedSameMeasuredSeconds": 15123.26424777188,
+      "historicalRefinedPackedSeconds": 9962.825058604689,
+      "measuredMomentPairSeconds": 2.567375886524823e-07,
+      "physicalRelativeBound": "Unavailable: no ROI physical current-space operator built or accepted."
+    }
+  ],
+  "limits": {
+    "maxBytes": 536870912,
+    "maxSeconds": 60,
+    "exactCacheMaxSupports": 64,
+    "fullEnergyGate": 0.05,
+    "analyticFarBudget": 0.01,
+    "productionROIAccepted": false,
+    "remainingCost": "Far plan is hierarchical; action still pair-streamed O(N\u00b2). No full ROI energy bound or solve admitted."
+  }
+}

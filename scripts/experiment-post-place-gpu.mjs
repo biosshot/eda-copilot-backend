@@ -24,7 +24,7 @@ const bytes=JSON.stringify(problem,(_,v)=>typeof v==='number'&&Object.is(v,-0)?{
 writeFileSync(join(out,'problem.json'),bytes);
 process.env.PCB_POST_PLACE_BACKEND=args.backend??'cpu';
 process.env.PCB_BOARD_PACKER_PROFILE='1';
-const addonPath=resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH??join('native/pcb-board-packer',require('../native/pcb-board-packer/platform.cjs').nativeFilename()));
+const addonPath=resolve(process.env.PCB_BOARD_PACKER_NATIVE_PATH??join('native/node-addon',require('../native/node-addon/platform.cjs').nativeFilename()));
 const addon=require(addonPath);
 if(args.warmBoard) {
  process.env.PCB_BOARD_BACKEND='cubecl';

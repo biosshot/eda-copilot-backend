@@ -1,0 +1,120 @@
+{
+  "sourceSingle": "https://qucs.github.io/tech/node75.html",
+  "sourcePair": "https://qucs.github.io/tech/node77.html",
+  "description": "Independent engineering equation evaluations, not published measured data. Microstrip Hammerstad/Jensen; coupled Kirschning/Jansen static; no runtime simulator. h=plane to lower conductor face. t/h=1e-5 approximates documented zero-thickness pair reference; finite t separately tested. Formula tolerance 3% applies only these cases, not arbitrary PCB accuracy.",
+  "single": [
+    {
+      "widthMm": 1,
+      "heightMm": 1,
+      "epsilon": 4,
+      "thicknessMm": 1e-05,
+      "referenceThicknessMm": 0,
+      "impedanceOhm": 74.05193045386382,
+      "effectivePermittivity": 2.914642940274056,
+      "equations": "node75 Hammerstad/Jensen static and finite-thickness correction"
+    },
+    {
+      "widthMm": 0.5,
+      "heightMm": 1,
+      "epsilon": 2.2,
+      "thicknessMm": 1e-05,
+      "referenceThicknessMm": 0,
+      "impedanceOhm": 126.7336907736508,
+      "effectivePermittivity": 1.7301588778811774,
+      "equations": "node75 Hammerstad/Jensen static and finite-thickness correction"
+    },
+    {
+      "widthMm": 2,
+      "heightMm": 1,
+      "epsilon": 9.5,
+      "thicknessMm": 1e-05,
+      "referenceThicknessMm": 0,
+      "impedanceOhm": 34.06896986076285,
+      "effectivePermittivity": 6.82879862626884,
+      "equations": "node75 Hammerstad/Jensen static and finite-thickness correction"
+    },
+    {
+      "widthMm": 1,
+      "heightMm": 1,
+      "epsilon": 4,
+      "thicknessMm": 0.1,
+      "referenceThicknessMm": 0.1,
+      "impedanceOhm": 70.68087078159483,
+      "effectivePermittivity": 2.8164133967843434,
+      "equations": "node75 Hammerstad/Jensen static and finite-thickness correction"
+    }
+  ],
+  "pair": [
+    {
+      "widthMm": 1,
+      "heightMm": 1,
+      "epsilon": 4,
+      "gapMm": 1.0,
+      "thicknessMm": 1e-05,
+      "referenceThicknessMm": 0,
+      "impedanceOhm": [
+        84.45650283954421,
+        63.00856152600554
+      ],
+      "effectivePermittivity": [
+        3.103831868567447,
+        2.6651761458121928
+      ],
+      "equations": "node77 11.91--11.126 static Kirschning/Jansen; u=1, g=gap/h; within 0.1<=u,g<=10 and 1<=epsilon<=18"
+    },
+    {
+      "widthMm": 1,
+      "heightMm": 1,
+      "epsilon": 4,
+      "gapMm": 0.2,
+      "thicknessMm": 1e-05,
+      "referenceThicknessMm": 0,
+      "impedanceOhm": [
+        96.2326715814206,
+        45.5105726759662
+      ],
+      "effectivePermittivity": [
+        3.089940142268462,
+        2.5767788347548226
+      ],
+      "equations": "node77 11.91--11.126 static Kirschning/Jansen; u=1, g=gap/h; within 0.1<=u,g<=10 and 1<=epsilon<=18"
+    },
+    {
+      "widthMm": 1,
+      "heightMm": 1,
+      "epsilon": 4,
+      "gapMm": 4.0,
+      "thicknessMm": 1e-05,
+      "referenceThicknessMm": 0,
+      "impedanceOhm": [
+        75.61896068896206,
+        72.40819021631341
+      ],
+      "effectivePermittivity": [
+        2.9935347999676813,
+        2.8331562419385556
+      ],
+      "equations": "node77 11.91--11.126 static Kirschning/Jansen; u=1, g=gap/h; within 0.1<=u,g<=10 and 1<=epsilon<=18"
+    }
+  ],
+  "stripline": {
+    "source": "https://ansyshelp.ansys.com/public/Views/Secured/Electronics/v252/en/Subsystems/Circuit/Content/Circuit/TRLStriplineTransmissionLine.htm",
+    "epsilon": 2.2,
+    "planeSeparationMm": 1.27,
+    "thicknessMm": 0.01,
+    "table": [
+      {
+        "widthMm": 0.5,
+        "impedanceOhm": 74.86
+      },
+      {
+        "widthMm": 1.0,
+        "impedanceOhm": 50.69
+      },
+      {
+        "widthMm": 2.0,
+        "impedanceOhm": 30.93
+      }
+    ]
+  }
+}

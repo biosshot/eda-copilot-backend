@@ -1,0 +1,218 @@
+{
+  "board": {
+    "outline": [
+      {
+        "x": -10,
+        "y": -10
+      },
+      {
+        "x": 10,
+        "y": -10
+      },
+      {
+        "x": 10,
+        "y": 10
+      },
+      {
+        "x": -10,
+        "y": 10
+      }
+    ],
+    "cutouts": [],
+    "layers": [
+      {
+        "name": "TOP",
+        "index": 0,
+        "side": "top"
+      },
+      {
+        "name": "I1",
+        "index": 1,
+        "side": "inner"
+      },
+      {
+        "name": "I2",
+        "index": 2,
+        "side": "inner"
+      },
+      {
+        "name": "BOTTOM",
+        "index": 3,
+        "side": "bottom"
+      }
+    ],
+    "nets": [
+      {
+        "name": "A"
+      }
+    ],
+    "components": [],
+    "keepouts": [],
+    "holes": [],
+    "pads": [
+      {
+        "id": "plated",
+        "number": "1",
+        "net": "A",
+        "at": {
+          "x": 0,
+          "y": 0
+        },
+        "rotationDeg": 0,
+        "layers": [
+          "TOP",
+          "I1",
+          "I2",
+          "BOTTOM"
+        ],
+        "shape": {
+          "kind": "rect",
+          "widthMm": 3,
+          "heightMm": 3
+        },
+        "shapesByLayer": {
+          "TOP": {
+            "kind": "circle",
+            "diameterMm": 10
+          },
+          "I1": {
+            "kind": "rect",
+            "widthMm": 3,
+            "heightMm": 3
+          },
+          "I2": {
+            "kind": "rect",
+            "widthMm": 3,
+            "heightMm": 3
+          },
+          "BOTTOM": {
+            "kind": "rect",
+            "widthMm": 3,
+            "heightMm": 3
+          }
+        },
+        "hole": {
+          "shape": "round",
+          "diameterMm": 1,
+          "plated": true
+        }
+      },
+      {
+        "id": "independent",
+        "number": "1",
+        "at": {
+          "x": 7,
+          "y": -7
+        },
+        "rotationDeg": 0,
+        "layers": [
+          "TOP"
+        ],
+        "shape": {
+          "kind": "rect",
+          "widthMm": 1,
+          "heightMm": 1
+        }
+      }
+    ],
+    "copper": {
+      "fixed": {
+        "tracks": [],
+        "vias": [],
+        "zones": []
+      },
+      "editable": {
+        "tracks": [],
+        "vias": [],
+        "zones": []
+      }
+    },
+    "rules": {
+      "default": {
+        "clearanceMm": 0.2,
+        "edgeClearanceMm": 0.3,
+        "minTrackWidthMm": 0.1,
+        "preferredTrackWidthMm": 0.2,
+        "via": {
+          "minDiameterMm": 0.5,
+          "preferredDiameterMm": 0.6,
+          "minDrillMm": 0.2,
+          "preferredDrillMm": 0.3
+        }
+      },
+      "nets": []
+    }
+  },
+  "options": {
+    "mesh": {
+      "min_angle_deg": 0,
+      "max_area_mm2": 0.5,
+      "max_nodes": 500
+    },
+    "profile": {
+      "stackup": [
+        {
+          "kind": "copper",
+          "layer": "TOP",
+          "thickness_mm": 0.035
+        },
+        {
+          "kind": "dielectric",
+          "name": "gap1",
+          "thickness_mm": 0.5
+        },
+        {
+          "kind": "copper",
+          "layer": "I1",
+          "thickness_mm": 0.035
+        },
+        {
+          "kind": "dielectric",
+          "name": "gap2",
+          "thickness_mm": 0.5
+        },
+        {
+          "kind": "copper",
+          "layer": "I2",
+          "thickness_mm": 0.035
+        },
+        {
+          "kind": "dielectric",
+          "name": "gap3",
+          "thickness_mm": 0.5
+        },
+        {
+          "kind": "copper",
+          "layer": "BOTTOM",
+          "thickness_mm": 0.035
+        }
+      ],
+      "materials": {
+        "TOP": {
+          "conductivity_s_m": 58000000.0,
+          "state": "20 C constant isotropic synthetic coupon"
+        },
+        "I1": {
+          "conductivity_s_m": 58000000.0,
+          "state": "20 C constant isotropic synthetic coupon"
+        },
+        "I2": {
+          "conductivity_s_m": 58000000.0,
+          "state": "20 C constant isotropic synthetic coupon"
+        },
+        "BOTTOM": {
+          "conductivity_s_m": 58000000.0,
+          "state": "20 C constant isotropic synthetic coupon"
+        }
+      },
+      "barrel": {
+        "plating_thickness_mm": 0.025,
+        "material": {
+          "conductivity_s_m": 58000000.0,
+          "state": "20 C constant isotropic synthetic coupon"
+        },
+        "diameter_convention": "finished_hole"
+      }
+    }
+  }
+}

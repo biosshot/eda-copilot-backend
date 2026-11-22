@@ -10,7 +10,7 @@ import {solvePlacementSubtreeSync} from '../src/pcb-layout/pcb-auto-place-v2/tre
 // Correctness replay only, not a performance benchmark. Exact encoded initial
 // problems from this same native build may reuse their saved output.
 const root='docs/experimental/pcb/placement-performance-2026-09-28/Telemetry';
-const nativeHash=createHash('sha256').update(readFileSync('native/pcb-board-packer/pcb-board-packer.win32-x64-msvc.node')).digest('hex');
+const nativeHash=createHash('sha256').update(readFileSync('native/node-addon/eda-copilot-node.win32-x64-msvc.node')).digest('hex');
 const bank=new Map();
 const canonical=x=>JSON.stringify(x,(_k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v);
 for(const dir of ['staged-v2','staged-block-check'])if(existsSync(`${root}/${dir}/provenance.json`)

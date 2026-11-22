@@ -1,0 +1,60 @@
+{
+  "label": "STM32G0_CAN_RS485-slender-edge-neighbour",
+  "pairs": [
+    [
+      {
+        "kind": "TOP",
+        "triangleMm": [
+          [
+            -3.4541,
+            12.424999995878233
+          ],
+          [
+            -3.4541,
+            12.425000004121769
+          ],
+          [
+            -3.9541,
+            12.175
+          ]
+        ],
+        "zRangeMm": [
+          1.565,
+          1.6
+        ],
+        "aspectProxy": 75816983.39531447,
+        "shapeBin": 3
+      },
+      {
+        "kind": "TOP",
+        "triangleMm": [
+          [
+            -3.4541,
+            12.425000004121769
+          ],
+          [
+            -3.4541,
+            12.424999995878233
+          ],
+          [
+            -3.454099999639392,
+            12.425
+          ]
+        ],
+        "zRangeMm": [
+          1.565,
+          1.6
+        ],
+        "aspectProxy": 22.860102682579306,
+        "shapeBin": 1
+      }
+    ]
+  ],
+  "supportIndices": [
+    668,
+    556
+  ],
+  "scale": 1.0,
+  "legacyEvidence": "debugging/p7-design-checkpoint/anisotropic-native-cost-audit.json",
+  "legacyEvidenceSha256": "bf3292227900588fb077843cf676310a03f4bdad249180e7fbbf98a292c826df"
+}

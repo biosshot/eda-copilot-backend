@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {compareValue,verifyHash,validateControl} from './helpers/p7-closure-reference.ts';
+const manifest=JSON.parse(readFileSync('tests/fixtures/analysis-p7-closure/manifest.json','utf8'));
+test('exact-byte fixture identity and stale reference rejection',()=>{for(const c of manifest.cases){verifyHash(c.dsl,c.dslSha256);if(c.board)verifyHash(c.board,c.boardSha256);}assert.throws(()=>verifyHash(manifest.cases[0].dsl,'0'.repeat(64)),/HASH/);});
+test('units, physical terminals, frequency and matrix validity cannot pass by unavailable data',()=>{assert.equal(manifest.units.capacitance,'F/m');const good={status:'complete',network:{ports:['p','q']},frequenciesHz:[1,2],parameters:{capacitanceFPerM:[[2,-1],[-1,2]],inductanceHPerM:[[2,1],[1,2]]}};validateControl(good,[1,2],['p','q']);assert.throws(()=>validateControl({...good,status:'rejected'},[1,2],['p','q']),/NOT_COMPLETE/);assert.throws(()=>validateControl(good,[1,3],['p','q']),/BAND/);assert.throws(()=>validateControl(good,[1,2],['q','p']),/PORT/);assert.throws(()=>validateControl({...good,parameters:{...good.parameters,capacitanceFPerM:[[1]]}},[1,2],['p','q']),/MATRIX/);});
+test('physical threshold rejects scaled units, error beyond target and nonfinite outputs',()=>{assert.equal(compareValue(1e-12,1e-12,1e-15).status,'pass');assert.equal(compareValue(1,1e-12,1e-15).status,'fail');assert.equal(compareValue(1.081,1,1e-4).status,'fail');assert.throws(()=>compareValue(NaN,1,1e-4),/INVALID/);});

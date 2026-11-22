@@ -1,0 +1,15 @@
+{
+  "reason": "Observed raw closed-operator reciprocity fails unchanged1e-9 gate at8/12; one controlled quadrature refinement, no symmetrization or physics/reference changes.",
+  "priorReciprocity": {
+    "8": 4.782857529509764e-07,
+    "12": 1.3585309983624507e-08
+  },
+  "selectedOrder": 24,
+  "expectedEffect": "Error decreased ~35x from8to12;24 should resolve near-touch outer integration. If still FAIL, stop with blocker.",
+  "caps": {
+    "bytes": 536870912,
+    "seconds": 60
+  },
+  "estimatedSeconds": 2,
+  "nativeGeometryReferenceAndKernelUnchanged": true
+}

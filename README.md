@@ -17,6 +17,10 @@ try {
 
 Entry points: `.`, `/components`, `/schematic`, `/pcb`, `/types`. All runtime dependencies belong to this package. Component/UUID resolution uses public EasyEDA APIs; supplied footprints allow offline placement. No private Copilot server, LLM credentials or database is required.
 
+The root also exports `runAnalysisDsl({ code, board?, profiles?, models? }, options)` and `analysisDslDocumentation()`. Analysis accepts ordinary JavaScript with `await`, explicit resources and independent immutable builders. Constant linear DC supports rectangular conductors and ready board copper with explicit sources, loads and materials. Geometry validates connectivity, same-layer copper clearance and outline/cutout clearance with source witnesses and explicit incomplete coverage. Explicit RLC/multiport networks and numerical line cross sections use the same process/shared addon. The installed reference is `dist/analysis-spec-doc.d.ts`, separate from PCB Layout's `dist/spec-doc.d.ts`. See [DSL coverage](docs/analyze/archive/design/analysis-dsl-verification.md) and [DC verification](docs/analyze/evidence/dc-analysis-verification.md).
+
+The existing line cross-section path also implements bounded smooth-conductor and regional dielectric loss perturbation through explicit `line.conductors`/`lossTangent`. Results remain conditional quasi-TEM hypotheses, with frequency-dependent RLGC, complex impedance, phase delay and P6b networks. No roughness, DC skin transition, thermal feedback or full-board extraction. [Standalone example](tests/fixtures/analysis-line-losses/example.js), [semantics](docs/analyze/reference/p7-extraction/line-losses-semantics.md), [verification and limitations](docs/analyze/evidence/line-losses-verification.md). The reviewer accepted independent numerical reference criteria R1/R2 while retaining their documented engineering discrepancies; interactive HTML controls remain unverified.
+
 Use `validatePcbLayoutIntent({ code, circuit, footprints?, existingPlacement? })` for offline structured DSL diagnostics, or `detectCircuitPatterns({ circuit, footprints? })` to reuse deterministic recognition independently. The catalog contains 57 conservative checks. See [PCB intent validation](docs/pcb-intent-validation.md) for English diagnostics and scope limits.
 
 ## Development
@@ -32,6 +36,8 @@ npm run test:package
 
 Node >=20.19 is required. Rust/Cargo and the platform C/C++ toolchain are needed only to build the native solver from source. `npm run dev` watches TypeScript and copies its assets; rebuild Rust separately when changing native code.
 
+`native:build` builds [the shared N-API host](native/node-addon/README.md), which links the ordinary Rust libraries `pcb-board-packer` and `pcb-analyze`. Its loader and `eda-copilot-node.<platform>.node` binary live in `native/node-addon`; each library owns its declarations, re-exported by the host. The internal `importAnalysisBoard(json)` binding exposes structural import diagnostics; the public DSL is a separate TypeScript layer and does not equate import/preparation with a physical solve.
+
 The repository contains its own `src/types`. `component.ts`, `circuit.ts`, `lcsc.ts` and `reused.ts` were copied from the original `copilot-server/src/types` during extraction. They are normal source files maintained here, not aliases or generated links. The existing lightweight Zod preprocess helpers are local. There is no `@copilot/shared` dependency and no EasyEDA repository checkout is required to build or test this package.
 
 `npm run test:package` builds a local npm archive from existing build outputs, installs only that archive into an isolated consumer with install scripts disabled, and exercises public APIs, declarations, workers, assets and the native solver. API calls use local fixtures. It does not publish anything.
@@ -39,6 +45,13 @@ The repository contains its own `src/types`. `component.ts`, `circuit.ts`, `lcsc
 `npm run test:recovery` selects native CPU/GPU recovery checks, including GPU-disabled calls and unavailable CUDA/Vulkan drivers. Hardware fault-injection checks require the matching `PCB_BLOCK_GPU_TESTS`, `PCB_BOARD_GPU_TESTS`, `PCB_POST_PLACE_GPU_TESTS` and `PCB_CUDA_GPU_TESTS` flags set to `1` on a compatible GPU host; otherwise they are skipped. Failures remain visible rather than updating quality references to accept them. The installed-archive check also exercises PCB workers with GPU disabled and with both GPU drivers unavailable.
 
 Real board examples are in `tests/pcb-layout`; run `npm run test:pcb-layout -- --list`, selected fixture names, or `--all`. These optional examples query the public footprint catalogue and require network access.
+
+The internal [analysis runtime](src/analyze/README.md) executes the structural
+importer in isolated processes with a bounded queue, admission-based deadlines
+and targeted cancellation. `disposeBackend()` closes both placement and analysis
+pools. Run the eight saved boards with
+`npm run test:pcb-analyze -- --all --name import`; each run retains its full report.
+This adds no public `/analyze` entry point or physical analysis implementation.
 
 ## Native releases
 

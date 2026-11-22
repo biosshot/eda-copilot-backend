@@ -1,0 +1,48 @@
+{
+  "configurations": {
+    "G0": "legacy independent adapters, valid geometries timed; existing failures retained",
+    "G1": "shared board context and coarse theta0.4/leaf8",
+    "G2": "same G1 geometry, individual cached checks theta0.4/leaf8"
+  },
+  "coupon": "D:\\MyProject\\NN\\projects\\Agents\\easyeda-copilot\\analyze-p7-extraction\\tests\\fixtures\\analysis-local-extraction\\magnetic-near-far\\coupon.json",
+  "couponSha256": "b55f753a306ddd16b672cc0e995dcee0e06daa62310468790268126d60e6cced",
+  "referenceSha256": "a942d1eef9b3b8c24bcdbb9854c05c57af37900e428b1ecb52d4c6580cae0a43",
+  "replaysPerNumericalConfiguration": 3,
+  "geometryRunsPerBoardConfiguration": [
+    "coldProcessFirst",
+    "sameProcessWarm"
+  ],
+  "caps": {
+    "numericalBatches": 2,
+    "maxSeconds": 120,
+    "maxBytes": 536870912,
+    "maxSupports": 64,
+    "maxPlanPairs": 6000000,
+    "maxPlanNodes": 8192,
+    "maxBlocks": 100000
+  },
+  "gates": {
+    "fullPlusReferenceUncertainty": 0.05,
+    "nearIntegralPlusEmpiricalReferenceUncertainty": 0.002,
+    "rawReciprocity": 1e-09,
+    "aggregateFarBudget": 0.01
+  },
+  "independentNearReference": {
+    "targets": "postfix triangles covering old613/668/556 centroids; retain all unique targets",
+    "powers": [
+      16,
+      18,
+      20
+    ],
+    "seeds": [
+      20261024,
+      20261025,
+      20261026,
+      20261027
+    ],
+    "method": "reuse positive4D Sobol/exact double-z; empirical2lastchange+6SE, no new full-matrix reference solve"
+  },
+  "selectionBeforeMeasurement": true,
+  "placementF32": "unchanged",
+  "fullROI": false
+}
