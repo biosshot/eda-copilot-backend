@@ -9,6 +9,15 @@ const scale=(a:Z,x:number):Z=>({real:a.real*x,imaginary:a.imaginary*x});
 const div=(a:Z,b:Z):Z=>scale(mul(a,{real:b.real,imaginary:-b.imaginary}),1/(b.real*b.real+b.imaginary*b.imaginary));
 const complexNear=(a:Z,b:Z)=>{near(a.real,b.real,1e-8,1e-10);near(a.imaginary,b.imaginary,1e-8,1e-10);};
 const modal=(a:number[][],k:number)=>a.length===1?a[0][0]:(a[0][0]+a[1][1]+(k===0?1:-1)*(a[0][1]+a[1][0]))/2;
+const MU0=1.25663706212e-6;
+function surfaceImpedance(delta:number,sigma:number,sheetThickness?:number):Z {
+ const thick=1/(sigma*delta);
+ if(sheetThickness===undefined)return {real:thick,imaginary:thick};
+ // Coth((1+i)t/delta), computed through exp(-2(1+i)t/delta).
+ const angle=2*sheetThickness/delta, magnitude=Math.exp(-angle);
+ const decay={real:magnitude*Math.cos(angle),imaginary:-magnitude*Math.sin(angle)};
+ return scale(mul({real:1,imaginary:1},div(add({real:1,imaginary:0},decay),add({real:1,imaginary:0},scale(decay,-1)))),thick);
+}
 /** Independent ABCD oracle for short real-board sections, not production's
  * interface/reflected-wave representation. */
 function abcd(z:Z,gamma:Z,length:number){
@@ -33,6 +42,7 @@ function auditLossConvergence(current:any,previous:any,n:number,input:any){
 }
 export function auditLineLosses(result:any,board:any,e:any){
  assert.equal(result.status,'complete',JSON.stringify(result.error));auditSectionOrigin(board,e);
+ const foil=process.env.P7_SECTION_FOIL!=='0';
  const sections=sectionResults(result).filter((r:any)=>r.solution?.field);assert.equal(sections.length,4);
  const responses=sectionResults(result).filter((r:any)=>r.solution?.representation==='S'),cascade=e.tracks[0]==='dcc17162579803b7';assert.equal(responses.length,cascade?8:4);
  const plots=result.reports.flatMap((r:any)=>r.plots),descriptors=result.reports.flatMap((r:any)=>r.descriptors);
@@ -92,12 +102,33 @@ export function auditLineLosses(result:any,board:any,e:any){
     near(sample.frequencyHz,axis[k]);const w=2*Math.PI*axis[k];assert.equal(sample.surfaceContributions.length,n+1);assert.equal(sample.regionContributions.length,2);assert.equal(sample.modes.length,n);
     for(const key of ['resistanceOhmPerM','externalInductanceHPerM','internalInductanceHPerM','totalInductanceHPerM','conductanceSPerM','capacitanceFPerM'])matrix(sample[key]);sample.surfaceContributions.forEach((s:any)=>matrix(s.resistanceOhmPerM));sample.regionContributions.forEach((r:any)=>{matrix(r.capacitanceFPerM);matrix(r.conductanceSPerM);});
     for(let i=0;i<n;i++)for(let j=0;j<n;j++){
-     let R=0,G=0,C=0;
-     sample.surfaceContributions.forEach((v:any,q:number)=>{assert.equal(v.id,integrals.surfaces[q].id);const sigma=index>=2?e.conductivitySM:null;assert.equal(v.conductivitySM,sigma);const rs=sigma===null?0:Math.sqrt(w*1.25663706212e-6/(2*sigma));const value=rs*integrals.surfaces[q].gramPerM[i][j];near(v.resistanceOhmPerM[i][j],value);R+=value;if(sigma!==null){near(v.skinDepthM,Math.sqrt(2/(w*1.25663706212e-6*sigma)));assert.ok(v.skinDepthM<=v.minimumSkinDimensionM/10);}});
+     let R=0,Lin=0,G=0,C=0;
+     sample.surfaceContributions.forEach((v:any,q:number)=>{
+      const surface=integrals.surfaces[q],sigma=index>=2?e.conductivitySM:null;
+      assert.equal(v.id,surface.id);assert.equal(v.conductivitySM,sigma);
+      let impedance={real:0,imaginary:0};
+      if(sigma!==null){
+       const delta=Math.sqrt(2/(w*MU0*sigma));
+       near(v.skinDepthM,delta);
+       let sheetThickness: number | undefined;
+       if(foil){
+        const thicknessMm=q<n?s.input.copperThicknessMm:s.input.conductors.referencePlanes[v.id].thicknessMm;
+        const thickness=thicknessMm*1e-3;
+        const width=s.input.widthMm*1e-3;
+        sheetThickness=q<n?Math.min(thickness,Math.max(thickness/2,width*thickness*surface.gramPerM[q][q])):thickness;
+       }else assert.ok(delta<=v.minimumSkinDimensionM/10);
+       impedance=surfaceImpedance(delta,sigma,sheetThickness);
+      }
+      const gram=surface.gramPerM[i][j];
+      const resistance=impedance.real*gram;
+      near(v.resistanceOhmPerM[i][j],resistance);
+      R+=resistance;
+      Lin+=impedance.imaginary*gram/w;
+     });
      sample.regionContributions.forEach((v:any,q:number)=>{assert.equal(v.id,integrals.regions[q].id);const tangent=v.id==='air'?0:(index===1||index===3?e.lossTangent:0);assert.equal(v.lossTangent,tangent);near(v.capacitanceFPerM[i][j],regional[q][i][j]);near(v.conductanceSPerM[i][j],w*tangent*regional[q][i][j]);G+=v.conductanceSPerM[i][j];C+=v.capacitanceFPerM[i][j];});
-     near(sample.resistanceOhmPerM[i][j],R);near(sample.internalInductanceHPerM[i][j],R/w);near(sample.externalInductanceHPerM[i][j],p.inductanceHPerM[i][j]);near(sample.totalInductanceHPerM[i][j],p.inductanceHPerM[i][j]+R/w);near(sample.conductanceSPerM[i][j],G);near(sample.capacitanceFPerM[i][j],C);near(C,p.capacitanceFPerM[i][j]);
+     near(sample.resistanceOhmPerM[i][j],R);near(sample.internalInductanceHPerM[i][j],Lin);near(sample.externalInductanceHPerM[i][j],p.inductanceHPerM[i][j]);near(sample.totalInductanceHPerM[i][j],p.inductanceHPerM[i][j]+Lin);near(sample.conductanceSPerM[i][j],G);near(sample.capacitanceFPerM[i][j],C);near(C,p.capacitanceFPerM[i][j]);
     }
-    sample.modes.forEach((m:any,q:number)=>{const R=modal(sample.resistanceOhmPerM,q),L=modal(sample.totalInductanceHPerM,q),G=modal(sample.conductanceSPerM,q),C=modal(sample.capacitanceFPerM,q);assert.ok(R>=0&&G>=0);const gamma={real:m.alphaNpPerM,imaginary:m.betaRadPerM},zc=m.characteristicImpedanceOhm;complexNear(mul(gamma,zc),{real:R,imaginary:w*L});complexNear(div(gamma,zc),{real:G,imaginary:w*C});near(m.phaseDelayS,m.betaRadPerM*e.lengthMm*.001/w);assert.ok(m.guards.resistanceToExternalReactance<=.05&&m.guards.conductanceToSusceptance<=.05);});
+    sample.modes.forEach((m:any,q:number)=>{const R=modal(sample.resistanceOhmPerM,q),L=modal(sample.totalInductanceHPerM,q),G=modal(sample.conductanceSPerM,q),C=modal(sample.capacitanceFPerM,q);assert.ok(R>=0&&G>=0);const gamma={real:m.alphaNpPerM,imaginary:m.betaRadPerM},zc=m.characteristicImpedanceOhm;complexNear(mul(gamma,zc),{real:R,imaginary:w*L});complexNear(div(gamma,zc),{real:G,imaginary:w*C});near(m.phaseDelayS,m.betaRadPerM*e.lengthMm*.001/w);assert.ok(m.guards.resistanceToExternalReactance<=(foil?.3:.05)&&m.guards.conductanceToSusceptance<=.05);});
    }
    assert.ok(net.maxPowerBalanceResidual<=1e-8);assert.equal(net.powerBalances.length,axis.length*n);net.powerBalances.forEach((b:any)=>{near(b.incidentW-b.reflectedW-b.transmittedW,b.integratedDissipatedW,1e-8,1e-10);near(b.normalizedResidual,Math.abs(b.incidentW-b.reflectedW-b.transmittedW-b.integratedDissipatedW)/b.incidentW,1e-8,1e-14);maxPowerResidual=Math.max(maxPowerResidual,b.normalizedResidual);});
   }

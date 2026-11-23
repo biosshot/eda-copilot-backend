@@ -2987,7 +2987,7 @@ mod compact_via_dispatch_test {
             &mesh, &request, CheckedGrid { frequencies_hz: &[1000.], reference_ohm: &[50., 50.], max_iterations: 1 },
             None, &[], None, PartitionPolicy::Legacy, budget, Instant::now(), wall,
         ).unwrap_err();
-        assert!(error.starts_with("MIXED_FOIL_CONTACT:"), "{error}");
+        assert!(error.starts_with("LOCAL_MIXED_FOIL_CONTACT:"), "{error}");
     }
 
     #[test]

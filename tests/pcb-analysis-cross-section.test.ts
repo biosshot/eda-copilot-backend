@@ -44,7 +44,14 @@ test('timeout/cancel/report limit terminate existing process then successful sol
 });
 
 test('Node and standalone Rust import the same cross section, counts and diagnostics',()=>{
- const request={line,frequencies:[1e6]},a=new addon.AnalysisElectricalSession().solveCrossSection(request);const r=spawnSync('cargo',['run','--release','--quiet','--locked','--manifest-path','native/analyze/Cargo.toml','--example','cross-section'],{input:JSON.stringify(request),encoding:'utf8',windowsHide:true,timeout:180000,maxBuffer:8*1024*1024});assert.ifError(r.error);assert.equal(r.status,0,r.stderr);const b=JSON.parse(r.stdout);assert.deepEqual(b,{status:a.status,diagnostics:a.diagnostics,parameters:a.parameters,quality:a.field.quality,nodes:a.field.nodes.length,triangles:a.field.triangles.length});
+ const request={line,frequencies:[1e6]},a=new addon.AnalysisElectricalSession().solveCrossSection(request);
+ const build=spawnSync('cargo',['build','--release','--locked','--manifest-path','native/analyze/Cargo.toml','--example','cross-section','--message-format=json'],{encoding:'utf8',windowsHide:true,timeout:900000,maxBuffer:8*1024*1024});
+ assert.ifError(build.error);assert.equal(build.status,0,build.stderr);
+ const executable=build.stdout.trim().split('\n').map(line=>JSON.parse(line)).find(entry=>entry.reason==='compiler-artifact'&&entry.target.name==='cross-section'&&entry.executable)?.executable;
+ assert.ok(executable,'Cargo did not return the cross-section example executable');
+ const r=spawnSync(executable,[],{input:JSON.stringify(request),encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:8*1024*1024});
+ assert.ifError(r.error);assert.equal(r.status,0,r.stderr);
+ const b=JSON.parse(r.stdout);assert.deepEqual(b,{status:a.status,diagnostics:a.diagnostics,parameters:a.parameters,quality:a.field.quality,nodes:a.field.nodes.length,triangles:a.field.triangles.length});
 });
 
 test('direct task example runs through installed worker vocabulary without casts',async()=>{const code=readFileSync('tests/fixtures/analysis-cross-section/example.js','utf8');const r=await runAnalysisDsl({code});assert.equal(r.status,'complete',JSON.stringify(r.error));assert.equal(results(r).length,2);assert.equal(r.reports[0].plots.length,4);});
