@@ -5,7 +5,7 @@
 ## 0.5.0 - 2026-11-23
 
 - Restore cross-section cache validation after a JavaScript round trip and retain typed deadline diagnostics. Keep coupled network assembly stable for roundoff-sized nullspace residuals.
-- Test the release-mode analysis core with isolated Rust tests, certified via traces, and equivalent direct and hierarchical magnetic quadrature.
+- Test the release-mode analysis core with isolated Rust tests, certified via traces, and equivalent direct and hierarchical magnetic quadrature. Keep the full volumetric via frequency benchmark opt-in, with via connectivity and contact refusal still checked in CI.
 
 
 PCB analysis is available in beta via `eda-copilot-backend/analyze`. The DSL, worker and SVG reports are intended for simple boards with supported geometry and explicitly supplied inputs. DC and steady-state thermal results are conditional engineering estimates. Frequency-domain analysis can decline to return results. Physical accuracy has not been independently verified.

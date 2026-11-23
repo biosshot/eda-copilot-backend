@@ -2955,8 +2955,7 @@ impl MixedMap<'_> {
 mod compact_via_dispatch_test {
     use super::*;
     use serde_json::json;
-    #[test]
-    fn imported_via_two_drives_and_missing_contact() {
+    fn imported_via_fixture() -> (BoardMesh, board_mesh::Request, AllocationBudget) {
         let board=crate::import_json(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-board.json")).board.unwrap();
         let mut request:board_mesh::Request=serde_json::from_str(include_str!("../../../../../tests/fixtures/analysis-local-extraction/board-integration/via-contact-request-d1-m1.json")).unwrap();
         request.cut_planes.clear(); request.allow_insulated_copper_cuts=false; request.domain_polygon_mm=None;
@@ -2964,8 +2963,38 @@ mod compact_via_dispatch_test {
         request.electrodes=["s0","s1","r0","r1"].into_iter().enumerate().map(|(i,name)| Electrode {name:name.into(),source_path:Some(format!("pads[{i}]")),source_paths:None,layer:if i==0 {"TOP"} else {"BOTTOM"}.into(),upper:i!=0}).collect();
         request.ports=vec![["s0".into(),"r0".into()],["s1".into(),"r1".into()]];
         for layer in &mut request.stack {if !layer.copper {layer.epsilon_r=Some(1.);}}
-        let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:10000,max_tetrahedra:10000}; let wall=Duration::from_secs(240);
-        let mesh=board_mesh::build(&board,&request,budget,wall).unwrap();
+        let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:10000,max_tetrahedra:10000};
+        let mesh=board_mesh::build(&board,&request,budget,Duration::from_secs(25)).unwrap();
+        (mesh, request, budget)
+    }
+
+    #[test]
+    fn imported_via_connects_both_ports_and_rejects_missing_contact() {
+        let (mesh, mut request, budget) = imported_via_fixture();
+        let wall = Duration::from_secs(25);
+        let map = prepare(&mesh, &request.electrodes, 1000., budget, wall).unwrap();
+        assert!(!mesh.barrel_ids.is_empty());
+        let [s0, s1, r0, r1] = map.electrodes[..] else { panic!("expected four electrodes") };
+        let component = |dof| map.potential_components.iter().position(|group| group.contains(&dof)).unwrap();
+        assert_ne!(s0, s1);
+        assert_ne!(r0, r1);
+        assert_eq!(component(s0), component(s1));
+        assert_eq!(component(r0), component(r1));
+        assert_ne!(component(s0), component(r0));
+
+        request.ports[1][1] = "missing".into();
+        let error = solve_checked_mesh_impl(
+            &mesh, &request, CheckedGrid { frequencies_hz: &[1000.], reference_ohm: &[50., 50.], max_iterations: 1 },
+            None, &[], None, PartitionPolicy::Legacy, budget, Instant::now(), wall,
+        ).unwrap_err();
+        assert!(error.starts_with("MIXED_FOIL_CONTACT:"), "{error}");
+    }
+
+    #[test]
+    #[ignore = "full volumetric via benchmark; evaluates tens of thousands of magnetic pairs"]
+    fn imported_via_two_drives_full_frequency_benchmark() {
+        let (mesh, request, budget) = imported_via_fixture();
+        let wall = Duration::from_secs(1800);
         struct Restore(Vec<(&'static str,Option<std::ffi::OsString>)>);
         impl Drop for Restore {fn drop(&mut self){for (key,value) in &self.0 {unsafe {if let Some(v)=value {std::env::set_var(key,v)}else{std::env::remove_var(key)}}}}}
         let _restore=Restore(["P7_COMPACT_PLANAR","P7_COMPACT_FULL_MIXED"].into_iter().map(|key|(key,std::env::var_os(key))).collect());
@@ -2975,8 +3004,6 @@ mod compact_via_dispatch_test {
         assert_eq!(result["coverage"],json!("unverified"));
         assert!(result["provenance"]["volumeTetrahedra"].as_u64().unwrap()>0);
         assert_eq!(result["samples"][0]["columns"].as_array().unwrap().len(),2);
-        let mut broken=request.clone(); broken.ports[1][1]="missing".into();
-        assert!(run(&broken).is_err());
     }
 }
 impl MixedMap<'_> {
