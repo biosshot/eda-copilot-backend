@@ -39,6 +39,7 @@ function harness(t: TestContext, maxWorkers = 1, maxQueueSize = 4) {
             async started() {
                 await until(() => existsSync(ready), 'worker did not report readiness');
                 const pid = Number(readFileSync(ready, 'utf8'));
+                assert.ok(Number.isSafeInteger(pid) && pid > 0, `Invalid worker PID ${pid}`);
                 localPids.add(pid);
                 assert.notEqual(pid, process.pid);
                 return pid;
