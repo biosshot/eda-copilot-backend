@@ -358,9 +358,11 @@ test('disposeBackend stops analysis even when placement shutdown rejects', async
     const ready = join(directory, 'ready'), release = join(directory, 'release');
     const originalPool = workerpool.pool.bind(workerpool);
     const injected = new Error('Test placement shutdown failure');
+    const placementTaskError = new Error('Test placement task stub');
     t.mock.method(workerpool, 'pool', (script, options) => {
         const pool = originalPool(script.endsWith('run-analysis.worker.js') ? worker : script, options);
         if (script.endsWith('run-pcb-layout.worker.js')) {
+            t.mock.method(pool, 'exec', () => { throw placementTaskError; });
             const terminate = pool.terminate.bind(pool);
             t.mock.method(pool, 'terminate', async (...args) => { await terminate(...args); throw injected; });
         }
@@ -372,7 +374,7 @@ test('disposeBackend stops analysis even when placement shutdown rejects', async
         rmSync(directory, { recursive: true, force: true });
     });
     const board = await makePcbLayout(pcbInput);
-    assert.ok(board.pcb, board.content);
+    assert.match(board.content, /Test placement task stub/);
     const result = runAnalysisProblem(problem({ mode: 'block', ready, release }));
     const rejected = assert.rejects(result, code('DISPOSED'));
     await until(() => existsSync(ready), 'analysis worker not ready');

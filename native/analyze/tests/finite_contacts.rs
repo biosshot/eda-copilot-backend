@@ -236,10 +236,16 @@ fn authored_equal_potentials_do_not_turn_point_contacts_into_finite_junctions() 
             }
         }
     }
-    assert!(extract_traced(&input, &trace, fixture::budget())
-        .err()
-        .unwrap()
-        .contains("no finite surface area"));
+    let field = extract_traced(&input, &trace, fixture::budget()).unwrap();
+    let traces = field.surface_traces();
+    let corner_owners: Vec<_> = traces
+        .iter()
+        .filter(|node| node.position_m[..2] == xy[4] && node.metal_source_id.starts_with("corner-"))
+        .map(|node| node.metal_source_id.as_str())
+        .collect();
+    assert_eq!(corner_owners, ["corner-a", "corner-a"]);
+    assert!(traces.iter().any(|node| node.metal_source_id == "corner-b"));
+    assert!(field.recover(&[1., 0.]).unwrap().energy_j > 0.);
 }
 
 #[test]

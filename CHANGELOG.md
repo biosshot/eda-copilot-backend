@@ -4,6 +4,8 @@
 
 ## 0.5.0 - 2026-11-23
 
+- Build the required hybrid copper profile for low-frequency direct extraction. Keep the captured STM32 full-field thermal convergence check opt-in while its existing spatial convergence limit is unmet.
+
 - Restore cross-section cache validation after a JavaScript round trip and retain typed deadline diagnostics. Keep coupled network assembly stable for roundoff-sized nullspace residuals.
 - Test the release-mode analysis core with isolated Rust tests, certified via traces, and equivalent direct and hierarchical magnetic quadrature. Keep the full volumetric via frequency benchmark opt-in, with via connectivity and contact refusal still checked in CI.
 

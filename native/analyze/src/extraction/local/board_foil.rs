@@ -791,14 +791,12 @@ pub fn solve_checked(
         ));
     }
     mixed_conductor::band_screen_kd()?; // P7_BAND_SCREEN: refuse an invalid value before any work
-    let skin = if maximum > 10_000. || request.profile_upper_hz.is_some() {
-        operator.skin_profile(maximum, request.profile_upper_hz, geometry.max_vertical_step_m)?
-            .map(|profile| profile.with_thickness_screen(
-                geometry.stack.iter().filter(|layer| layer.copper).filter_map(|layer| layer.conductivity_s_m),
-            )).transpose()?
-    } else {
-        None
-    };
+    // The checked endpoint always selects hybrid-planar-v3, including its
+    // lowest admitted frequencies. Its mesh always needs a covering profile.
+    let skin = operator.skin_profile(maximum, request.profile_upper_hz, geometry.max_vertical_step_m)?
+        .map(|profile| profile.with_thickness_screen(
+            geometry.stack.iter().filter(|layer| layer.copper).filter_map(|layer| layer.conductivity_s_m),
+        )).transpose()?;
     let mut shrunk = None;
     if skin.is_some() {
         // Apply the existing physical pad/closed copper and electrical-size

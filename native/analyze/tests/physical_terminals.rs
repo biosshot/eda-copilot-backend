@@ -368,11 +368,11 @@ fn permutation_orientation_continuation_and_true_zero_energy_gauge() {
     let mut continued = request("both", false);
     continued["initial"] = original["finalState"].clone();
     continued["time"]["stopS"] = json!(5.01e-6);
-    // Tiny late exchange on a charged rail must reject if F64 energy balance is unresolved.
+    // A tiny late exchange must retain a resolved energy balance.
+    let late = solve(continued.clone());
     assert!(
-        time::solve(serde_json::from_value(continued.clone()).unwrap())
-            .unwrap_err()
-            .starts_with("COUPLED_ENERGY")
+        number(&late["quality"]["normalizedEnergyBalance"]) <= 1e-8,
+        "unresolved late energy balance: {}", late["quality"]
     );
     let mut earlier = request("both", false);
     earlier["time"]["stopS"] = json!(1e-6);
