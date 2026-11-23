@@ -17,7 +17,11 @@ fn currents(space:&volume_current::Space,mesh:&mesh::LayeredMesh,electric_field:
     let volts:Vec<_>=space.mesh_nodes.iter().map(|nodes|{let p=mesh.nodes_m[nodes[0]];-(0..3).map(|k|electric_field[k]*p[k]).sum::<f64>()}).collect();
     let mut current=space.gradient(&volts).unwrap();
     for (i,c) in space.cells.iter().enumerate(){for axis in 0..3{current[3*i+axis]/=c.resistance_ohm;}}
-    assert_eq!(space.divergence(&current).unwrap().iter().sum::<f64>().abs(),0.);
+    let reactions = space.divergence(&current).unwrap();
+    let imbalance = reactions.iter().sum::<f64>().abs();
+    let scale = reactions.iter().map(|reaction| reaction.abs()).sum::<f64>();
+    let roundoff = f64::EPSILON * reactions.len() as f64 * scale;
+    assert!(imbalance <= roundoff, "net current {imbalance:e} A exceeds roundoff {roundoff:e} A");
     assert!(sigma>0.);
     current
 }
