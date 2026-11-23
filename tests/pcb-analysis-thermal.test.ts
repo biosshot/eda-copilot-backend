@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,mkdtempSync,writeFileSync} from 'node:fs';
+import {readFileSync,mkdtempSync,mkdirSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
@@ -13,6 +13,12 @@ import {dcCoupon,couponSetup} from './helpers/pcb-analysis-dc-coupon.ts';
 import {thermalResults} from './helpers/pcb-analysis-thermal-audit.ts';
 import {resultFor} from '../src/analyze/analysis-dsl/executor.ts';
 import {ReportStore} from '../src/analyze/analysis-dsl/data.ts';
+
+function writeThermalEvidence(filename:string,content:string) {
+ const directory='debugging/thermal-verification';
+ mkdirSync(directory,{recursive:true});
+ writeFileSync(join(directory,filename),content);
+}
 
 test('thermal refinement report publication obeys the same deadline before mutation',()=>{
  const updates:unknown[]=[];const store=new ReportStore('deadline',undefined,{maxEntries:10,maxOutputBytes:1e6},u=>updates.push(u));
@@ -82,7 +88,7 @@ test('loss transfer resolves authoritative same-context geometry and rejects sou
 test('production thermal T1 example, finite arrays, unavailable geometry and expected failed check',async()=>{
  const code=readFileSync('tests/fixtures/analysis-thermal.js','utf8'),started=performance.now();const result=await runAnalysisDsl({code},{maxOutputBytes:8*1024*1024,timeoutMs:120000});assert.equal(result.status,'complete',JSON.stringify(result.error));assert.deepEqual(result.reports[0].checks.map(c=>c.status),['pass','pass','fail','pass']);
  const [steady,time,continuation]=thermalResults(result);assert.ok(Math.abs(steady.solution.temperaturesC.junction[0]-55)<1e-8);assert.equal(time.solution.axis.length,201);assert.equal(continuation.solution.axis[0],100);assert.equal(time.solution.quality.normalizedEnergyBalance<1e-6,true);assert.equal((result.reports[0].plots.at(-1)as any).data.validity.status,'unavailable');
- const {nativeFilename}=createRequire(import.meta.url)('../native/node-addon/platform.cjs');const hash=(b:string|Buffer)=>createHash('sha256').update(b).digest('hex');writeFileSync('debugging/thermal-verification/t1-production.json',JSON.stringify({wallMs:performance.now()-started,scriptSha256:hash(code),nativeSha256:hash(readFileSync(join('native/node-addon',nativeFilename()))),result}));
+ const {nativeFilename}=createRequire(import.meta.url)('../native/node-addon/platform.cjs');const hash=(b:string|Buffer)=>createHash('sha256').update(b).digest('hex');writeThermalEvidence('t1-production.json',JSON.stringify({wallMs:performance.now()-started,scriptSha256:hash(code),nativeSha256:hash(readFileSync(join('native/node-addon',nativeFilename()))),result}));
 });
 test('thermal native numerical failure and budget rejection recover in next scenario',async()=>{
  const base=`const a=analysis();const n=a.thermalNetwork({nodes:[{id:'j',heatCapacityJPerK:2},{id:'a',boundary:'environment'}],links:[{from:'j',to:'a',resistanceKPerW:10}],sources:[{node:'j',powerW:3}]});`;
@@ -112,7 +118,7 @@ test('production DC loss transfer resolves saved meshReference and conserves tri
  a.check({name:'conserved transferred watts',actual:t.temperatureMap.min(),min:25,unit:'degC'});`},{timeoutMs:120000,maxOutputBytes:32*1024*1024});
  assert.equal(result.status,'complete',JSON.stringify(result.error));const calculations=result.reports[0].calculations.filter((c:any)=>c.phase==='completed')as any[];assert.ok(calculations[1].result.solution.meshReference);const dc=calculations[1].result.solution,t=thermalResults(result)[0].solution;
  assert.ok(dc.barrel_loss_w>0,'Current crosses finite barrel segments');assert.ok(t.lossTransfer.barrelSegments>0);assert.ok(Math.abs(t.inputPowerW[0]-dc.copper_loss_w-dc.barrel_loss_w)<1e-12);assert.equal(t.lossTransfer.solutionId,dc.id);assert.equal(t.lossTransfer.triangles,dc.domains.reduce((n:number,d:any)=>n+d.loss_w.length,0));assert.ok(t.quality.normalizedEnergyBalance<=1e-6);assert.equal(result.reports[0].checks[0].status,'pass');
- writeFileSync('debugging/thermal-verification/loss-transfer-production.json',JSON.stringify({board,result}));
+ writeThermalEvidence('loss-transfer-production.json',JSON.stringify({board,result}));
 });
 
 
@@ -127,5 +133,5 @@ test('abort kills an observed production native thermal solve and next scenario 
  await new Promise(r=>setTimeout(r,80));controller.abort();const result=await pending;assert.equal(result.error?.code,'ABORTED');assert.equal(alive(started.pid),false);assert.ok(!records().some(r=>r.phase==='solve-end'),'Solve finished before abort');
  const recovered=await runAnalysisDsl({code:${JSON.stringify(readFileSync('tests/fixtures/analysis-thermal.js','utf8'))}},{maxOutputBytes:8*1024*1024});assert.equal(recovered.status,'complete',JSON.stringify(recovered.error));console.log(JSON.stringify({killedPid:started.pid,error:result.error.code,recovery:recovered.status}));`;
  const child=spawnSync(process.execPath,['--input-type=module','-e',source],{cwd:resolve('.'),windowsHide:true,encoding:'utf8',timeout:25000,maxBuffer:2*1024*1024,env:{...process.env,NODE_OPTIONS:`--require="${resolve('tests/fixtures/analysis-thermal-pid.cjs').replaceAll('\\','/')}"`,ANALYSIS_THERMAL_PID_LOG:log}});
- writeFileSync('debugging/thermal-verification/cancellation.log',(child.stdout??'')+(child.stderr??''));assert.ifError(child.error);assert.equal(child.status,0,child.stdout+child.stderr);assert.doesNotMatch(child.stderr,/CubeCL|CUDA|Vulkan/i);
+ writeThermalEvidence('cancellation.log',(child.stdout??'')+(child.stderr??''));assert.ifError(child.error);assert.equal(child.status,0,child.stdout+child.stderr);assert.doesNotMatch(child.stderr,/CubeCL|CUDA|Vulkan/i);
 });

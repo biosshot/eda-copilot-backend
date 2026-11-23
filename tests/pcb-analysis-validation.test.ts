@@ -32,5 +32,15 @@ test('geometry runtime native parity, active cancellation/deadline/report cap an
  const code=`${start}await a.geometry().rules([{kind:'clearance',minMm:.3}]).run();`;assert.equal((await runAnalysisDsl({board:board(),code},{timeoutMs:1})).error?.code,'TIMEOUT');const abort=new AbortController();abort.abort();assert.equal((await runAnalysisDsl({code},{signal:abort.signal})).error?.code,'ABORTED');assert.equal((await runAnalysisDsl({board:board(),code},{maxOutputBytes:4096})).status,'failed');assert.equal((await runAnalysisDsl({board:board(),code},options)).status,'complete');
 });
 test('Node shared addon agrees with standalone CPU/F64 geometry validation',()=>{
- const request={board_json:JSON.stringify(board()),rules:[{kind:'clearance',minMm:.3}]};const n=addon.validateAnalysisGeometry(request);const r=spawnSync('cargo',['run','--quiet','--locked','--manifest-path','native/analyze/Cargo.toml','--example','validation'],{input:JSON.stringify(request),encoding:'utf8',windowsHide:true,timeout:180000,maxBuffer:16*1024*1024});assert.ifError(r.error);assert.equal(r.status,0,r.stderr);const native=JSON.parse(r.stdout);delete n.elapsed_ms;delete native.elapsed_ms;assert.deepEqual(native,n);
+ const request={board_json:JSON.stringify(board()),rules:[{kind:'clearance',minMm:.3}]};
+ const addonResult=addon.validateAnalysisGeometry(request);
+ const build=spawnSync('cargo',['build','--release','--locked','--manifest-path','native/analyze/Cargo.toml','--example','validation','--message-format=json'],{encoding:'utf8',windowsHide:true,timeout:900000,maxBuffer:8*1024*1024});
+ assert.ifError(build.error);assert.equal(build.status,0,build.stderr);
+ const executable=build.stdout.trim().split('\n').map(line=>JSON.parse(line)).find(entry=>entry.reason==='compiler-artifact'&&entry.target.name==='validation'&&entry.executable)?.executable;
+ assert.ok(executable,'Cargo did not return the validation example executable');
+ const standalone=spawnSync(executable,[],{input:JSON.stringify(request),encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:16*1024*1024});
+ assert.ifError(standalone.error);assert.equal(standalone.status,0,standalone.stderr);
+ const nativeResult=JSON.parse(standalone.stdout);
+ delete addonResult.elapsed_ms;delete nativeResult.elapsed_ms;
+ assert.deepEqual(nativeResult,addonResult);
 });
