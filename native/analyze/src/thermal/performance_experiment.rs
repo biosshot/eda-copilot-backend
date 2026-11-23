@@ -58,7 +58,6 @@ fn instrumentation_preserves_coupon_fields_and_guards() {
         b["counters"]["preconditionerBuilds"]
     );
     assert!(s["timings"]["preconditionerApply"]["ms"].as_f64().unwrap() > 0.);
-    std::fs::write(root().join("performance-instrumentation-coupon.json"),serde_json::to_vec_pretty(&json!({"scope":"Same predeclared faithful coupon, instrumentation off/on; bitwise complete field/flow/energy/quality/counter/memory equality", "baselineMs":a["elapsedMs"],"profiledMs":b["elapsedMs"],"profile":p,"status":"pass"})).unwrap()).unwrap();
 }
 #[test]
 #[ignore = "Exactly one approved TPS tighter diagnostic <=120s process, no complete-board acceptance"]
