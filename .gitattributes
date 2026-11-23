@@ -1,3 +1,19 @@
 * text=auto
 *.node binary
 *.png binary
+
+# Frozen analysis fixtures whose recorded hashes cover CRLF bytes.
+tests/fixtures/analysis-p7-closure/BandAmpV5.js text eol=crlf
+tests/fixtures/analysis-p7-closure/NanoScope.js text eol=crlf
+tests/fixtures/analysis-p7-closure/STM32G0_CAN_RS485.js text eol=crlf
+tests/fixtures/analysis-p7-closure/TPS63060DSCR.js text eol=crlf
+tests/fixtures/analysis-p7-closure/ThunderF722.js text eol=crlf
+tests/fixtures/analysis-p7-closure/agnd-dgnd-bridge.* text eol=crlf
+tests/fixtures/analysis-p7-closure/broken-fence.* text eol=crlf
+tests/fixtures/analysis-p7-closure/multiple-reference.* text eol=crlf
+tests/fixtures/analysis-p7-closure/regular-fence.* text eol=crlf
+tests/fixtures/analysis-p7-closure/split-reference.* text eol=crlf
+tests/fixtures/analysis-resonant-checkpoint/frozen-manifest.json text eol=crlf
+tests/fixtures/analysis-resonant-checkpoint/mutual-*.json text eol=crlf
+tests/fixtures/analysis-resonant-checkpoint/parallel-*.json text eol=crlf
+tests/fixtures/analysis-resonant-checkpoint/series-*.json text eol=crlf

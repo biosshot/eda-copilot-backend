@@ -1,5 +1,6 @@
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';import{createHash}from'node:crypto';
 import{compareValue,validateControl,validateDslCalculation}from'../tests/helpers/p7-closure-reference.ts';
+import {createRequire} from 'node:module';
 import {runAnalysisDsl} from '../src/analyze/run-analysis-dsl.ts';
 const line={kind:'coupled-stripline',widthMm:.3,gapMm:.3,copperThicknessMm:.035,topDielectricHeightMm:.3,bottomDielectricHeightMm:.3,lengthMm:20,topMaterial:{relativePermittivity:4,lossTangent:0,state:'Explicit homogeneous analytic TEM benchmark'},bottomMaterial:{relativePermittivity:4,lossTangent:0,state:'Explicit homogeneous analytic TEM benchmark'}};
 const frequencies=[1e6,1e7,1e8];const start=performance.now();
@@ -8,10 +9,20 @@ const reused=process.argv.includes('--reuse');
 const sourcePath=process.env.P7_RESULT_FILE??'debugging/p7-closure/stripline-native.json';
 const dslPath='tests/fixtures/analysis-p7-closure/coupled-stripline.js';
 const hash=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
-const provenance=reused?{sourcePath,sourceSha256:hash(sourcePath),sourceAddonSha256:null,coldSolve:false}:{addonSha256:hash('native/node-addon/eda-copilot-node.win32-x64-msvc.node'),dslSha256:hash(dslPath),workerSha256:hash('dist/run-analysis-dsl.worker.js'),coldSolve:!process.env.P7_VALIDATION_REPORT,validationOnly:!!process.env.P7_VALIDATION_REPORT};
+const validationReport=process.env.P7_VALIDATION_REPORT;
+const {nativeFilename}=createRequire(import.meta.url)('../native/node-addon/platform.cjs');
+const provenance=reused
+ ? {sourcePath,sourceSha256:hash(sourcePath),sourceAddonSha256:null,coldSolve:false}
+ : {
+    dslSha256:hash(dslPath),
+    addonSha256:validationReport?null:hash('native/node-addon/'+nativeFilename()),
+    workerSha256:validationReport?null:hash('dist/run-analysis-dsl.worker.js'),
+    coldSolve:!validationReport,
+    validationOnly:!!validationReport
+ };
 let result:any;
 try {
- if(process.env.P7_VALIDATION_REPORT){const calculation=JSON.parse(readFileSync(process.env.P7_VALIDATION_REPORT,'utf8'));validateDslCalculation(calculation);result=calculation.solution;}
+ if(validationReport){const calculation=JSON.parse(readFileSync(validationReport,'utf8'));validateDslCalculation(calculation);result=calculation.solution;}
  else if(reused) result=JSON.parse(readFileSync(sourcePath,'utf8')).result;
  else {
   const dsl=await runAnalysisDsl({code:readFileSync(dslPath,'utf8')},{filename:dslPath,timeoutMs:120000,maxOutputBytes:128*1024*1024});

@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import{mkdtempSync,readFileSync,writeFileSync,rmSync}from'node:fs';import{tmpdir}from'node:os';import{join}from'node:path';import{spawnSync}from'node:child_process';
+import{existsSync,mkdtempSync,readFileSync,writeFileSync,rmSync}from'node:fs';import{tmpdir}from'node:os';import{join}from'node:path';import{spawnSync}from'node:child_process';
 const root=process.cwd();
 const units={capacitanceFPerM:'F/m',vacuumCapacitanceFPerM:'F/m',inductanceHPerM:'H/m',resistanceOhmPerM:'Ohm/m',conductanceSPerM:'S/m'};
 const ports=['positiveInput','negativeInput','positiveOutput','negativeOutput'];const axis=[1e6,1e7,1e8];
@@ -23,7 +23,9 @@ function compareInSubprocess(c:any){
   const path=join(folder,'input.json');writeFileSync(path,JSON.stringify(c));
   const p=spawnSync(process.execPath,['--import','tsx','scripts/verify-p7-closure-stripline.ts'],{cwd:root,env:{...process.env,P7_OUTPUT_DIR:folder,P7_VALIDATION_REPORT:path},encoding:'utf8',timeout:15000});
   assert.equal(p.error,undefined);assert.equal(p.signal,null);
-  return {exit:p.status,evidence:JSON.parse(readFileSync(join(folder,'stripline-comparison.json'),'utf8')),output:p.stdout+p.stderr};
+  const evidencePath=join(folder,'stripline-comparison.json');
+ assert.ok(existsSync(evidencePath),p.stdout+p.stderr);
+ return {exit:p.status,evidence:JSON.parse(readFileSync(evidencePath,'utf8')),output:p.stdout+p.stderr};
  }finally{rmSync(folder,{recursive:true,force:true});}
 }
 test('real comparator subprocess passes valid control and fails exactly one perturbed delay',()=>{
