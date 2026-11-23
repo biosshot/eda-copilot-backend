@@ -1,5 +1,6 @@
 import {LocalModelCache,localCoreIdentity,magneticAxialTetPolicy,magneticPrecision as selectedMagneticPrecision,localExtractionKey,sectionFieldIdentity} from './local-model-cache.ts';
 import { cachedBoardFoilReport } from './board-foil-cache.ts';
+import { AnalysisDslError } from './analysis-dsl/schema.ts';
 import { createRequire } from 'node:module';
 import { backendResource } from '../runtime/resources.ts';
 import type { AnalysisProblem, AnalysisResult } from './types.ts';
@@ -96,7 +97,7 @@ export function createProblemExecutor(retainDcForScenario = false) {
       try {
         const core=checkedCoreIdentity();const {boardIdentity,budget,...physical}=problem.request;
         const key=localCache.key({core,kind:'section-v3',request:physical});
-        const sectionStart=performance.now(),seconds=budget?.maxSeconds??Number((physical.line as any)?.geometry?.maxSeconds??120);const sectionBudget=()=>{const left=seconds-(performance.now()-sectionStart)/1000;if(!Number.isFinite(left)||left<=0)throw new Error('SECTION_TIMEOUT: shared cache/field/propagation deadline');return {...budget,maxSeconds:left};};
+        const sectionStart=performance.now(),seconds=budget?.maxSeconds??Number((physical.line as any)?.geometry?.maxSeconds??120);const sectionBudget=()=>{const left=seconds-(performance.now()-sectionStart)/1000;if(!Number.isFinite(left)||left<=0)throw new AnalysisDslError('SECTION_TIMEOUT','Shared cache/field/propagation deadline');return {...budget,maxSeconds:left};};
         try {let validatedSection:any;const cached=localCache.obtain(key,()=>{const fieldKey=localCache.key({core,kind:'section-field-v1',request:sectionFieldIdentity(physical)});
           const field=localCache.obtain(fieldKey,()=>{const value=electrical!.solveCrossSection({...physical,budget:sectionBudget()});if(value.status!=='complete')throw Object.assign(new Error('section rejected'),{sectionReport:value});return {...value,fieldCacheMetadata:{schema:1,coreIdentity,key:fieldKey}};},value=>{const v=value as any;if(v.fieldCacheMetadata?.schema!==1||v.fieldCacheMetadata.coreIdentity!==coreIdentity||v.fieldCacheMetadata.key!==fieldKey||localCache.key({core,kind:'section-field-v1',request:sectionFieldIdentity({line:v.input,mesh:v.fieldRequestMesh??undefined})})!==fieldKey)throw new Error('Section field cache identity refusal');const checked=electrical!.propagateCrossSection({line:v.input,frequencies:v.frequenciesHz,mesh:v.fieldRequestMesh??undefined,budget:sectionBudget()},value);if(checked.status!=='complete')throw new Error('Stored section coefficients failed native validation');});
           const report=electrical!.propagateCrossSection({...physical,budget:sectionBudget()},field.value);if(report.status!=='complete')throw Object.assign(new Error('section replay rejected'),{sectionReport:report});

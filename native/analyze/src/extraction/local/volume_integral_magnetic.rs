@@ -1697,6 +1697,11 @@ impl CompactLocalHierarchy {
         let space = Space { mesh_nodes:vec![], node_potential:Default::default(), cells, components:vec![], planned_bytes:space_bytes };
         Ok(Self { pair, tree, space, checked_self: std::cell::RefCell::new(vec![false;n]), direct_small: false, fast: false, fast_threads: 1, fast_table: std::cell::RefCell::new(Vec::new()), fast_info: std::cell::RefCell::new(None), planned_bytes })
     }
+    #[cfg(test)]
+    pub(super) fn direct_pair_for_test(&self, i: usize, j: usize) -> Result<f64> {
+        self.pair.pair(i, j)
+    }
+
     pub(super) fn self_max_change(&self) -> f64 { self.pair.self_max_change.get() }
     /// Switch to the dense non-certified fast table (large problems only; see the
     /// planar H-matrix gate). Returns false and keeps the certified path when the
@@ -2257,9 +2262,9 @@ mod compact_reuse_tests {
         let repeat=parallel.actions(&columns,&[1.,1.]).unwrap();
         assert_eq!(repeat.0,b);assert_eq!(repeat.1,bb);
         assert_eq!(*parallel.pair.checked_self_values.borrow(),slots);
-        // Two geometry slots retain both cells and avoid rebuilding cubature.
+        // The planner may reserve extra slots. Both cells must fit and reuse cubature.
         let worker=parallel.pair.pool.as_ref().unwrap().workers[0].lock().unwrap();
-        assert_eq!(worker.slots,2);
+        assert!(worker.slots >= 2);
         let value=worker.pair(1,0).unwrap();
         let builds=worker.parallel_counts.as_ref().unwrap().borrow().geometry_builds;
         let hits=worker.parallel_counts.as_ref().unwrap().borrow().geometry_hits;

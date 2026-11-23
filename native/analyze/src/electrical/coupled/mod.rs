@@ -311,14 +311,21 @@ impl System {
         for mode in &candidates {
             let mut residual = vec![0.; ni];
             let mut scale = vec![0.; ni];
+            let mut coefficient_scale = vec![0.; ni];
             for (&(i, j), v) in &a {
                 residual[j] += v * mode[i];
                 scale[j] += (v * mode[i]).abs();
+                coefficient_scale[j] += v.abs();
             }
+            // The unit mode comes from a nullspace solve and reorthogonalization.
+            // Even an exact zero entry can carry rounding error after projection.
+            let projection_roundoff = 64. * f64::EPSILON * (nv + 1) as f64;
             if residual
                 .iter()
-                .zip(scale)
-                .any(|(r, s)| r.abs() > 1e-12 * s.max(1e-300))
+                .zip(scale.iter().zip(coefficient_scale))
+                .any(|(r, (s, a))| {
+                    !r.is_finite() || r.abs() > 1e-12 * s + projection_roundoff * a
+                })
             {
                 return Err(fail(
                     "COUPLED_GAUGE",

@@ -37,7 +37,7 @@ jobs:
           echo "VULKAN_SDK=$sdk_root/macOS" >> "$GITHUB_ENV"
       - run: npm run native:build
       - run: cargo test --locked --manifest-path native/pcb-board-packer/Cargo.toml
-      - run: cargo test --locked --manifest-path native/analyze/Cargo.toml
+      - run: cargo test --release --locked --manifest-path native/analyze/Cargo.toml -- --test-threads=1
       - name: Check native runtime dependencies
         shell: bash
         run: |

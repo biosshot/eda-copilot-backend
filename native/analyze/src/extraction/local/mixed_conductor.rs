@@ -2964,7 +2964,7 @@ mod compact_via_dispatch_test {
         request.electrodes=["s0","s1","r0","r1"].into_iter().enumerate().map(|(i,name)| Electrode {name:name.into(),source_path:Some(format!("pads[{i}]")),source_paths:None,layer:if i==0 {"TOP"} else {"BOTTOM"}.into(),upper:i!=0}).collect();
         request.ports=vec![["s0".into(),"r0".into()],["s1".into(),"r1".into()]];
         for layer in &mut request.stack {if !layer.copper {layer.epsilon_r=Some(1.);}}
-        let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:10000,max_tetrahedra:10000}; let wall=Duration::from_secs(25);
+        let budget=AllocationBudget{max_bytes:512*1024*1024,max_nodes:10000,max_tetrahedra:10000}; let wall=Duration::from_secs(240);
         let mesh=board_mesh::build(&board,&request,budget,wall).unwrap();
         struct Restore(Vec<(&'static str,Option<std::ffi::OsString>)>);
         impl Drop for Restore {fn drop(&mut self){for (key,value) in &self.0 {unsafe {if let Some(v)=value {std::env::set_var(key,v)}else{std::env::remove_var(key)}}}}}

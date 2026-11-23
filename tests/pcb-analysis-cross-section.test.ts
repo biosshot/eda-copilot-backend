@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {runAnalysisDsl} from '../src/analyze/run-analysis-dsl.ts';
-import {readFileSync} from 'node:fs';
+import {mkdtempSync, readFileSync, rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {createRequire} from 'node:module';
 const addon=createRequire(import.meta.url)('../native/node-addon/index.cjs');
@@ -21,10 +23,18 @@ test('no length returns per-metre values, delay/network unavailable; paired mode
  const p=await runAnalysisDsl({code:`const a=analysis();const r=await a.impedance().target(a.line(${JSON.stringify(pair)})).method('cross-section').frequencyHz(1e8).run();a.plot({title:'modes',data:r.characteristicImpedance});const n=await a.networkParameters().network(r.network).frequencyHz(1e8).representation('S').referenceOhm(50).run();a.plot({title:'cross',data:n.parameter({out:'negativeOutput',in:'positiveInput'}).imaginary()});`},options);
  assert.equal(p.status,'complete',JSON.stringify(p.error));const z=results(p)[0];assert.deepEqual(z.solution.network.ports,['positiveInput','negativeInput','positiveOutput','negativeOutput']);assert.deepEqual(z.characteristicImpedance.data.rows.map((r:any)=>r.name),['even','odd','differential','common']);assert.equal(z.characteristicImpedance.unit,'Ohm');assert.equal(z.delay.unit,'s');assert.ok(z.solution.parameters.capacitanceFPerM[0][1]<0);assert.ok(z.solution.parameters.inductanceHPerM[0][1]>0);
 });
-test('unsupported/excess-loss/missing materials, impossible mesh, caps and next success are explicit',async()=>{
+test('unsupported/excess-loss/missing materials, impossible mesh, caps and next success are explicit',async(t)=>{
+ const previousCache = process.env.PCB_ANALYSIS_CACHE_DIR;
+ const coldCache = mkdtempSync(join(tmpdir(), 'eda-section-budget-'));
+ process.env.PCB_ANALYSIS_CACHE_DIR = coldCache;
+ t.after(() => {
+  if (previousCache === undefined) delete process.env.PCB_ANALYSIS_CACHE_DIR;
+  else process.env.PCB_ANALYSIS_CACHE_DIR = previousCache;
+  rmSync(coldCache, {recursive:true, force:true});
+ });
  for(const input of [{...line,material:{...line.material,lossTangent:.051}},{...line,material:{state:'missing'}},{...line,material:{...line.material,conductivitySPerM:0}},{...line,solderMask:{}}]){const r=await runAnalysisDsl({code:`const a=analysis();await a.impedance().target(a.line(${JSON.stringify(input)})).method('cross-section').frequencyHz(1e8).run();`},options);assert.equal(r.status,'failed');assert.match(r.error!.code,/SECTION_|INVALID_CONFIGURATION/);}
  const unsupported=await runAnalysisDsl({code:`const a=analysis();await a.impedance().target({id:'future-resource',kind:'unimplemented',analyses:['impedance']}).method('cross-section').frequencyHz(1e8).run();`},options);assert.equal(unsupported.error?.code,'SECTION_UNSUPPORTED');
- for(const modifiers of [`.method('layered')`,`.frequencyHz(1e15)`,`.mesh({maxNodes:16})`,`.mesh({maxRefinements:1})`,`.budget({maxMemoryMiB:1})`,`.budget({maxSeconds:1e-9})`,`.frequency({startHz:1e6,stopHz:1e9,points:1e9,scale:'linear'})`]){const r=await runAnalysisDsl({code:`${start}try{await a.impedance().target(l).method('cross-section')${modifiers.startsWith('.frequency(')?'':'.frequencyHz(1e8)'}${modifiers}.run();}catch(e){a.log({level:'info',message:e.code});}const z=await a.impedance().target(l).method('cross-section').frequencyHz(1e8).run();a.check({name:'recovery',actual:z.characteristicImpedance,unit:'Ohm',min:1});`},options);assert.equal(r.status,'complete',JSON.stringify(r.error));assert.equal(r.reports[0].logs.length,1);assert.match(r.reports[0].logs[0].message,/SECTION_/);assert.equal(r.reports[0].checks[0].status,'pass');}
+ for(const modifiers of [`.budget({maxMemoryMiB:1})`,`.method('layered')`,`.frequencyHz(1e15)`,`.mesh({maxNodes:16})`,`.mesh({maxRefinements:1})`,`.budget({maxSeconds:1e-9})`,`.frequency({startHz:1e6,stopHz:1e9,points:1e9,scale:'linear'})`]){const r=await runAnalysisDsl({code:`${start}try{await a.impedance().target(l).method('cross-section')${modifiers.startsWith('.frequency(')?'':'.frequencyHz(1e8)'}${modifiers}.run();}catch(e){a.log({level:'info',message:e.code});}const z=await a.impedance().target(l).method('cross-section').frequencyHz(1e8).run();a.check({name:'recovery',actual:z.characteristicImpedance,unit:'Ohm',min:1});`},options);assert.equal(r.status,'complete',JSON.stringify(r.error));assert.equal(r.reports[0].logs.length,1);assert.match(r.reports[0].logs[0].message,/SECTION_/);assert.equal(r.reports[0].checks[0].status,'pass');}
 });
 test('Node/Rust transport parity and native error recovery; no frequency fan-out',()=>{
  const s=new addon.AnalysisElectricalSession();const a=s.solveCrossSection({line,frequencies:[1e6]});const b=s.solveCrossSection({line,frequencies:[1e6,1e8,1e9]});assert.equal(a.status,'complete',JSON.stringify(a));assert.deepEqual(a.parameters,b.parameters);assert.deepEqual(a.field,b.field);assert.deepEqual(a.convergence,b.convergence);const original=JSON.stringify(a.network),short=s.solveCrossSection({line:{...line,lengthMm:10},frequencies:[1e6]});assert.deepEqual(short.parameters,a.parameters);assert.notDeepEqual(short.network.parameters,a.network.parameters);const wider=s.solveCrossSection({line:{...line,widthMm:.6},frequencies:[1e6]});assert.notEqual(wider.parameters.capacitanceFPerM[0][0],a.parameters.capacitanceFPerM[0][0]);assert.equal(JSON.stringify(a.network),original);assert.throws(()=>s.solveCrossSection({line,frequencies:[1e6],unknown:1}));const bad=s.solveCrossSection({line:{...line,lengthMm:0},frequencies:[1e6]});assert.equal(bad.status,'rejected');assert.equal(s.solveCrossSection({line,frequencies:[1e6]}).status,'complete');s.clear();

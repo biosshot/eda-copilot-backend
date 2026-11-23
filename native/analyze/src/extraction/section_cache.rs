@@ -24,7 +24,9 @@ fn regional(rows:&[Vec<Vec<f64>>],c:&[Vec<f64>])->Result<()>{let n=c.len();for a
 /// validation. Cache checksums/versioning belong to the existing host cache.
 pub fn replay(input:Request,mut stored:Value)->Value{
  let start=Instant::now();let result=(||->Result<Value>{
-  if stored["status"]!="complete"||physical(stored["input"].clone())!=physical(input.line.clone())||stored["fieldRequestMesh"]!=json!(input.mesh)||!stored["convergence"].is_array(){return Err(error("SECTION_CACHE","complete identical physical section required"));}
+  let stored_mesh = serde_json::from_value::<Option<super::MeshOptions>>(stored["fieldRequestMesh"].clone())
+   .map_err(|e|error("SECTION_CACHE",format!("invalid stored mesh options: {e}")))?;
+  if stored["status"]!="complete"||physical(stored["input"].clone())!=physical(input.line.clone())||stored_mesh!=input.mesh||!stored["convergence"].is_array(){return Err(error("SECTION_CACHE","complete identical physical section required"));}
   let seconds=input.budget.as_ref().and_then(|b|b.max_seconds).unwrap_or(120.);let memory=input.budget.as_ref().and_then(|b|b.max_memory_mi_b).unwrap_or(768.);
   if !seconds.is_finite()||seconds<=0.||!memory.is_finite()||memory<1.{return Err(error("SECTION_BUDGET","positive finite replay budget required"));}
   let polygon=input.line["kind"]=="polygon-section";

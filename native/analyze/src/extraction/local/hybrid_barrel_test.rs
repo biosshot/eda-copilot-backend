@@ -406,7 +406,7 @@ fn thin_wall_barrel_splits_at_interior_copper_layers() {
 /// Merged barrel potentials must still match the unchanged electric field mesh.
 #[test]
 fn thin_wall_barrel_potentials_match_the_electric_field_trace() {
-    use super::super::layered_capacitance::{prepare_certified_action, prepare_traced_spatial_action, Budget};
+    use super::super::layered_capacitance::{prepare_certified_action, Budget};
     let (board, request) = production_via_fixture();
     let wall = Duration::from_secs(60);
     let mesh = board_mesh::build_profiled_hybrid(&board, &request, BUDGET, wall, Some(hybrid_profile(&request))).unwrap();
@@ -414,10 +414,10 @@ fn thin_wall_barrel_potentials_match_the_electric_field_trace() {
     assert!(!map.barrels.is_empty());
     let budget = Budget { max_nodes: 100_000, max_local_terms: 2_400_000, max_bytes: 512 * 1024 * 1024, max_wall: wall };
     let (input, regions, original) = super::super::planar_trace::input_from_board(&mesh, &request, budget).unwrap();
-    let trace = super::super::planar_trace::trace(&input, &map, budget).unwrap();
+    let (trace, certificate) = super::super::planar_trace::certified_trace(&input, &original, &map, budget).unwrap();
     let referenced: std::collections::BTreeSet<_> = trace.nodes.iter().flat_map(|n| n.weights.iter().map(|&(i, _)| i)).collect();
     assert_eq!(referenced.len(), map.potential_count(), "every mixed mode must be referenced by a matched physical metal node");
-    let action = prepare_traced_spatial_action(&input, &trace, &regions, budget).unwrap();
+    let action = prepare_certified_action(&input, &trace, &regions, &certificate, budget).unwrap();
     let dielectric_nodes: std::collections::BTreeSet<_> = mesh.mesh.tetrahedra.iter().flat_map(|t| t.nodes).collect();
     let mut interior = vec![true; map.potential_count()];
     for row in map.electric_node_trace() { if dielectric_nodes.contains(&row.node) { for (i, _) in row.weights { interior[i] = false; } } }
@@ -426,7 +426,4 @@ fn thin_wall_barrel_potentials_match_the_electric_field_trace() {
         excitation[mode] = 1.;
         assert!(action.apply(&excitation).unwrap().iter().all(|&q| q == 0.), "interior-only mode must have exactly zero field charge");
     }
-    drop(action);
-    let (certified_trace, certificate) = super::super::planar_trace::certified_trace(&input, &original, &map, budget).unwrap();
-    prepare_certified_action(&input, &certified_trace, &regions, &certificate, budget).unwrap();
 }

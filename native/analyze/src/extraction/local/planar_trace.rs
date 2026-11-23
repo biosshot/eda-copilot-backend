@@ -586,11 +586,11 @@ mod board_adapter_tests {
         eprintln!("P7_CANONICAL_MIN_TET {:?}",smallest.nodes.map(|i|board_mesh.mesh.nodes_m[i]));
         let map=mixed_conductor::prepare(&board_mesh,&request.electrodes,1e6,allocation,wall).unwrap();
         let budget=Budget{max_nodes:100_000,max_local_terms:2_400_000,max_bytes:512*1024*1024,max_wall:wall};
-        let (input,regions,_original)=input_from_board(&board_mesh,&request,budget).unwrap();
-        let trace=trace(&input,&map,budget).unwrap();
+        let (input,regions,original)=input_from_board(&board_mesh,&request,budget).unwrap();
+        let (trace,certificate)=certified_trace(&input,&original,&map,budget).unwrap();
         let referenced:std::collections::BTreeSet<_>=trace.nodes.iter().flat_map(|n|n.weights.iter().map(|&(i,_)|i)).collect();
         assert_eq!(referenced.len(),map.potential_count(),"every mixed mode must be referenced by a matched physical metal node");
-        let action=super::super::layered_capacitance::prepare_traced_spatial_action(&input,&trace,&regions,budget).unwrap();
+        let action=super::super::layered_capacitance::prepare_certified_action(&input,&trace,&regions,&certificate,budget).unwrap();
         let dielectric_nodes:std::collections::BTreeSet<_>=board_mesh.mesh.tetrahedra.iter().flat_map(|t|t.nodes).collect();
         let mut interior=vec![true;map.potential_count()];
         for row in map.electric_node_trace() { if dielectric_nodes.contains(&row.node) { for (i,_) in row.weights {interior[i]=false;} } }
@@ -600,13 +600,13 @@ mod board_adapter_tests {
         assert!(charge.iter().all(|&q|q==0.),"interior-only mode must have exactly zero field charge");
         drop(action);
         let mut unused=trace.clone();unused.potential_nodes.push("unreferenced-bogus".into());
-        let failure=super::super::layered_capacitance::prepare_traced_spatial_action(&input,&unused,&regions,budget).err().unwrap();
+        let failure=super::super::layered_capacitance::prepare_certified_action(&input,&unused,&regions,&certificate,budget).err().unwrap();
         assert!(failure.contains("FIELD_TRACE") && failure.contains("unusedCount=1"),"{failure}");
         let mut unmatched=trace.clone();let mut extra=unmatched.nodes[0].clone();extra.position_m[0]+=100.;unmatched.nodes.push(extra);
-        let failure=super::super::layered_capacitance::prepare_traced_spatial_action(&input,&unmatched,&regions,budget).err().unwrap();
+        let failure=super::super::layered_capacitance::prepare_certified_action(&input,&unmatched,&regions,&certificate,budget).err().unwrap();
         assert!(failure.contains("FIELD_TRACE") && !failure.contains("unmatchedCount=0"),"{failure}");
         let mut missing=trace.clone();missing.nodes.remove(0);
-        let failure=super::super::layered_capacitance::prepare_traced_spatial_action(&input,&missing,&regions,budget).err().unwrap();
+        let failure=super::super::layered_capacitance::prepare_certified_action(&input,&missing,&regions,&certificate,budget).err().unwrap();
         assert!(failure.contains("FIELD_TRACE"),"{failure}");
     }
     #[test]

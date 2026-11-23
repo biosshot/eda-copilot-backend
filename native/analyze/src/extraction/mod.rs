@@ -33,7 +33,7 @@ pub(crate) fn p7_default_mode(name: &str, default: u8, max: u8) -> u8 {
         Ok(v) => v.parse::<u8>().ok().filter(|m| *m <= max).unwrap_or(0),
     }
 }
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct MeshOptions {
     pub max_nodes: Option<usize>,

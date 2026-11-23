@@ -3944,11 +3944,15 @@ mod compact_planar_tests {
         let pairs=super::super::volume_integral_magnetic::CompactLocalPairs::new(vec![t0,t1],AllocationBudget{max_bytes:4_000_000,..budget},start,wall).unwrap();
         let mut op=CompactMixedMagnetic{supports:vec![],dimensions:2,planar_max_order:std::cell::Cell::new(0),planar_max_change:std::cell::Cell::new(0.),planar_unconverged:std::cell::Cell::new(0),local,local_pairs:Some(pairs),local_hierarchy:None,mixed_plan:plan,hm:None,cross:Default::default(),pl_pool:None,pl_workers:1,cache:std::cell::RefCell::new(BTreeMap::new()),budget,start,wall,action_count:std::cell::Cell::new(0),cache_limit:32,batch_limit:8_000_000,pair_count:std::cell::Cell::new(0),promoted_pairs:std::cell::Cell::new(0),mixed_max_change:std::cell::Cell::new(0.),mixed_fallback_count:std::cell::Cell::new(0),self_max_change:std::cell::Cell::new(0.)};
         let columns=vec![vec![1.,-2.],vec![-0.7,0.4]];
-        // With goals=None every moment candidate is rejected and each TT
-        // pair uses the direct kernel; this is a numerical arithmetic control.
+        // Compare the certified action to a direct sum of the same quadrature
+        // coefficients. The legacy kernel uses a different tetra self order.
+        let hierarchy=super::super::volume_integral_magnetic::CompactLocalHierarchy::new(vec![t0,t1],budget,start,wall).unwrap();
+        for i in 0..2 { for j in i..2 {
+            op.cache.borrow_mut().insert((i,j),hierarchy.direct_pair_for_test(i,j).unwrap());
+        }}
         let (direct,_)=op.apply_batch(&columns,None).unwrap();
         op.mixed_plan=super::super::near_far::Plan::from_moments_excluding_suffix_pairs(moments,0,0.2,1,plan_budget).unwrap();
-        op.local_hierarchy=Some(super::super::volume_integral_magnetic::CompactLocalHierarchy::new(vec![t0,t1],budget,start,wall).unwrap());
+        op.local_hierarchy=Some(hierarchy);
         let (actual,bounds)=op.apply_batch(&columns,Some(&[1e-8,1e-8])).unwrap();
         for c in 0..columns.len() { for i in 0..2 {
             assert!(bounds[c][i] <= 1e-8);
