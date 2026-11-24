@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { buildAnalysisExample } from './helpers/analysis-example.ts';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -26,8 +27,8 @@ const previousExports = [
 ];
 
 function rustReports(paths: string[]): AnalysisImportReport[] {
-    const result = spawnSync('cargo', ['run', '--quiet', '--locked', '--manifest-path', 'native/analyze/Cargo.toml', '--example', 'import', '--', ...paths], {
-        cwd: resolve('.'), encoding: 'utf8', windowsHide: true, timeout: 180_000, maxBuffer: 16 * 1024 * 1024,
+    const result = spawnSync(buildAnalysisExample('import'), paths, {
+        cwd: resolve('.'), encoding: 'utf8', windowsHide: true, timeout: 30_000, maxBuffer: 16 * 1024 * 1024,
     });
     assert.ifError(result.error);
     assert.ok(result.status === 0 || result.status === 1, result.stderr);

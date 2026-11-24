@@ -5,6 +5,7 @@ import {mkdtempSync, readFileSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
+import { buildAnalysisExample } from './helpers/analysis-example.ts';
 import {createRequire} from 'node:module';
 const addon=createRequire(import.meta.url)('../native/node-addon/index.cjs');
 const line={kind:'microstrip',widthMm:.3,copperThicknessMm:.035,dielectricHeightMm:.18,lengthMm:20,material:{relativePermittivity:4.2,lossTangent:0,state:'Explicit PEC/lossless test hypothesis'}};
@@ -45,10 +46,7 @@ test('timeout/cancel/report limit terminate existing process then successful sol
 
 test('Node and standalone Rust import the same cross section, counts and diagnostics',()=>{
  const request={line,frequencies:[1e6]},a=new addon.AnalysisElectricalSession().solveCrossSection(request);
- const build=spawnSync('cargo',['build','--release','--locked','--manifest-path','native/analyze/Cargo.toml','--example','cross-section','--message-format=json'],{encoding:'utf8',windowsHide:true,timeout:900000,maxBuffer:8*1024*1024});
- assert.ifError(build.error);assert.equal(build.status,0,build.stderr);
- const executable=build.stdout.trim().split('\n').map(line=>JSON.parse(line)).find(entry=>entry.reason==='compiler-artifact'&&entry.target.name==='cross-section'&&entry.executable)?.executable;
- assert.ok(executable,'Cargo did not return the cross-section example executable');
+ const executable=buildAnalysisExample('cross-section');
  const r=spawnSync(executable,[],{input:JSON.stringify(request),encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:8*1024*1024});
  assert.ifError(r.error);assert.equal(r.status,0,r.stderr);
  const b=JSON.parse(r.stdout);assert.deepEqual(b,{status:a.status,diagnostics:a.diagnostics,parameters:a.parameters,quality:a.field.quality,nodes:a.field.nodes.length,triangles:a.field.triangles.length});

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {spawnSync} from 'node:child_process';
+import { buildAnalysisExample } from './helpers/analysis-example.ts';
 import {runAnalysisDsl} from '../src/analyze/run-analysis-dsl.ts';
 import {runAnalysisProblem,terminateAnalysisPool} from '../src/analyze/run-analysis.ts';
 const addon=createRequire(import.meta.url)('../native/node-addon/index.cjs');
@@ -34,10 +35,7 @@ test('geometry runtime native parity, active cancellation/deadline/report cap an
 test('Node shared addon agrees with standalone CPU/F64 geometry validation',()=>{
  const request={board_json:JSON.stringify(board()),rules:[{kind:'clearance',minMm:.3}]};
  const addonResult=addon.validateAnalysisGeometry(request);
- const build=spawnSync('cargo',['build','--release','--locked','--manifest-path','native/analyze/Cargo.toml','--example','validation','--message-format=json'],{encoding:'utf8',windowsHide:true,timeout:900000,maxBuffer:8*1024*1024});
- assert.ifError(build.error);assert.equal(build.status,0,build.stderr);
- const executable=build.stdout.trim().split('\n').map(line=>JSON.parse(line)).find(entry=>entry.reason==='compiler-artifact'&&entry.target.name==='validation'&&entry.executable)?.executable;
- assert.ok(executable,'Cargo did not return the validation example executable');
+ const executable=buildAnalysisExample('validation');
  const standalone=spawnSync(executable,[],{input:JSON.stringify(request),encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:16*1024*1024});
  assert.ifError(standalone.error);assert.equal(standalone.status,0,standalone.stderr);
  const nativeResult=JSON.parse(standalone.stdout);
