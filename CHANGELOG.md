@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.5.1 - 2026-11-25
+
 - Accept optional UUID-keyed symbol geometry in `extractCircuit`. Schematic and PCB placement use supplied symbols and footprints when catalog resolution fails.
 
 ## 0.5.0 - 2026-11-23
