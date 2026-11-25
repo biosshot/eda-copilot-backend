@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Accept optional UUID-keyed symbol geometry in `extractCircuit`. Schematic and PCB placement use supplied symbols and footprints when catalog resolution fails.
+
 ## 0.5.0 - 2026-11-23
 
 - Build the required hybrid copper profile for low-frequency direct extraction. Keep the captured STM32 thermal checks opt-in while the steady full-field spatial convergence limit is unmet and the transient solve needs a larger wall-time budget.
